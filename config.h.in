@@ -1,0 +1,29 @@
+/* -*-c-*- */
+#ifndef HDR_UP_CONFIG
+#define HDR_UP_CONFIG
+
+/* linux is great */
+#undef _GNU_SOURCE
+#undef _FILE_OFFSET_BITS
+#undef _LARGE_FILES
+
+/* defines for various headers which are usable on this system */
+#undef HAVE_SYS_TYPES_H
+#undef HAVE_STDINT_H
+#undef HAVE_INTTYPES_H
+#undef HAVE_SYS_DISKLABEL_H
+#undef HAVE_SYS_DKIO_H
+
+/* it's kind of bogus to include these here but I'd rather not look at
+   this ugly mess of #ifdefs at the top of every single file */
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif
+
+#endif /* HDR_UP_CONFIG */

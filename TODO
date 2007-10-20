@@ -1,0 +1,17 @@
+platform-specific device name fixup like sd0 -> /dev/rsd0c
+mbr read
+  extended partition
+  partition id string table
+disklabel read
+  open, net, free, dfly
+  solaris?
+  big and little endian
+portability to bsds, osx, linux, solaris
+portability to amd64, sparc64, powerpc
+apple map
+gpt
+zfs?
+other solaris maps?
+filesystem tasting
+manpage
+cyl, head, sect command-line override

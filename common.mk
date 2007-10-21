@@ -1,16 +1,17 @@
-CC       = cc
-CFLAGS   = -g -Wall -Werror
-DEPFLAGS = -MM -MG
-LDFLAGS  = 
-LIBS     = 
+CC           = cc
+CFLAGS       = -g -Wall -Werror
+DEPFLAGS     = -MM
+LDFLAGS      = 
+LIBS         = 
 
-ALL_PROGS = upart
-ALL_SRCS  = ${UPART_SRCS}
-ALL_HDRS  = disk.h
-UPART_SRCS= disk.c main.c
+ALL_PROGS     = upart
+ALL_SRCS      = ${UPART_SRCS}
+ALL_HDRS      = ${UPART_HDRSRC:=.h}
+UPART_SRCS    = ${UPART_HDRSRC:=.c} main.c
+UPART_HDRSRC  = disk mbr util
 
-UPART_OBJS= ${UPART_SRCS:.c=.o}
-ALL_OBJS  = ${ALL_SRCS:.c=.o}
+UPART_OBJS    = ${UPART_SRCS:.c=.o}
+ALL_OBJS      = ${ALL_SRCS:.c=.o}
 
 .PHONY: all clean
 

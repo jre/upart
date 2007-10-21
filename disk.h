@@ -11,8 +11,16 @@ struct up_disk
     int64_t upd_size;           /* total number of sects */
 };
 
-struct up_disk *up_disk_new(const char *path);
-int up_disk_load(struct up_disk *disk);
+/* Open the disk device or file read-only and return descriptor */
+int up_disk_open(const char *path);
+
+/* Close disk descriptor */
+void up_disk_close(int fd);
+
+/* Load disk params and return newly allocated struct up_disk */
+struct up_disk *up_disk_load(const char *path, int fd);
+
+/* Free struct up_disk */
 void up_disk_free(struct up_disk *disk);
 
 #endif /* HDR_UPART_DISK */

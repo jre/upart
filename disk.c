@@ -26,8 +26,30 @@ static int getparams(int fd, struct up_disk *disk);
 static int getparams_disklabel(int fd, struct up_disk *disk);
 #endif
 
+int
+up_disk_open(const char *path)
+{
+    int fd;
+
+    fd = open(path, O_RDONLY);
+    if(0 > fd)
+    {
+        fprintf(stderr, "failed to open %s for reading: %s\n",
+                path, strerror(errno));
+        return -1;
+    }
+
+    return fd;
+}
+
+void
+up_disk_close(int fd)
+{
+    close(fd);
+}
+
 struct up_disk *
-up_disk_new(const char *path)
+up_disk_load(const char *path, int fd)
 {
     struct up_disk *disk;
     size_t len;
@@ -49,32 +71,14 @@ up_disk_new(const char *path)
     }
     snprintf(disk->upd_path, len + 1, "%s", path);
 
-    return disk;
-}
-
-int
-up_disk_load(struct up_disk *disk)
-{
-    int fd;
-
-    fd = open(disk->upd_path, O_RDONLY);
-    if(0 > fd)
-    {
-        fprintf(stderr, "failed to open %s for reading: %s\n",
-                disk->upd_path, strerror(errno));
-        return -1;
-    }
-
     if(0 > getparams(fd, disk))
     {
-        fprintf(stderr, "failed to determine disk parameters for %s\n",
-                disk->upd_path);
-        close(fd);
-        return -1;
+        fprintf(stderr, "failed to determine disk parameters for %s\n", path);
+        up_disk_free(disk);
+        return NULL;
     }
-    close(fd);
 
-    return 0;
+    return disk;
 }
 
 void

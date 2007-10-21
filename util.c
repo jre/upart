@@ -1,0 +1,69 @@
+#include "config.h"
+
+#include <ctype.h>
+#include <stdio.h>
+
+#include "util.h"
+
+void
+up_hexdump(const void *_buf, size_t size, size_t dispoff, void *_stream)
+{
+    static const char   hex[] = "0123456789abcdef";
+    const char *        buf = _buf;
+    FILE *              stream = _stream;
+    size_t              ii, jj;
+
+    if(NULL == stream)
+        stream = stderr;
+
+    if(!size)
+        return;
+
+    for(ii = 0; size > ii; ii++)
+    {
+        if(!(ii % 0x10))
+            fprintf(stream, "%08zx ", ii + dispoff);
+        putc(' ', stream);
+        putc(hex[((unsigned char)(buf[ii]) & 0xf0) >> 4], stream);
+        putc(hex[(unsigned char)(buf[ii]) & 0x0f], stream);
+        if(!((ii + 1) % 0x8))
+            putc(' ', stream);
+        if(!((ii + 1) % 0x10))
+        {
+            putc(' ', stream);
+            putc('|', stream);
+            for(jj = ii - 0xf; ii >= jj; jj++)
+            {
+                /* for hexdump -C compatible output, use this instead */
+                /* if('\xff' == (int)(buf[jj]) || isprint(buf[jj])) */
+                if(isprint(buf[jj]))
+                    putc(buf[jj], stream);
+                else
+                    putc('.', stream);
+            }
+            putc('|', stream);
+            putc('\n', stream);
+        }
+    }
+
+    if(ii % 0x10)
+    {
+        jj = ii % 0x10;
+        fprintf(stream, "%*s", (int)(3 * (0x10 - jj) + (0x8 > jj) + 1), "");
+        putc(' ', stream);
+        putc('|', stream);
+        for(jj = ii - jj; ii > jj; jj++)
+        {
+            /* for hexdump -C compatible output, use this instead */
+            /* if('\xff' == (int)(buf[jj]) || isprint(buf[jj])) */
+            if(isprint(buf[jj]))
+                putc(buf[jj], stream);
+            else
+                putc('.', stream);
+        }
+        putc('|', stream);
+        putc('\n', stream);
+    }
+
+    fprintf(stream, "%08zx\n", size + dispoff);
+}

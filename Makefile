@@ -3,6 +3,6 @@
 .PHONY: depend dep
 
 depend dep:
-	${CC} ${CFLAGS} ${DEPFLAGS} ${ALL_SRCS} > .depend 2> /dev/null
+	${CC} ${CFLAGS} ${DEPFLAGS} ${ALL_SRCS} > .depend
 
 ${ALL_OBJS}: Makefile

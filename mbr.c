@@ -20,6 +20,7 @@
 #define MBR_PART_SIZE           (0x10)
 #define MBR_PART_COUNT          (4)
 #define MBR_FLAG_ACTIVE         (0x80)
+#define MBR_EXT_ID              (0x05) 
 
 #define MBR_GETSECT(buf) \
     (((const uint8_t *)(buf))[0] & 0x3f)
@@ -47,6 +48,12 @@ struct up_mbr
     char                upm_buf[MBR_SIZE];
     struct up_mbr_part  upm_parts[MBR_PART_COUNT];
 };
+
+struct up_mbr_ext
+{
+    
+};
+
 static int readmbr(const struct up_disk *disk, int fd,
                    off_t start, off_t end, void *buf, size_t size);
 static int parsembr(const struct up_disk *disk, struct up_mbr *mbr,
@@ -199,5 +206,6 @@ up_mbr_dump(void *_mbr, void *_stream)
                 part->upmp_lastsect, part->upmp_start, part->upmp_size,
                 part->upmp_type, up_mbr_name(part->upmp_type));
     }
+    fprintf(stream, "Dump of sector 0x%x:\n", mbr->upm_off);
     up_hexdump(mbr->upm_buf, MBR_SIZE, mbr->upm_off, stream);
 }

@@ -1,8 +1,7 @@
 test with different sector sizes
-platform-specific device name fixup like sd0 -> /dev/rsd0c
 mbr read
   extended partition
-  partition id string table
+  more complete partition id string table
 disklabel read
   open, net, free, dfly
   solaris?

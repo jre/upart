@@ -153,7 +153,7 @@ parsembr(const struct up_disk *disk, struct up_mbr *mbr,
             part->upmp_firstcyl  = MBR_GETCYL(buf + 2);
             part->upmp_type      = buf[4];
             part->upmp_lasthead  = buf[5];
-            part->upmp_lastsect  = MBR_GETSECT(buf + 6)
+            part->upmp_lastsect  = MBR_GETSECT(buf + 6);
             part->upmp_lastcyl   = MBR_GETCYL(buf + 6);
             part->upmp_start     = UP_GETBUF32LE(buf + 8);
             part->upmp_size      = UP_GETBUF32LE(buf + 12);

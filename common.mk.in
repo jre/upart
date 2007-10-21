@@ -1,8 +1,9 @@
-CC           = cc
-CFLAGS       = -g -Wall -Werror
+# -*-Makefile-*-
+CC           = @CC@
+CFLAGS       = @CFLAGS@ @CPPFLAGS@ @DEFS@
 DEPFLAGS     = -MM
-LDFLAGS      = 
-LIBS         = 
+LDFLAGS      = @LDFLAGS@
+LIBS         = @LIBS@
 
 ALL_PROGS     = upart
 ALL_SRCS      = ${UPART_SRCS}

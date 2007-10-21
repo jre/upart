@@ -15,7 +15,6 @@ static float fmtsize(int64_t num, const char **units);
 int
 main(int argc, char *argv[])
 {
-    int                 fd;
     struct up_disk *    disk;
     const char *        unit;
     float               size;
@@ -24,10 +23,7 @@ main(int argc, char *argv[])
     if(2 != argc)
         usage(argv[0]);
 
-    fd = up_disk_open(argv[1]);
-    if(0 > fd)
-        return EXIT_FAILURE;
-    disk = up_disk_load(argv[1], fd);
+    disk = up_disk_open(argv[1]);
     if(!disk)
         return EXIT_FAILURE;
 
@@ -43,7 +39,7 @@ main(int argc, char *argv[])
            BESTDECIMAL(size), size, unit);
 
     puts("");
-    switch(up_mbr_testload(disk, fd, 0, disk->upd_size, &mbr))
+    switch(up_mbr_testload(disk, disk->upd_fd, 0, disk->upd_size, &mbr))
     {
         case -1:
             return EXIT_FAILURE;
@@ -55,9 +51,8 @@ main(int argc, char *argv[])
             break;
     }
 
-    up_disk_close(fd);
     up_mbr_free(mbr);
-    up_disk_free(disk);
+    up_disk_close(disk);
 
     return EXIT_SUCCESS;
 }

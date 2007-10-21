@@ -3,7 +3,9 @@
 
 struct up_disk
 {
-    char   *upd_path;           /* path to device node or plain file */
+    char   *upd_name;           /* disk name supplied by the user */
+    char   *upd_path;           /* path to opened device node or plain file */
+    int     upd_fd;             /* descriptor for disk device */
     int     upd_sectsize;       /* size of a sector in bytes */
     int64_t upd_cyls;           /* total number of cylinders */
     int64_t upd_heads;          /* number of tracks per cylinder */
@@ -11,16 +13,10 @@ struct up_disk
     int64_t upd_size;           /* total number of sects */
 };
 
-/* Open the disk device or file read-only and return descriptor */
-int up_disk_open(const char *path);
+/* Open the disk device read-only and get drive params */
+struct up_disk *up_disk_open(const char *path);
 
-/* Close disk descriptor */
-void up_disk_close(int fd);
-
-/* Load disk params and return newly allocated struct up_disk */
-struct up_disk *up_disk_load(const char *path, int fd);
-
-/* Free struct up_disk */
-void up_disk_free(struct up_disk *disk);
+/* Close disk */
+void up_disk_close(struct up_disk *disk);
 
 #endif /* HDR_UPART_DISK */

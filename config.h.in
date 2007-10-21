@@ -7,12 +7,19 @@
 #undef _FILE_OFFSET_BITS
 #undef _LARGE_FILES
 
-/* defines for various headers which are usable on this system */
+/* standard headers */
 #undef HAVE_SYS_TYPES_H
+#undef HAVE_SYS_PARAM_H
 #undef HAVE_STDINT_H
 #undef HAVE_INTTYPES_H
+
+/* BSD disklabel headers */
 #undef HAVE_SYS_DISKLABEL_H
 #undef HAVE_SYS_DKIO_H
+
+/* libutil, for opendisk() */
+#undef HAVE_UTIL_H
+#undef HAVE_OPENDISK
 
 /* it's kind of bogus to include these here but I'd rather not look at
    this ugly mess of #ifdefs at the top of every single file */

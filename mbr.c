@@ -49,15 +49,11 @@ struct up_mbr
     struct up_mbr_part  upm_parts[MBR_PART_COUNT];
 };
 
-struct up_mbr_ext
-{
-    
-};
-
 static int readmbr(const struct up_disk *disk, int fd,
                    off_t start, off_t end, void *buf, size_t size);
 static int parsembr(const struct up_disk *disk, struct up_mbr *mbr,
                     off_t start, off_t end, const void *_buf);
+static void parsembrpart(const uint8_t *buf, struct up_mbr_part *part);
 
 int
 up_mbr_test(const struct up_disk *disk, int fd, off_t start, off_t end)
@@ -142,31 +138,14 @@ parsembr(const struct up_disk *disk, struct up_mbr *mbr,
 {
     const uint8_t *     buf = _buf;
     int                 ii;
-    struct up_mbr_part *part;
 
+    assert(end > start && end - start >= MBR_SIZE);
+    assert(MBR_MAGIC == UP_GETBUF16LE(buf + MBR_MAGIC_OFF));
     mbr->upm_off = start;
     memcpy(mbr->upm_buf, buf, MBR_SIZE);
-    buf += MBR_MAP_OFF;
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
-    {
-        part = &mbr->upm_parts[ii];
-        if(!buf[4])
-            memset(part, 0, sizeof *part);
-        else
-        {
-            part->upmp_flags     = buf[0];
-            part->upmp_firsthead = buf[1];
-            part->upmp_firstsect = MBR_GETSECT(buf + 2);
-            part->upmp_firstcyl  = MBR_GETCYL(buf + 2);
-            part->upmp_type      = buf[4];
-            part->upmp_lasthead  = buf[5];
-            part->upmp_lastsect  = MBR_GETSECT(buf + 6);
-            part->upmp_lastcyl   = MBR_GETCYL(buf + 6);
-            part->upmp_start     = UP_GETBUF32LE(buf + 8);
-            part->upmp_size      = UP_GETBUF32LE(buf + 12);
-        }
-        buf += MBR_PART_SIZE;
-    }
+        parsembrpart(buf + MBR_MAP_OFF + (ii * MBR_PART_SIZE),
+                     &mbr->upm_parts[ii]);
 
     /*
       XXX should sanity check data here
@@ -176,6 +155,26 @@ parsembr(const struct up_disk *disk, struct up_mbr *mbr,
     */
 
     return 0;
+}
+
+static void
+parsembrpart(const uint8_t *buf, struct up_mbr_part *part)
+{
+    if(!buf[4])
+        memset(part, 0, sizeof *part);
+    else
+    {
+        part->upmp_flags     = buf[0];
+        part->upmp_firsthead = buf[1];
+        part->upmp_firstsect = MBR_GETSECT(buf + 2);
+        part->upmp_firstcyl  = MBR_GETCYL(buf + 2);
+        part->upmp_type      = buf[4];
+        part->upmp_lasthead  = buf[5];
+        part->upmp_lastsect  = MBR_GETSECT(buf + 6);
+        part->upmp_lastcyl   = MBR_GETCYL(buf + 6);
+        part->upmp_start     = UP_GETBUF32LE(buf + 8);
+        part->upmp_size      = UP_GETBUF32LE(buf + 12);
+    }
 }
 
 void
@@ -206,6 +205,6 @@ up_mbr_dump(void *_mbr, void *_stream)
                 part->upmp_lastsect, part->upmp_start, part->upmp_size,
                 part->upmp_type, up_mbr_name(part->upmp_type));
     }
-    fprintf(stream, "Dump of sector 0x%x:\n", mbr->upm_off);
+    fprintf(stream, "Dump of sector 0x%"PRIx64":\n", (int64_t)mbr->upm_off);
     up_hexdump(mbr->upm_buf, MBR_SIZE, mbr->upm_off, stream);
 }

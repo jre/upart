@@ -21,6 +21,8 @@
 #define MBR_PART_COUNT          (4)
 #define MBR_FLAG_ACTIVE         (0x80)
 
+#define MBR_GETSECT(buf) \
+    (((const uint8_t *)(buf))[0] & 0x3f)
 #define MBR_GETCYL(buf) \
     (((uint16_t)(((const uint8_t *)(buf))[0] & 0xc0) << 2) | \
       (uint16_t)(((const uint8_t *)(buf))[1]))
@@ -147,11 +149,11 @@ parsembr(const struct up_disk *disk, struct up_mbr *mbr,
         {
             part->upmp_flags     = buf[0];
             part->upmp_firsthead = buf[1];
-            part->upmp_firstsect = buf[2] & 0x3f;
+            part->upmp_firstsect = MBR_GETSECT(buf + 2);
             part->upmp_firstcyl  = MBR_GETCYL(buf + 2);
             part->upmp_type      = buf[4];
             part->upmp_lasthead  = buf[5];
-            part->upmp_lastsect  = buf[6] & 0x3f;
+            part->upmp_lastsect  = MBR_GETSECT(buf + 6)
             part->upmp_lastcyl   = MBR_GETCYL(buf + 6);
             part->upmp_start     = UP_GETBUF32LE(buf + 8);
             part->upmp_size      = UP_GETBUF32LE(buf + 12);

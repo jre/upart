@@ -21,4 +21,7 @@ void up_mbr_free(void *mbr);
 /* dump private data to stream */
 void up_mbr_dump(void *mbr, void *stream);
 
+/* return the name for a partition ID */
+const char *up_mbr_name(uint8_t type);
+
 #endif /* HDR_UPART_MBR */

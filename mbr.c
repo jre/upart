@@ -22,7 +22,7 @@
 #define MBR_FLAG_ACTIVE         (0x80)
 
 #define MBR_GETCYL(buf) \
-    (((uint16_t)(((const uint8_t *)(buf))[0] & 0xc0) << 2) & \
+    (((uint16_t)(((const uint8_t *)(buf))[0] & 0xc0) << 2) | \
       (uint16_t)(((const uint8_t *)(buf))[1]))
 
 struct up_mbr_part
@@ -184,17 +184,18 @@ up_mbr_dump(void *_mbr, void *_stream)
     int                 ii;
     struct up_mbr_part *part;
 
-    fprintf(stream, "MBR at byte offset 0x%"PRIx64":\n",
+    fprintf(stream, "MBR at byte offset 0x%"PRIx64":\n"
+            " #  A    C   H  S    C   H  S      Start       Size ID Name\n",
             (uint64_t)mbr->upm_off);
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
     {
         part = &mbr->upm_parts[ii];
-        fprintf(stream, " %d: %02x %4d/%3d/%2d - %4d/%3d/%2d %10d+%10d %02x\n",
-                ii, part->upmp_flags, part->upmp_firstcyl,
-                part->upmp_firsthead, part->upmp_firstsect,
-                part->upmp_lastcyl, part->upmp_lasthead,
+        fprintf(stream, " %d: %c %4d/%3d/%2d-%4d/%3d/%2d %10d+%10d %02x %s\n",
+                ii, (MBR_FLAG_ACTIVE & part->upmp_flags ? 'y' : 'n'),
+                part->upmp_firstcyl, part->upmp_firsthead,
+                part->upmp_firstsect, part->upmp_lastcyl, part->upmp_lasthead,
                 part->upmp_lastsect, part->upmp_start, part->upmp_size,
-                part->upmp_type);
+                part->upmp_type, up_mbr_name(part->upmp_type));
     }
     up_hexdump(mbr->upm_buf, MBR_SIZE, mbr->upm_off, stream);
 }

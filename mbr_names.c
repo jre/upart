@@ -171,7 +171,7 @@ static const char *up_mbr_name_table[] =
     /* 0xa2 */ NULL,
     /* 0xa3 */ NULL,
     /* 0xa4 */ NULL,
-    /* 0xa5 */ "FreeBSD",
+    /* 0xa5 */ "FreeBSD or DragonFlyBSD",
     /* 0xa6 */ "OpenBSD",
     /* 0xa7 */ NULL,
     /* 0xa8 */ "MacOS X UFS", /* verify this */

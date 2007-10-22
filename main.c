@@ -29,7 +29,6 @@ main(int argc, char *argv[])
 
     up_disk_dump(disk, stdout, &opts);
 
-    puts("");
     switch(up_mbr_testload(disk, 0, disk->upd_size, &mbr))
     {
         case -1:
@@ -38,7 +37,7 @@ main(int argc, char *argv[])
             printf("no MBR found on %s\n", disk->upd_path);
             break;
         case 1:
-            up_mbr_dump(mbr, stdout, &opts);
+            up_mbr_dump(disk, mbr, stdout, &opts);
             break;
     }
 

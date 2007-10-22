@@ -181,18 +181,22 @@ void
 up_disk_dump(const struct up_disk *disk, void *_stream,
              const struct up_opts *opt)
 {
-    FILE *              stream = stream;
+    FILE *              stream = _stream;
     const char *        unit;
     float               size;
 
     size = up_fmtsize(disk->upd_size * disk->upd_sectsize, &unit);
-    printf("%s\n"
-           "  sector size: %d\n"
-           "  cylinders:   %d\n"
-           "  heads:       %d\n"
-           "  sectors:     %d\n"
-           "  size:        %.*f%s\n",
-           disk->upd_path, disk->upd_sectsize, (int)disk->upd_cyls,
-           (int)disk->upd_heads, (int)disk->upd_sects,
-           UP_BESTDECIMAL(size), size, unit);
+    fprintf(stream, "%s: %.*f%s (%"PRId64" sectors of %d bytes)\n",
+            disk->upd_name, UP_BESTDECIMAL(size), size, unit,
+            disk->upd_size, disk->upd_sectsize);
+    if(opt->upo_verbose)
+    fprintf(stream,
+            "    device path:         %s\n"
+            "    sector size:         %d\n"
+            "    total sectors:       %"PRId64"\n"
+            "    total cylinders:     %d (cylinders)\n"
+            "    tracks per cylinder: %d (heads)\n"
+            "    sectors per track:   %d (sectors)\n"
+            "\n", disk->upd_path, disk->upd_sectsize, disk->upd_size,
+            (int)disk->upd_cyls, (int)disk->upd_heads, (int)disk->upd_sects);
 }

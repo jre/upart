@@ -305,7 +305,8 @@ up_mbr_free(void *mbr)
 }
 
 void
-up_mbr_dump(const void *_mbr, void *_stream, const struct up_opts *opts)
+up_mbr_dump(const struct up_disk *disk, const void *_mbr, void *_stream,
+            const struct up_opts *opts)
 {
     const struct up_mbr *       mbr = _mbr;
     FILE *                      stream = _stream;
@@ -314,8 +315,9 @@ up_mbr_dump(const void *_mbr, void *_stream, const struct up_opts *opts)
     struct up_mbr_ext *         ext;
     char                        splat;
 
-    fprintf(stream, "MBR:\n"
-            "         C   H  S    C   H  S      Start       Size ID Name\n");
+    fprintf(stream, "MBR partition table for %s:\n"
+            "         C   H  S    C   H  S      Start       Size ID Name\n",
+            disk->upd_name);
     jj = MBR_PART_COUNT;
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
     {
@@ -348,15 +350,20 @@ up_mbr_dump(const void *_mbr, void *_stream, const struct up_opts *opts)
     if(!opts->upo_verbose)
         return;
 
-    fprintf(stream, "Dump of MBR sector:\n");
+    fprintf(stream, "\nDump of %s MBR:\n", disk->upd_name);
     up_hexdump(mbr->upm_buf, MBR_SIZE, 0, stream);
+    putc('\n', stream);
+    jj = MBR_PART_COUNT;
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
     {
         SLIST_FOREACH(ext, &mbr->upm_ext[ii], upme_next)
         {
-            fprintf(stream, "Dump of extended MBR at sector %"PRId64
-                    " (0x%08"PRIx64"):\n", ext->upme_absoff, ext->upme_absoff);
+            fprintf(stream, "Dump of %s extended MBR #%d "
+                    "at sector %"PRId64" (0x%08"PRIx64"):\n",
+                    disk->upd_name, jj, ext->upme_absoff, ext->upme_absoff);
             up_hexdump(ext->upme_buf, MBR_SIZE, ext->upme_absoff, stream);
+            putc('\n', stream);
+            jj++;
         }
     }
 }

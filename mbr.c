@@ -12,7 +12,6 @@
 #include "mbr.h"
 #include "util.h"
 
-/* note that this is in host byte order */
 #define MBR_SIZE                (0x200)
 #define MBR_MAGIC_OFF           (0x1fe)
 #define MBR_MAGIC               (0xaa55)
@@ -30,6 +29,7 @@
 
 struct up_mbr_part
 {
+    unsigned int        upmp_valid : 1;
     uint8_t             upmp_flags;
     uint8_t             upmp_firsthead;
     uint8_t             upmp_firstsect;
@@ -44,47 +44,50 @@ struct up_mbr_part
 
 struct up_mbr
 {
-    off_t               upm_off;
     char                upm_buf[MBR_SIZE];
     struct up_mbr_part  upm_parts[MBR_PART_COUNT];
 };
 
-static int readmbr(const struct up_disk *disk, int fd,
-                   off_t start, off_t end, void *buf, size_t size);
+static int readmbr(const struct up_disk *disk, int64_t start, int64_t size,
+                   uint8_t *buf, size_t buflen);
 static int parsembr(const struct up_disk *disk, struct up_mbr *mbr,
-                    off_t start, off_t end, const void *_buf);
-static void parsembrpart(const uint8_t *buf, struct up_mbr_part *part);
+                    int64_t start, int64_t size,
+                    const uint8_t *buf, size_t buflen);
+static void parsembrpart(const uint8_t *buf, size_t buflen,
+                         struct up_mbr_part *part);
 
 int
-up_mbr_test(const struct up_disk *disk, int fd, off_t start, off_t end)
+up_mbr_test(const struct up_disk *disk, int64_t start, int64_t size)
 {
-    char                buf[MBR_SIZE];
+    uint8_t             buf[MBR_SIZE];
 
-    return readmbr(disk, fd, start, end, buf, sizeof buf);
+    return readmbr(disk, start, size, buf, sizeof buf);
 }
 
 void *
-up_mbr_load(const struct up_disk *disk, int fd, off_t start, off_t end)
+up_mbr_load(const struct up_disk *disk, int64_t start, int64_t size)
 {
     void *              mbr;
 
-    up_mbr_testload(disk, fd, start, end, &mbr);
+    up_mbr_testload(disk, start, size, &mbr);
     return mbr;
 }
 
 int
-up_mbr_testload(const struct up_disk *disk, int fd, off_t start, off_t end,
+up_mbr_testload(const struct up_disk *disk, int64_t start, int64_t size,
                 void **map)
 {
-    char                buf[MBR_SIZE];
+    uint8_t             buf[MBR_SIZE];
     int                 res;
     struct up_mbr *     mbr;
 
+    /* load MBR */
     *map = NULL;
-    res = readmbr(disk, fd, start, end, buf, sizeof buf);
+    res = readmbr(disk, start, size, buf, sizeof buf);
     if(0 >= res)
         return res;
 
+    /* alloc mbr struct */
     mbr = calloc(1, sizeof *mbr);
     if(!mbr)
     {
@@ -92,7 +95,8 @@ up_mbr_testload(const struct up_disk *disk, int fd, off_t start, off_t end,
         return -1;
     }
 
-    if(0 > parsembr(disk, mbr, start, end, buf))
+    /* parse MBR */
+    if(0 > parsembr(disk, mbr, start, size, buf, sizeof buf))
     {
         free(mbr);
         return 0;
@@ -103,30 +107,29 @@ up_mbr_testload(const struct up_disk *disk, int fd, off_t start, off_t end,
 }
 
 static int
-readmbr(const struct up_disk *disk, int fd, off_t start, off_t end,
-        void *buf, size_t size)
+readmbr(const struct up_disk *disk, int64_t start, int64_t size,
+        uint8_t *buf, size_t buflen)
 {
     ssize_t res;
 
-    assert(end >= start);
-    if(MBR_SIZE > end - start || MBR_SIZE > size)
+    if(start || MBR_SIZE > size || MBR_SIZE > buflen)
         return 0;
 
-    res = pread(fd, buf, MBR_SIZE, start);
+    res = pread(disk->upd_fd, buf, MBR_SIZE, start);
     if(0 > res)
     {
         fprintf(stderr, "failed to read MBR at offset %"PRIu64" of %s: %s\n",
-                (uint64_t)start, disk->upd_path, strerror(errno));
+                start, disk->upd_path, strerror(errno));
         return -1;
     }
     if(MBR_SIZE > res)
     {
         fprintf(stderr, "failed to read MBR at offset %"PRIu64" of %s: "
-                "short read count", (uint64_t)start, disk->upd_path);
+                "short read count", start, disk->upd_path);
         return -1;
     }
 
-    if(MBR_MAGIC != UP_GETBUF16LE((uint8_t *)buf + MBR_MAGIC_OFF))
+    if(MBR_MAGIC != UP_GETBUF16LE(buf + MBR_MAGIC_OFF))
         return 0;
 
     return 1;
@@ -134,36 +137,46 @@ readmbr(const struct up_disk *disk, int fd, off_t start, off_t end,
 
 static int
 parsembr(const struct up_disk *disk, struct up_mbr *mbr,
-         off_t start, off_t end, const void *_buf)
+         int64_t start, int64_t size, const uint8_t *buf, size_t buflen)
 {
-    const uint8_t *     buf = _buf;
     int                 ii;
+    int64_t             pstart, psize;
 
-    assert(end > start && end - start >= MBR_SIZE);
-    assert(MBR_MAGIC == UP_GETBUF16LE(buf + MBR_MAGIC_OFF));
-    mbr->upm_off = start;
+    assert(0 == start && size >= MBR_SIZE && MBR_SIZE == buflen &&
+           MBR_MAGIC == UP_GETBUF16LE(buf + MBR_MAGIC_OFF));
     memcpy(mbr->upm_buf, buf, MBR_SIZE);
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
-        parsembrpart(buf + MBR_MAP_OFF + (ii * MBR_PART_SIZE),
+    {
+        assert(MBR_MAP_OFF + (ii * MBR_PART_SIZE) + MBR_PART_SIZE <= MBR_SIZE);
+        parsembrpart(buf + MBR_MAP_OFF + (ii * MBR_PART_SIZE), MBR_PART_SIZE,
                      &mbr->upm_parts[ii]);
+        pstart = mbr->upm_parts[ii].upmp_start;
+        psize  = mbr->upm_parts[ii].upmp_size;
+/*
+        fprintf(stderr, "XXX valid %d %d %d ps=0x%x pz=0x%x ss=0x%x es=0x%x\n",
+                (start < pstart), (start + size > pstart),
+                (size - pstart >= psize),
+                partstart, partsize, startsec, endsec);
+*/
+        if(start < pstart && start + size > pstart &&
+           size - pstart >= psize)
+            mbr->upm_parts[ii].upmp_valid = 1;
+    }
 
-    /*
-      XXX should sanity check data here
-            upmp_start > start
-            upmp_start + upmp_size <= end
-            partition overlap
-    */
+    /* XXX should check for partition overlap */
 
     return 0;
 }
 
 static void
-parsembrpart(const uint8_t *buf, struct up_mbr_part *part)
+parsembrpart(const uint8_t *buf, size_t buflen, struct up_mbr_part *part)
 {
+    assert(MBR_PART_SIZE <= buflen);
     if(!buf[4])
         memset(part, 0, sizeof *part);
     else
     {
+        /* XXX should fill in lba info from chs if needed */
         part->upmp_flags     = buf[0];
         part->upmp_firsthead = buf[1];
         part->upmp_firstsect = MBR_GETSECT(buf + 2);
@@ -191,20 +204,26 @@ up_mbr_dump(void *_mbr, void *_stream)
     FILE *              stream = _stream;
     int                 ii;
     struct up_mbr_part *part;
+    char                splat;
 
-    fprintf(stream, "MBR at byte offset 0x%"PRIx64":\n"
-            " #  A    C   H  S    C   H  S      Start       Size ID Name\n",
-            (uint64_t)mbr->upm_off);
+    fprintf(stream, "MBR:\n"
+            "#        C   H  S    C   H  S      Start       Size ID Name\n");
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
     {
         part = &mbr->upm_parts[ii];
-        fprintf(stream, " %d: %c %4d/%3d/%2d-%4d/%3d/%2d %10d+%10d %02x %s\n",
-                ii, (MBR_FLAG_ACTIVE & part->upmp_flags ? 'y' : 'n'),
-                part->upmp_firstcyl, part->upmp_firsthead,
+        if(!part->upmp_valid)
+            splat = 'X';
+        else if(MBR_FLAG_ACTIVE & part->upmp_flags)
+            splat = '*';
+        else
+            splat = ' ';
+        /* XXX need to print something if partition is marked invalid */
+        fprintf(stream, "%d:  %c %4d/%3d/%2d-%4d/%3d/%2d %10d+%10d %02x %s\n",
+                ii, splat, part->upmp_firstcyl, part->upmp_firsthead,
                 part->upmp_firstsect, part->upmp_lastcyl, part->upmp_lasthead,
                 part->upmp_lastsect, part->upmp_start, part->upmp_size,
                 part->upmp_type, up_mbr_name(part->upmp_type));
     }
-    fprintf(stream, "Dump of sector 0x%"PRIx64":\n", (int64_t)mbr->upm_off);
-    up_hexdump(mbr->upm_buf, MBR_SIZE, mbr->upm_off, stream);
+    fprintf(stream, "Dump of MBR sector:\n");
+    up_hexdump(mbr->upm_buf, MBR_SIZE, 0, stream);
 }

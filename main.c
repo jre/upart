@@ -39,7 +39,7 @@ main(int argc, char *argv[])
            BESTDECIMAL(size), size, unit);
 
     puts("");
-    switch(up_mbr_testload(disk, disk->upd_fd, 0, disk->upd_size, &mbr))
+    switch(up_mbr_testload(disk, 0, disk->upd_size, &mbr))
     {
         case -1:
             return EXIT_FAILURE;

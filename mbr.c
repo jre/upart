@@ -305,14 +305,14 @@ up_mbr_free(void *mbr)
 }
 
 void
-up_mbr_dump(void *_mbr, void *_stream, int verbose)
+up_mbr_dump(const void *_mbr, void *_stream, const struct up_opts *opts)
 {
-    struct up_mbr *     mbr = _mbr;
-    FILE *              stream = _stream;
-    int                 ii, jj;
-    struct up_mbr_part *part;
-    struct up_mbr_ext * ext;
-    char                splat;
+    const struct up_mbr *       mbr = _mbr;
+    FILE *                      stream = _stream;
+    int                         ii, jj;
+    const struct up_mbr_part *  part;
+    struct up_mbr_ext *         ext;
+    char                        splat;
 
     fprintf(stream, "MBR:\n"
             "         C   H  S    C   H  S      Start       Size ID Name\n");
@@ -345,7 +345,7 @@ up_mbr_dump(void *_mbr, void *_stream, int verbose)
         part = &ext->upme_part;
     }
 
-    if(!verbose)
+    if(!opts->upo_verbose)
         return;
 
     fprintf(stream, "Dump of MBR sector:\n");

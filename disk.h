@@ -1,6 +1,8 @@
 #ifndef HDR_UPART_DISK
 #define HDR_UPART_DISK
 
+struct up_opts;
+
 struct up_disk
 {
     char   *upd_name;           /* disk name supplied by the user */
@@ -18,5 +20,8 @@ struct up_disk *up_disk_open(const char *path);
 
 /* Close disk */
 void up_disk_close(struct up_disk *disk);
+
+void up_disk_dump(const struct up_disk *disk, void *_stream,
+                  const struct up_opts *opt);
 
 #endif /* HDR_UPART_DISK */

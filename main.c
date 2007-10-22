@@ -6,24 +6,20 @@
 
 #include "disk.h"
 #include "mbr.h"
+#include "util.h"
 
-#define BESTDECIMAL(d)          (10.0 > (d) ? 2 : (100.0 > (d) ? 1 : 0))
-
-static char *readargs(int argc, char *argv[], int *verbose);
+static char *readargs(int argc, char *argv[], struct up_opts *opts);
 static void usage(const char *argv0);
-static float fmtsize(int64_t num, const char **units);
 
 int
 main(int argc, char *argv[])
 {
-    int                 verbose;
+    struct up_opts      opts;
     char *              name;
     struct up_disk *    disk;
-    const char *        unit;
-    float               size;
     void *              mbr;
 
-    name = readargs(argc, argv, &verbose);
+    name = readargs(argc, argv, &opts);
     if(NULL == name)
         return EXIT_FAILURE;
 
@@ -31,16 +27,7 @@ main(int argc, char *argv[])
     if(!disk)
         return EXIT_FAILURE;
 
-    size = fmtsize(disk->upd_size * (int64_t)disk->upd_sectsize, &unit);
-    printf("%s\n"
-           "  sector size: %d\n"
-           "  cylinders:   %d\n"
-           "  heads:       %d\n"
-           "  sectors:     %d\n"
-           "  size:        %.*f%s\n",
-           disk->upd_path, disk->upd_sectsize, (int)disk->upd_cyls,
-           (int)disk->upd_heads, (int)disk->upd_sects,
-           BESTDECIMAL(size), size, unit);
+    up_disk_dump(disk, stdout, &opts);
 
     puts("");
     switch(up_mbr_testload(disk, 0, disk->upd_size, &mbr))
@@ -51,7 +38,7 @@ main(int argc, char *argv[])
             printf("no MBR found on %s\n", disk->upd_path);
             break;
         case 1:
-            up_mbr_dump(mbr, stdout, verbose);
+            up_mbr_dump(mbr, stdout, &opts);
             break;
     }
 
@@ -62,17 +49,17 @@ main(int argc, char *argv[])
 }
 
 static char *
-readargs(int argc, char *argv[], int *verbose)
+readargs(int argc, char *argv[], struct up_opts *opts)
 {
     int opt;
 
-    *verbose = 0;
+    memset(opts, 0, sizeof *opts);
     while(0 < (opt = getopt(argc, argv, "hv")))
     {
         switch(opt)
         {
             case 'v':
-                *verbose = 1;
+                opts->upo_verbose = 1;
                 break;
             default:
                 usage(argv[0]);
@@ -98,21 +85,4 @@ usage(const char *argv0)
         name = argv0;
 
     printf("usage: %s [-v] device-path\n", name);
-}
-
-static float
-fmtsize(int64_t num, const char **units)
-{
-    static const char *sizes[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB"};
-    float  ret;
-    size_t ii;
-
-    ret = num;
-    for(ii = 0; sizeof(sizes) / sizeof(sizes[0]) > ii && 1000.0 < ret; ii++)
-        ret /= 1024.0;
-
-    if(NULL != units)
-        *units = sizes[ii];
-
-    return ret;
 }

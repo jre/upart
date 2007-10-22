@@ -36,6 +36,5 @@ AC_OUTPUT
 
 cat <<EOF
 
-Configuration complete. Now build with GNU make, which may be called
-'make' or 'gmake' depending on your system.
+Configuration complete, now type 'name' to build.
 EOF

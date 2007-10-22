@@ -115,4 +115,15 @@
 */
 void up_hexdump(const void *buf, size_t size, size_t dispoff, void *stream);
 
+/* Format NUM as a human readable size. UNITS should point to a const
+   char * to store the unit label in. Use the UP_BESTDECIMAL() macro
+   on the return value to get the best decimal precision when printing. */
+float up_fmtsize(int64_t num, const char **units);
+#define UP_BESTDECIMAL(d)       (10.0 > (d) ? 2 : (100.0 > (d) ? 1 : 0))
+
+struct up_opts
+{
+    unsigned int        upo_verbose  : 1;
+};
+
 #endif /* HDR_UPART_UTIL */

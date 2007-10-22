@@ -2,6 +2,7 @@
 #define HDR_UPART_MBR
 
 struct up_disk;
+struct up_opts;
 
 /* Test for an MBR. Return -1 for error, 0 for no MBR, 1 for MBR found */
 int up_mbr_test(const struct up_disk *disk, int64_t start, int64_t size);
@@ -19,7 +20,7 @@ int up_mbr_testload(const struct up_disk *disk, int64_t start, int64_t size,
 void up_mbr_free(void *mbr);
 
 /* dump private data to stream */
-void up_mbr_dump(void *mbr, void *stream, int verbose);
+void up_mbr_dump(const void *mbr, void *stream, const struct up_opts *opts);
 
 /* return the name for a partition ID */
 const char *up_mbr_name(uint8_t type);

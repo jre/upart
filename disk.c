@@ -21,6 +21,7 @@
 #endif
 
 #include "disk.h"
+#include "util.h"
 
 #if defined(HAVE_SYS_DISKLABEL_H) && \
     (defined(DIOCGPDINFO) || defined(DIOCGDINFO))
@@ -175,3 +176,23 @@ getparams_disklabel(int fd, struct up_disk *disk)
     return 0;
 }
 #endif /* GETPARAMS_DISKLABEL */
+
+void
+up_disk_dump(const struct up_disk *disk, void *_stream,
+             const struct up_opts *opt)
+{
+    FILE *              stream = stream;
+    const char *        unit;
+    float               size;
+
+    size = up_fmtsize(disk->upd_size * disk->upd_sectsize, &unit);
+    printf("%s\n"
+           "  sector size: %d\n"
+           "  cylinders:   %d\n"
+           "  heads:       %d\n"
+           "  sectors:     %d\n"
+           "  size:        %.*f%s\n",
+           disk->upd_path, disk->upd_sectsize, (int)disk->upd_cyls,
+           (int)disk->upd_heads, (int)disk->upd_sects,
+           UP_BESTDECIMAL(size), size, unit);
+}

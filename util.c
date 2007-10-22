@@ -67,3 +67,20 @@ up_hexdump(const void *_buf, size_t size, size_t dispoff, void *_stream)
 
     fprintf(stream, "%08zx\n", size + dispoff);
 }
+
+float
+up_fmtsize(int64_t num, const char **units)
+{
+    static const char *sizes[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB"};
+    float  ret;
+    size_t ii;
+
+    ret = num;
+    for(ii = 0; sizeof(sizes) / sizeof(sizes[0]) > ii && 1000.0 < ret; ii++)
+        ret /= 1024.0;
+
+    if(NULL != units)
+        *units = sizes[ii];
+
+    return ret;
+}

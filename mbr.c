@@ -74,6 +74,8 @@ static int parsembrext(const struct up_disk *disk, struct up_mbr_ext *ext,
                        size_t buflen, struct up_mbr_part *next);
 static void parsembrpart(const uint8_t *buf, size_t buflen, int64_t start,
                          int64_t size, struct up_mbr_part *part);
+static void printpart(const struct up_disk *disk,
+                      const struct up_mbr_part *part, int index, FILE *stream);
 
 int
 up_mbr_test(const struct up_disk *disk, int64_t start, int64_t size)
@@ -311,40 +313,20 @@ up_mbr_dump(const struct up_disk *disk, const void *_mbr, void *_stream,
     const struct up_mbr *       mbr = _mbr;
     FILE *                      stream = _stream;
     int                         ii, jj;
-    const struct up_mbr_part *  part;
     struct up_mbr_ext *         ext;
-    char                        splat;
 
-    fprintf(stream, "MBR partition table for %s:\n"
-            "         C   H  S    C   H  S      Start       Size ID Name\n",
-            disk->upd_name);
+    /* print header */
+    printpart(disk, NULL, 0, stream);
+
     jj = MBR_PART_COUNT;
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
     {
-        part = &mbr->upm_parts[ii];
-        if(!part->upmp_valid)
-            splat = 'X';
-        else if(MBR_FLAG_ACTIVE & part->upmp_flags)
-            splat = '*';
-        else
-            splat = ' ';
-        /* XXX need to print something if partition is marked invalid */
-        fprintf(stream, "%d:  %c %4d/%3d/%2d-%4d/%3d/%2d %10d+%10d %02x %s\n",
-                ii, splat, part->upmp_firstcyl, part->upmp_firsthead,
-                part->upmp_firstsect, part->upmp_lastcyl, part->upmp_lasthead,
-                part->upmp_lastsect, part->upmp_start, part->upmp_size,
-                part->upmp_type, up_mbr_name(part->upmp_type));
+        printpart(disk, &mbr->upm_parts[ii], ii, stream);
         SLIST_FOREACH(ext, &mbr->upm_ext[ii], upme_next)
         {
-        part = &ext->upme_part;
-        fprintf(stream, " %d: %c %4d/%3d/%2d-%4d/%3d/%2d %10d+%10d %02x %s\n",
-                jj, splat, part->upmp_firstcyl, part->upmp_firsthead,
-                part->upmp_firstsect, part->upmp_lastcyl, part->upmp_lasthead,
-                part->upmp_lastsect, part->upmp_start, part->upmp_size,
-                part->upmp_type, up_mbr_name(part->upmp_type));
-        jj++;
+            printpart(disk, &ext->upme_part, jj, stream);
+            jj++;
         }
-        part = &ext->upme_part;
     }
 
     if(!opts->upo_verbose)
@@ -366,4 +348,37 @@ up_mbr_dump(const struct up_disk *disk, const void *_mbr, void *_stream,
             jj++;
         }
     }
+}
+
+static void
+printpart(const struct up_disk *disk, const struct up_mbr_part *part,
+          int index, FILE *stream)
+{
+    char                splat;
+
+    if(!part)
+    {
+        fprintf(stream, "MBR partition table for %s:\n"
+                "IDX      C   H  S    C   H  S      Start       Size ID\n",
+                disk->upd_name);
+        return;
+    }
+
+    if(!part->upmp_valid)
+        splat = 'X';
+    else if(MBR_FLAG_ACTIVE & part->upmp_flags)
+        splat = '*';
+    else
+        splat = ' ';
+
+    if(MBR_PART_COUNT > index)
+        fprintf(stream, "%d:  ", index);
+    else
+        fprintf(stream, " %d: ", index);
+
+    fprintf(stream, "%c %4d/%3d/%2d-%4d/%3d/%2d %10d+%10d %02x %s\n",
+            splat, part->upmp_firstcyl, part->upmp_firsthead,
+            part->upmp_firstsect, part->upmp_lastcyl, part->upmp_lasthead,
+            part->upmp_lastsect, part->upmp_start, part->upmp_size,
+            part->upmp_type, up_mbr_name(part->upmp_type));
 }

@@ -9,21 +9,25 @@
 
 #define BESTDECIMAL(d)          (10.0 > (d) ? 2 : (100.0 > (d) ? 1 : 0))
 
+static char *readargs(int argc, char *argv[], int *verbose);
 static void usage(const char *argv0);
 static float fmtsize(int64_t num, const char **units);
 
 int
 main(int argc, char *argv[])
 {
+    int                 verbose;
+    char *              name;
     struct up_disk *    disk;
     const char *        unit;
     float               size;
     void *              mbr;
 
-    if(2 != argc)
-        usage(argv[0]);
+    name = readargs(argc, argv, &verbose);
+    if(NULL == name)
+        return EXIT_FAILURE;
 
-    disk = up_disk_open(argv[1]);
+    disk = up_disk_open(name);
     if(!disk)
         return EXIT_FAILURE;
 
@@ -47,7 +51,7 @@ main(int argc, char *argv[])
             printf("no MBR found on %s\n", disk->upd_path);
             break;
         case 1:
-            up_mbr_dump(mbr, stdout);
+            up_mbr_dump(mbr, stdout, verbose);
             break;
     }
 
@@ -55,6 +59,34 @@ main(int argc, char *argv[])
     up_disk_close(disk);
 
     return EXIT_SUCCESS;
+}
+
+static char *
+readargs(int argc, char *argv[], int *verbose)
+{
+    int opt;
+
+    *verbose = 0;
+    while(0 < (opt = getopt(argc, argv, "hv")))
+    {
+        switch(opt)
+        {
+            case 'v':
+                *verbose = 1;
+                break;
+            default:
+                usage(argv[0]);
+                return NULL;
+        }
+    }
+
+    if(optind + 1 == argc)
+        return argv[optind];
+    else
+    {
+        usage(argv[0]);
+        return NULL;
+    }
 }
 
 static void
@@ -65,9 +97,7 @@ usage(const char *argv0)
     if(!(name = strrchr(argv0, '/')) || !*(++name))
         name = argv0;
 
-    printf("usage: %s device-path\n", name);
-
-    exit(EXIT_FAILURE);
+    printf("usage: %s [-v] device-path\n", name);
 }
 
 static float

@@ -305,7 +305,7 @@ up_mbr_free(void *mbr)
 }
 
 void
-up_mbr_dump(void *_mbr, void *_stream)
+up_mbr_dump(void *_mbr, void *_stream, int verbose)
 {
     struct up_mbr *     mbr = _mbr;
     FILE *              stream = _stream;
@@ -344,6 +344,9 @@ up_mbr_dump(void *_mbr, void *_stream)
         }
         part = &ext->upme_part;
     }
+
+    if(!verbose)
+        return;
 
     fprintf(stream, "Dump of MBR sector:\n");
     up_hexdump(mbr->upm_buf, MBR_SIZE, 0, stream);

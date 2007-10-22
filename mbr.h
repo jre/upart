@@ -19,7 +19,7 @@ int up_mbr_testload(const struct up_disk *disk, int64_t start, int64_t size,
 void up_mbr_free(void *mbr);
 
 /* dump private data to stream */
-void up_mbr_dump(void *mbr, void *stream);
+void up_mbr_dump(void *mbr, void *stream, int verbose);
 
 /* return the name for a partition ID */
 const char *up_mbr_name(uint8_t type);

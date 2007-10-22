@@ -2,11 +2,9 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "bsdqueue.h"
 #include "disk.h"
@@ -62,10 +60,10 @@ struct up_mbr
     SLIST_HEAD(up_mbr_chain, up_mbr_ext) upm_ext[MBR_PART_COUNT];
 };
 
-static int mbr_loadext(const struct up_disk *disk, uint8_t *buf, size_t buflen,
-                       struct up_mbr_part *part, struct up_mbr_chain *chain);
-static int readmbr(const struct up_disk *disk, int64_t start, int64_t size,
-                   uint8_t *buf, size_t buflen);
+static int mbr_loadext(struct up_disk *disk, struct up_mbr_part *part,
+                       struct up_mbr_chain *chain);
+static int readmbr(struct up_disk *disk, int64_t start, int64_t size,
+                   const uint8_t **buf);
 static int parsembr(const struct up_disk *disk, struct up_mbr *mbr,
                     int64_t start, int64_t size,
                     const uint8_t *buf, size_t buflen);
@@ -78,15 +76,13 @@ static void printpart(FILE *stream, const struct up_disk *disk,
                       const struct up_mbr_part *part, int index, int verbose);
 
 int
-up_mbr_test(const struct up_disk *disk, int64_t start, int64_t size)
+up_mbr_test(struct up_disk *disk, int64_t start, int64_t size)
 {
-    uint8_t             buf[MBR_SIZE];
-
-    return readmbr(disk, start, size, buf, sizeof buf);
+    return readmbr(disk, start, size, NULL);
 }
 
 void *
-up_mbr_load(const struct up_disk *disk, int64_t start, int64_t size)
+up_mbr_load(struct up_disk *disk, int64_t start, int64_t size)
 {
     void *              mbr;
 
@@ -95,10 +91,9 @@ up_mbr_load(const struct up_disk *disk, int64_t start, int64_t size)
 }
 
 int
-up_mbr_testload(const struct up_disk *disk, int64_t start, int64_t size,
-                void **map)
+up_mbr_testload(struct up_disk *disk, int64_t start, int64_t size, void **map)
 {
-    uint8_t             buf[MBR_SIZE];
+    const uint8_t *     buf;
     int                 res, ii;
     struct up_mbr *     mbr;
 
@@ -106,7 +101,7 @@ up_mbr_testload(const struct up_disk *disk, int64_t start, int64_t size,
     *map = NULL;
     if(start)
         return 0;
-    res = readmbr(disk, start, size, buf, sizeof buf);
+    res = readmbr(disk, start, size, &buf);
     if(0 >= res)
         return res;
 
@@ -119,7 +114,7 @@ up_mbr_testload(const struct up_disk *disk, int64_t start, int64_t size,
     }
 
     /* parse MBR */
-    if(0 > parsembr(disk, mbr, start, size, buf, sizeof buf))
+    if(0 > parsembr(disk, mbr, start, size, buf, disk->upd_sectsize))
     {
         free(mbr);
         return 0;
@@ -130,8 +125,7 @@ up_mbr_testload(const struct up_disk *disk, int64_t start, int64_t size,
     {
         if(MBR_EXT_ID == mbr->upm_parts[ii].upmp_type &&
            mbr->upm_parts[ii].upmp_valid &&
-           0 > mbr_loadext(disk, buf, sizeof buf, &mbr->upm_parts[ii],
-                           &mbr->upm_ext[ii]))
+           0 > mbr_loadext(disk, &mbr->upm_parts[ii], &mbr->upm_ext[ii]))
         {
             up_mbr_free(mbr);
             return -1;
@@ -143,9 +137,10 @@ up_mbr_testload(const struct up_disk *disk, int64_t start, int64_t size,
 }
 
 static int
-mbr_loadext(const struct up_disk *disk, uint8_t *buf, size_t buflen,
-            struct up_mbr_part *part, struct up_mbr_chain *chain)
+mbr_loadext(struct up_disk *disk, struct up_mbr_part *part,
+            struct up_mbr_chain *chain)
 {
+    const uint8_t *     buf;
     int                 res;
     struct up_mbr_ext * ext, * last;
     struct up_mbr_part  next;
@@ -160,7 +155,7 @@ mbr_loadext(const struct up_disk *disk, uint8_t *buf, size_t buflen,
     while(MBR_EXT_ID == next.upmp_type && next.upmp_valid)
     {
         res = readmbr(disk, part->upmp_start + next.upmp_start,
-                      next.upmp_size, buf, buflen);
+                      next.upmp_size, &buf);
         if(0 >= res)
             return res;
 
@@ -172,7 +167,7 @@ mbr_loadext(const struct up_disk *disk, uint8_t *buf, size_t buflen,
         }
 
         if(0 > parsembrext(disk, ext, part->upmp_start, part->upmp_size,
-                           buf, buflen, &next))
+                           buf, disk->upd_sectsize, &next))
         {
             free(ext);
             return 0;
@@ -189,30 +184,26 @@ mbr_loadext(const struct up_disk *disk, uint8_t *buf, size_t buflen,
 }
 
 static int
-readmbr(const struct up_disk *disk, int64_t start, int64_t size,
-        uint8_t *buf, size_t buflen)
+readmbr(struct up_disk *disk, int64_t start, int64_t size,
+        const uint8_t **buf)
 {
-    ssize_t res;
+    const uint8_t *     ret;
 
-    if(MBR_SIZE > size * disk->upd_sectsize || MBR_SIZE > buflen)
+    if(buf)
+        *buf = NULL;
+
+    if(MBR_SIZE > size * disk->upd_sectsize || MBR_SIZE > disk->upd_sectsize)
         return 0;
 
-    res = pread(disk->upd_fd, buf, MBR_SIZE, start * disk->upd_sectsize);
-    if(0 > res)
-    {
-        fprintf(stderr, "failed to read MBR at sector %"PRIu64" on %s: %s\n",
-                start, disk->upd_path, strerror(errno));
+    ret = up_disk_getsect(disk, start);
+    if(!ret)
         return -1;
-    }
-    if(MBR_SIZE > res)
-    {
-        fprintf(stderr, "failed to read MBR at sector %"PRIu64" on %s: "
-                "short read count", start, disk->upd_path);
-        return -1;
-    }
 
-    if(MBR_MAGIC != UP_GETBUF16LE(buf + MBR_MAGIC_OFF))
+    if(MBR_MAGIC != UP_GETBUF16LE(ret + MBR_MAGIC_OFF))
         return 0;
+
+    if(buf)
+        *buf = ret;
 
     return 1;
 }

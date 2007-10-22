@@ -10,6 +10,7 @@
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -91,11 +92,58 @@ up_disk_open(const char *name)
         goto fail;
     }
 
+    disk->upd_buf = malloc(disk->upd_sectsize);
+    if(!disk->upd_buf)
+    {
+        perror("malloc");
+        goto fail;
+    }
+
     return disk;
 
   fail:
     up_disk_close(disk);
     return NULL;
+}
+
+int64_t
+up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
+             void *buf, size_t bufsize)
+{
+    ssize_t res;
+
+    /* validate and fixup arguments */
+    assert(0 < bufsize && 0 < size && 0 <= start);
+    bufsize -= bufsize % disk->upd_sectsize;
+    if(bufsize / disk->upd_sectsize < size)
+        size = bufsize / disk->upd_sectsize;
+    if(0 == bufsize || 0 == size)
+        return 0;
+    if(INT64_MAX / disk->upd_sectsize < start)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    res = pread(disk->upd_fd, buf, size * disk->upd_sectsize,
+                start * disk->upd_sectsize);
+    if(0 > res)
+    {
+        fprintf(stderr, "failed to read %s sector %"PRIu64": %s\n",
+                disk->upd_path, start, strerror(errno));
+        return -1;
+    }
+
+    return res / disk->upd_sectsize;
+}
+
+const void *
+up_disk_getsect(struct up_disk *disk, int64_t sect)
+{
+    if(1 > up_disk_read(disk, sect, 1, disk->upd_buf, disk->upd_sectsize))
+        return NULL;
+    else
+        return disk->upd_buf;
 }
 
 void
@@ -105,6 +153,8 @@ up_disk_close(struct up_disk *disk)
         return;
     if(0 <= disk->upd_fd)
         close(disk->upd_fd);
+    if(disk->upd_buf)
+        free(disk->upd_buf);
     if(disk->upd_name)
         free(disk->upd_name);
     if(disk->upd_path && disk->upd_path != disk->upd_name)

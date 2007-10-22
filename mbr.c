@@ -74,8 +74,8 @@ static int parsembrext(const struct up_disk *disk, struct up_mbr_ext *ext,
                        size_t buflen, struct up_mbr_part *next);
 static void parsembrpart(const uint8_t *buf, size_t buflen, int64_t start,
                          int64_t size, struct up_mbr_part *part);
-static void printpart(const struct up_disk *disk,
-                      const struct up_mbr_part *part, int index, FILE *stream);
+static void printpart(FILE *stream, const struct up_disk *disk,
+                      const struct up_mbr_part *part, int index, int verbose);
 
 int
 up_mbr_test(const struct up_disk *disk, int64_t start, int64_t size)
@@ -316,15 +316,15 @@ up_mbr_dump(const struct up_disk *disk, const void *_mbr, void *_stream,
     struct up_mbr_ext *         ext;
 
     /* print header */
-    printpart(disk, NULL, 0, stream);
+    printpart(stream, disk, NULL, 0, opts->upo_verbose);
 
     jj = MBR_PART_COUNT;
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
     {
-        printpart(disk, &mbr->upm_parts[ii], ii, stream);
+        printpart(stream, disk, &mbr->upm_parts[ii], ii, opts->upo_verbose);
         SLIST_FOREACH(ext, &mbr->upm_ext[ii], upme_next)
         {
-            printpart(disk, &ext->upme_part, jj, stream);
+            printpart(stream, disk, &ext->upme_part, jj, opts->upo_verbose);
             jj++;
         }
     }
@@ -351,16 +351,21 @@ up_mbr_dump(const struct up_disk *disk, const void *_mbr, void *_stream,
 }
 
 static void
-printpart(const struct up_disk *disk, const struct up_mbr_part *part,
-          int index, FILE *stream)
+printpart(FILE *stream, const struct up_disk *disk,
+          const struct up_mbr_part *part, int index, int verbose)
 {
     char                splat;
 
     if(!part)
     {
-        fprintf(stream, "MBR partition table for %s:\n"
-                "IDX      C   H  S    C   H  S      Start       Size ID\n",
-                disk->upd_name);
+        if(verbose)
+            fprintf(stream, "MBR partition table for %s:\n"
+                    "IDX      C   H  S    C   H  S      Start       Size ID\n",
+                    disk->upd_name);
+        else
+            fprintf(stream, "MBR partition table for %s:\n"
+                    "IDX        Start       Size ID\n",
+                    disk->upd_name);
         return;
     }
 
@@ -376,9 +381,14 @@ printpart(const struct up_disk *disk, const struct up_mbr_part *part,
     else
         fprintf(stream, " %d: ", index);
 
-    fprintf(stream, "%c %4d/%3d/%2d-%4d/%3d/%2d %10d+%10d %02x %s\n",
-            splat, part->upmp_firstcyl, part->upmp_firsthead,
-            part->upmp_firstsect, part->upmp_lastcyl, part->upmp_lasthead,
-            part->upmp_lastsect, part->upmp_start, part->upmp_size,
-            part->upmp_type, up_mbr_name(part->upmp_type));
+    if(verbose)
+        fprintf(stream, "%c %4d/%3d/%2d-%4d/%3d/%2d %10d %10d %02x %s\n",
+                splat, part->upmp_firstcyl, part->upmp_firsthead,
+                part->upmp_firstsect, part->upmp_lastcyl, part->upmp_lasthead,
+                part->upmp_lastsect, part->upmp_start, part->upmp_size,
+                part->upmp_type, up_mbr_name(part->upmp_type));
+    else
+        fprintf(stream, "%c %10d %10d %02x %s\n",
+                splat, part->upmp_start, part->upmp_size,
+                part->upmp_type, up_mbr_name(part->upmp_type));
 }

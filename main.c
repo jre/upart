@@ -10,7 +10,7 @@
 #include "util.h"
 
 static int getlabel(struct up_disk *disk, int64_t start, int64_t size,
-                    void *arg);
+                    const char *label, void *arg);
 static char *readargs(int argc, char *argv[], struct up_opts *opts);
 static void usage(const char *argv0);
 
@@ -32,7 +32,7 @@ main(int argc, char *argv[])
 
     up_disk_dump(disk, stdout, &opts);
 
-    getlabel(disk, 0, disk->upd_size, &opts);
+    getlabel(disk, 0, disk->upd_size, NULL, &opts);
 
     switch(up_mbr_testload(disk, 0, disk->upd_size, &mbr))
     {
@@ -55,17 +55,18 @@ main(int argc, char *argv[])
 }
 
 static int
-getlabel(struct up_disk *disk, int64_t start, int64_t size, void *arg)
+getlabel(struct up_disk *disk, int64_t start, int64_t size,
+         const char *label, void *arg)
 {
-    void               *label;
+    void               *disklabel;
     int                 res;
 
-    res = up_disklabel_testload(disk, start, size, &label);
+    res = up_disklabel_testload(disk, start, size, &disklabel);
     if(0 < res)
     {
         fputc('\n', stdout);
-        up_disklabel_dump(disk, label, stdout, arg);
-        up_disklabel_free(label);
+        up_disklabel_dump(disk, disklabel, stdout, arg, label);
+        up_disklabel_free(disklabel);
     }
 
     return res;    

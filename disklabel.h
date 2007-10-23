@@ -21,6 +21,7 @@ void up_disklabel_free(void *label);
 
 /* dump private data to stream */
 void up_disklabel_dump(const struct up_disk *disk, const void *label,
-                       void *stream, const struct up_opts *opt);
+                       void *stream, const struct up_opts *opt,
+                       const char *parent);
 
 #endif /* HDR_UPART_DISKLABEL */

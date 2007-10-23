@@ -404,21 +404,24 @@ printpart(FILE *stream, const struct up_disk *disk,
 
 int
 up_mbr_iter(struct up_disk *disk, const void *_mbr,
-            int (*func)(struct up_disk *, int64_t, int64_t, void *),
+            int (*func)(struct up_disk *, int64_t, int64_t, const char *, void *),
             void *arg)
 {
     const struct up_mbr        *mbr = _mbr;
-    int                         ii, res, max;
+    int                         ii, jj, res, max;
     struct up_mbr_ext          *ext;
     const struct up_mbr_part   *part;
+    char                        label[32];
 
     max = 0;
+    jj  = MBR_PART_COUNT;
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
     {
         part = &mbr->upm_parts[ii];
         if(part->upmp_valid)
         {
-            res = func(disk, part->upmp_start, part->upmp_size, arg);
+            snprintf(label, sizeof label, "MBR partition %d", ii + 1);
+            res = func(disk, part->upmp_start, part->upmp_size, label, arg);
             if(0 > res)
                 return res;
             if(res > max)
@@ -429,7 +432,8 @@ up_mbr_iter(struct up_disk *disk, const void *_mbr,
             part = &ext->upme_part;
             if(part->upmp_valid)
             {
-                res = func(disk, part->upmp_start, part->upmp_size, arg);
+                snprintf(label, sizeof label, "MBR partition %d", jj + 1);
+                res = func(disk, part->upmp_start, part->upmp_size, label, arg);
                 if(0 > res)
                     return res;
                 if(res > max)

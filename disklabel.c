@@ -497,7 +497,7 @@ up_disklabel_free(void *_label)
 
 void
 up_disklabel_dump(const struct up_disk *disk, const void *_label,
-                  void *_stream, const struct up_opts *opt)
+                  void *_stream, const struct up_opts *opt, const char *parent)
 {
     const struct up_label      *label   = _label;
     FILE                       *stream  = _stream;
@@ -506,9 +506,15 @@ up_disklabel_dump(const struct up_disk *disk, const void *_label,
     uint32_t                    fsize, frag;
     uint8_t                     fragblock;
 
-    fprintf(stream, "Disklabel on %s at sector %"PRId64"+%d offset %d "
-            "with %d partition maximum:\n", disk->upd_name, label->upl_base,
-            label->upl_sectoff, label->upl_byteoff, label->upl_npartitions);
+    if(parent)
+        fprintf(stream, "Disklabel in %s at offset %d with %d partition "
+                "maximum:\n", parent, label->upl_byteoff,
+                label->upl_npartitions);
+    else
+        fprintf(stream, "Disklabel on %s at sector %"PRId64"+%d offset %d "
+                "with %d partition maximum:\n", disk->upd_name,
+                label->upl_base, label->upl_sectoff, label->upl_byteoff,
+                label->upl_npartitions);
     if(opt->upo_verbose)
     {
         if(label->upl_type < sizeof(up_disktypes) / sizeof(up_disktypes[0]))

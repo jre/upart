@@ -212,7 +212,7 @@ getparams_disklabel(int fd, struct up_disk *disk)
 #endif
     {
         if(errno)
-            fprintf(stderr, "failed to read disklabel for %s: %s",
+            fprintf(stderr, "failed to read disklabel for %s: %s\n",
                     disk->upd_path, strerror(errno));
         return -1;
     }
@@ -221,7 +221,11 @@ getparams_disklabel(int fd, struct up_disk *disk)
     disk->upd_cyls     = dl.d_ncylinders;
     disk->upd_heads    = dl.d_ntracks;
     disk->upd_sects    = dl.d_nsectors;
+#ifdef DL_GETDSIZE
+    disk->upd_size     = DL_GETDSIZE(&dl);
+#else
     disk->upd_size     = dl.d_secperunit;
+#endif
 
     return 0;
 }

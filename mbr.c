@@ -290,11 +290,25 @@ parsembrpart(const uint8_t *buf, size_t buflen, int64_t start, int64_t size,
 }
 
 void
-up_mbr_free(void *mbr)
+up_mbr_free(void *_mbr)
 {
-    /* XXX free ext */
-    if(mbr)
-        free(mbr);
+    struct up_mbr *     mbr = _mbr;
+    struct up_mbr_ext * ext;
+    int                 ii;
+
+    if(!mbr)
+        return;
+
+    for(ii = 0; MBR_PART_COUNT > ii; ii++)
+    {
+        while((ext = SLIST_FIRST(&mbr->upm_ext[ii])))
+        {
+            SLIST_REMOVE_HEAD(&mbr->upm_ext[ii], upme_next);
+            free(ext);
+        }
+    }
+
+    free(mbr);
 }
 
 void

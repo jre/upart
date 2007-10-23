@@ -41,6 +41,7 @@ main(int argc, char *argv[])
         case 0:
             break;
         case 1:
+            fputc('\n', stdout);
             up_mbr_dump(disk, mbr, stdout, &opts);
             /* XXX need generic pertition framework for iteration */
             up_mbr_iter(disk, mbr, getlabel, &opts);
@@ -62,6 +63,7 @@ getlabel(struct up_disk *disk, int64_t start, int64_t size, void *arg)
     res = up_disklabel_testload(disk, start, size, &label);
     if(0 < res)
     {
+        fputc('\n', stdout);
         up_disklabel_dump(disk, label, stdout, arg);
         up_disklabel_free(label);
     }

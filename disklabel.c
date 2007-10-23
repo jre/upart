@@ -533,7 +533,10 @@ up_disklabel_dump(const struct up_disk *disk, const void *_label,
         fprintf(stream, "  drive data:");
         for(jj = 0; LABEL_COUNT_DRIVEDATA > jj; jj++)
             fprintf(stream, " %d", label->upl_drivedata[jj]);
-        fputs("\n\n", stream);
+        fputc('\n', stream);
+        fprintf(stream, "  disklabel byte order: %s\n",
+                (label->upl_bigendian ? "big endian" : "little endian"));
+        fputc('\n', stream);
         fprintf(stream, "      %10s %10s %7s %5s %5s %5s\n",
                 "size", "offset", "fstype", "fsize", "bsize", "cpg");
     }

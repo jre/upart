@@ -18,7 +18,8 @@
 #define MBR_PART_SIZE           (0x10)
 #define MBR_PART_COUNT          (4)
 #define MBR_FLAG_ACTIVE         (0x80)
-#define MBR_EXT_ID              (0x05) 
+#define MBR_EXT_ID              (0x05)
+#define MBR_UNUSED_ID           (0x00)
 #define MBR_EXT_PART_OFF        (MBR_MAP_OFF)
 #define MBR_EXT_NEXT_OFF        (MBR_MAP_OFF + MBR_PART_SIZE)
 
@@ -116,7 +117,7 @@ up_mbr_testload(struct up_disk *disk, int64_t start, int64_t size, void **map)
     /* parse MBR */
     if(0 > parsembr(disk, mbr, start, size, buf, disk->upd_sectsize))
     {
-        free(mbr);
+        up_mbr_free(mbr);
         return 0;
     }
 
@@ -365,14 +366,17 @@ printpart(FILE *stream, const struct up_disk *disk,
     {
         if(verbose)
             fprintf(stream, "MBR partition table for %s:\n"
-                    "IDX      C   H  S    C   H  S      Start       Size ID\n",
+                    "         C   H  S    C   H  S      Start       Size ID\n",
                     disk->upd_name);
         else
             fprintf(stream, "MBR partition table for %s:\n"
-                    "IDX        Start       Size ID\n",
+                    "           Start       Size ID\n",
                     disk->upd_name);
         return;
     }
+
+    if(MBR_UNUSED_ID == part->upmp_type && !verbose)
+        return;
 
     if(!part->upmp_valid)
         splat = 'X';
@@ -382,9 +386,9 @@ printpart(FILE *stream, const struct up_disk *disk,
         splat = ' ';
 
     if(MBR_PART_COUNT > index)
-        fprintf(stream, "%d:  ", index);
+        fprintf(stream, "%d:  ", index + 1);
     else
-        fprintf(stream, " %d: ", index);
+        fprintf(stream, " %d: ", index + 1);
 
     if(verbose)
         fprintf(stream, "%c %4d/%3d/%2d-%4d/%3d/%2d %10d %10d %02x %s\n",

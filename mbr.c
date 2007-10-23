@@ -401,3 +401,42 @@ printpart(FILE *stream, const struct up_disk *disk,
                 splat, part->upmp_start, part->upmp_size,
                 part->upmp_type, up_mbr_name(part->upmp_type));
 }
+
+int
+up_mbr_iter(struct up_disk *disk, const void *_mbr,
+            int (*func)(struct up_disk *, int64_t, int64_t, void *),
+            void *arg)
+{
+    const struct up_mbr        *mbr = _mbr;
+    int                         ii, res, max;
+    struct up_mbr_ext          *ext;
+    const struct up_mbr_part   *part;
+
+    max = 0;
+    for(ii = 0; MBR_PART_COUNT > ii; ii++)
+    {
+        part = &mbr->upm_parts[ii];
+        if(part->upmp_valid)
+        {
+            res = func(disk, part->upmp_start, part->upmp_size, arg);
+            if(0 > res)
+                return res;
+            if(res > max)
+                max = res;
+        }
+        SLIST_FOREACH(ext, &mbr->upm_ext[ii], upme_next)
+        {
+            part = &ext->upme_part;
+            if(part->upmp_valid)
+            {
+                res = func(disk, part->upmp_start, part->upmp_size, arg);
+                if(0 > res)
+                    return res;
+                if(res > max)
+                    max = res;
+            }
+        }
+    }
+
+    return max;
+}

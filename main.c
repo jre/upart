@@ -5,9 +5,12 @@
 #include <string.h>
 
 #include "disk.h"
+#include "disklabel.h"
 #include "mbr.h"
 #include "util.h"
 
+static int getlabel(struct up_disk *disk, int64_t start, int64_t size,
+                    void *arg);
 static char *readargs(int argc, char *argv[], struct up_opts *opts);
 static void usage(const char *argv0);
 
@@ -15,9 +18,9 @@ int
 main(int argc, char *argv[])
 {
     struct up_opts      opts;
-    char *              name;
-    struct up_disk *    disk;
-    void *              mbr;
+    char               *name;
+    struct up_disk     *disk;
+    void               *mbr;
 
     name = readargs(argc, argv, &opts);
     if(NULL == name)
@@ -29,22 +32,41 @@ main(int argc, char *argv[])
 
     up_disk_dump(disk, stdout, &opts);
 
+    getlabel(disk, 0, disk->upd_size, &opts);
+
     switch(up_mbr_testload(disk, 0, disk->upd_size, &mbr))
     {
         case -1:
             return EXIT_FAILURE;
         case 0:
-            printf("no MBR found on %s\n", disk->upd_path);
             break;
         case 1:
             up_mbr_dump(disk, mbr, stdout, &opts);
+            /* XXX need generic pertition framework for iteration */
+            up_mbr_iter(disk, mbr, getlabel, &opts);
+            up_mbr_free(mbr);
             break;
     }
 
-    up_mbr_free(mbr);
     up_disk_close(disk);
 
     return EXIT_SUCCESS;
+}
+
+static int
+getlabel(struct up_disk *disk, int64_t start, int64_t size, void *arg)
+{
+    void               *label;
+    int                 res;
+
+    res = up_disklabel_testload(disk, start, size, &label);
+    if(0 < res)
+    {
+        up_disklabel_dump(disk, label, stdout, arg);
+        up_disklabel_free(label);
+    }
+
+    return res;    
 }
 
 static char *

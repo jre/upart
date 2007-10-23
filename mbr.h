@@ -26,4 +26,8 @@ void up_mbr_dump(const struct up_disk *disk, const void *mbr, void *stream,
 /* return the name for a partition ID */
 const char *up_mbr_name(uint8_t type);
 
+int up_mbr_iter(struct up_disk *disk, const void *mbr,
+                int (*func)(struct up_disk *, int64_t, int64_t, void *),
+                void *arg);
+
 #endif /* HDR_UPART_MBR */

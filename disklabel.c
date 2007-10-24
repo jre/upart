@@ -486,15 +486,6 @@ up_disklabel_free(void *_label)
     free(label);
 }
 
-#define DISKLABELV1_FFS_FRAGBLOCK(fsize, frag) 			\
-	((fsize) * (frag) == 0 ? 0 :				\
-	(((ffs((fsize) * (frag)) - 13) << 3) | (ffs(frag))))
-
-#define DISKLABELV1_FFS_BSIZE(i) ((i) == 0 ? 0 : (1 << (((i) >> 3) + 12)))
-#define DISKLABELV1_FFS_FRAG(i) ((i) == 0 ? 0 : (1 << (((i) & 0x07) - 1)))
-#define DISKLABELV1_FFS_FSIZE(i) (DISKLABELV1_FFS_FRAG(i) == 0 ? 0 : \
-	(DISKLABELV1_FFS_BSIZE(i) / DISKLABELV1_FFS_FRAG(i)))
-
 void
 up_disklabel_dump(const struct up_disk *disk, const void *_label,
                   void *_stream, const struct up_opts *opt, const char *parent)
@@ -503,18 +494,18 @@ up_disklabel_dump(const struct up_disk *disk, const void *_label,
     FILE                       *stream  = _stream;
     int                         ii, jj;
     struct up_labelpart *       part;
-    uint32_t                    fsize, frag;
-    uint8_t                     fragblock;
 
+    /* print disklabel position */
     if(parent)
-        fprintf(stream, "Disklabel in %s at offset %d with %d partition "
-                "maximum:\n", parent, label->upl_byteoff,
-                label->upl_npartitions);
+        fprintf(stream, "Disklabel in %s (%d partitions):\n",
+                parent, label->upl_npartitions);
     else
         fprintf(stream, "Disklabel on %s at sector %"PRId64"+%d offset %d "
                 "with %d partition maximum:\n", disk->upd_name,
                 label->upl_base, label->upl_sectoff, label->upl_byteoff,
                 label->upl_npartitions);
+
+    /* print verbose info */
     if(opt->upo_verbose)
     {
         if(label->upl_type < sizeof(up_disktypes) / sizeof(up_disktypes[0]))
@@ -543,28 +534,30 @@ up_disklabel_dump(const struct up_disk *disk, const void *_label,
         fprintf(stream, "  disklabel byte order: %s\n",
                 (label->upl_bigendian ? "big endian" : "little endian"));
         fputc('\n', stream);
-        fprintf(stream, "      %10s %10s %7s %5s %5s %5s\n",
-                "size", "offset", "fstype", "fsize", "bsize", "cpg");
     }
+
+    /* print partition header */
+    if(opt->upo_verbose)
+        fprintf(stream, "      %10s %10s %-7s %5s %5s %5s\n",
+                "Start", "Size", "Type", "fsize", "bsize", "cpg");
     else
-        fprintf(stream, "      %10s %10s %7s\n", "size", "offset", "fstype");
+        fprintf(stream, "      %10s %10s %-7s\n", "Start", "Size", "Type");
+
+    /* print partitions */
     for(ii = 0; label->upl_npartitions > ii; ii++)
     {
         part = &label->upl_partitions[ii];
-        fragblock = DISKLABELV1_FFS_FRAGBLOCK(part->uplp_fsize, part->uplp_frag);
-        frag = DISKLABELV1_FFS_FRAG(fragblock);
-        fsize = DISKLABELV1_FFS_FSIZE(fragblock);
         /* skip zero-length partitions unless verbose */
         if(!opt->upo_verbose && 0 == part->uplp_size)
             continue;
         /* print partition letter, size, and offset */
         fprintf(stream, " %c:   %10u %10u",
-                'a' + ii, part->uplp_size, part->uplp_offset);
+                'a' + ii, part->uplp_offset, part->uplp_size);
         /* print filesystem type name or number */
         if(part->uplp_fstype < sizeof(up_fstypes) / sizeof(up_fstypes[0]))
-            fprintf(stream, " %7s", up_fstypes[part->uplp_fstype]);
+            fprintf(stream, " %-7s", up_fstypes[part->uplp_fstype]);
         else
-            fprintf(stream, " %7u", part->uplp_fstype);
+            fprintf(stream, " %-7u", part->uplp_fstype);
         /* print filesystem-specific extra data */
         if(opt->upo_verbose)
         {
@@ -578,6 +571,7 @@ up_disklabel_dump(const struct up_disk *disk, const void *_label,
         fputc('\n', stream);
     }
 
+    /* dump raw disklabel */
     if(opt->upo_verbose)
     {
         fprintf(stream, "\nDump of %s disklabel at sector %"PRId64

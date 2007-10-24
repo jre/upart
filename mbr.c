@@ -438,6 +438,7 @@ up_mbr_iter(struct up_disk *disk, const void *_mbr,
                     return res;
                 if(res > max)
                     max = res;
+                jj++;
             }
         }
     }

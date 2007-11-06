@@ -6,6 +6,7 @@
 
 #include "disk.h"
 #include "disklabel.h"
+#include "map.h"
 #include "mbr.h"
 #include "util.h"
 
@@ -20,7 +21,7 @@ main(int argc, char *argv[])
     struct up_opts      opts;
     char               *name;
     struct up_disk     *disk;
-    void               *mbr;
+    struct up_map     *mbr;
 
     if(0 > up_getendian())
         return EXIT_FAILURE;
@@ -48,7 +49,7 @@ main(int argc, char *argv[])
             up_mbr_dump(disk, mbr, stdout, &opts);
             /* XXX need generic pertition framework for iteration */
             up_mbr_iter(disk, mbr, getlabel, &opts);
-            up_mbr_free(mbr);
+            up_map_free(mbr);
             break;
     }
 

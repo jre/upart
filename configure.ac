@@ -5,7 +5,7 @@ AC_CONFIG_FILES([common.mk])
 
 if test -z "$CFLAGS"
 then
-    CFLAGS="-g -Wall -Werror"
+    CFLAGS="-g -Wall -Werror -O"
 fi
 
 dnl ugh, we should test if _GNU_SOURCE is needed instead of using it everywhere

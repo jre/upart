@@ -8,7 +8,6 @@
 
 #include "disk.h"
 #include "disklabel.h"
-#include "mbr.h"
 #include "util.h"
 
 /*
@@ -191,7 +190,7 @@ up_disklabel_load(struct up_disk *disk, int64_t start, int64_t size)
 {
     void               *mbr;
 
-    up_mbr_testload(disk, start, size, &mbr);
+    up_disklabel_testload(disk, start, size, &mbr);
     return mbr;
 }
 

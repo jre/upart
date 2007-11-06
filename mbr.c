@@ -328,31 +328,3 @@ printpart(FILE *stream, const struct up_disk *disk,
         fprintf(stream, "%c %10"PRId64" %10"PRId64" %02x %s\n",
                 splat, part->start, part->size, part->type, part->label);
 }
-
-int
-up_mbr_iter(struct up_disk *disk, const struct up_map *map,
-            int (*func)(struct up_disk*, int64_t, int64_t, const char*, void*),
-            void *arg)
-{
-    int                         res, max;
-    const struct up_part       *ii;
-    const struct up_mbrpart    *priv;
-    char                        label[32];
-
-    max = 0;
-    for(ii = up_map_first(map); ii; ii = up_map_next(ii))
-    {
-        priv = ii->priv;
-        if(!UP_PART_IS_BAD(ii->flags))
-        {
-            snprintf(label, sizeof label, "MBR partition %d", priv->index + 1);
-            res = func(disk, ii->start, ii->size, label, arg);
-            if(0 > res)
-                return res;
-            if(res > max)
-                max = res;
-        }
-    }
-
-    return max;
-}

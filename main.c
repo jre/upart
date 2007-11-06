@@ -10,18 +10,18 @@
 #include "mbr.h"
 #include "util.h"
 
-static int getlabel(struct up_disk *disk, int64_t start, int64_t size,
-                    const char *label, void *arg);
+static int getlabel(struct up_disk *disk, int64_t start, int64_t size, void *arg);
 static char *readargs(int argc, char *argv[], struct up_opts *opts);
 static void usage(const char *argv0);
 
 int
 main(int argc, char *argv[])
 {
-    struct up_opts      opts;
-    char               *name;
-    struct up_disk     *disk;
-    struct up_map     *mbr;
+    struct up_opts              opts;
+    char                       *name;
+    struct up_disk             *disk;
+    struct up_map              *mbr;
+    const struct up_part       *part;
 
     if(0 > up_getendian())
         return EXIT_FAILURE;
@@ -36,7 +36,7 @@ main(int argc, char *argv[])
 
     up_disk_dump(disk, stdout, &opts);
 
-    getlabel(disk, 0, disk->upd_size, NULL, &opts);
+    getlabel(disk, 0, disk->upd_size, &opts);
 
     switch(up_mbr_testload(disk, 0, disk->upd_size, &mbr))
     {
@@ -47,8 +47,8 @@ main(int argc, char *argv[])
         case 1:
             fputc('\n', stdout);
             up_mbr_dump(disk, mbr, stdout, &opts);
-            /* XXX need generic pertition framework for iteration */
-            up_mbr_iter(disk, mbr, getlabel, &opts);
+            for(part = up_map_first(mbr); part; part = up_map_next(part))
+                getlabel(disk, part->start, part->size, &opts);
             up_map_free(mbr);
             break;
     }
@@ -59,8 +59,7 @@ main(int argc, char *argv[])
 }
 
 static int
-getlabel(struct up_disk *disk, int64_t start, int64_t size,
-         const char *label, void *arg)
+getlabel(struct up_disk *disk, int64_t start, int64_t size, void *arg)
 {
     void               *disklabel;
     int                 res;
@@ -69,7 +68,7 @@ getlabel(struct up_disk *disk, int64_t start, int64_t size,
     if(0 < res)
     {
         fputc('\n', stdout);
-        up_disklabel_dump(disk, disklabel, stdout, arg, label);
+        up_disklabel_dump(disk, disklabel, stdout, arg, NULL);
         up_disklabel_free(disklabel);
     }
 

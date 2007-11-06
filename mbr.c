@@ -12,69 +12,63 @@
 #include "util.h"
 
 #define MBR_SIZE                (0x200)
-#define MBR_MAGIC_OFF           (0x1fe)
 #define MBR_MAGIC               (0xaa55)
-#define MBR_MAP_OFF             (0x1be)
-#define MBR_PART_SIZE           (0x10)
 #define MBR_PART_COUNT          (4)
 #define MBR_FLAG_ACTIVE         (0x80)
-#define MBR_EXT_ID              (0x05)
-#define MBR_UNUSED_ID           (0x00)
-#define MBR_EXT_PART_OFF        (MBR_MAP_OFF)
-#define MBR_EXT_NEXT_OFF        (MBR_MAP_OFF + MBR_PART_SIZE)
+#define MBR_ID_EXT              (0x05)
+#define MBR_ID_UNUSED           (0x00)
+#define MBR_EXTPART             (0)
+#define MBR_EXTNEXT             (1)
 
-#define MBR_GETSECT(buf) \
-    (((const uint8_t *)(buf))[0] & 0x3f)
-#define MBR_GETCYL(buf) \
-    (((uint16_t)(((const uint8_t *)(buf))[0] & 0xc0) << 2) | \
-      (uint16_t)(((const uint8_t *)(buf))[1]))
+#define MBR_GETSECT(sc)         ((sc)[0] & 0x3f)
+#define MBR_GETCYL(sc)          ((((sc)[0] & 0xc0) << 2) | (sc)[1])
 
-struct up_mbr_part
+struct up_mbrpart_p
 {
-    unsigned int        upmp_valid : 1;
-    uint8_t             upmp_flags;
-    uint8_t             upmp_firsthead;
-    uint8_t             upmp_firstsect;
-    uint16_t            upmp_firstcyl;
-    uint8_t             upmp_type;
-    uint8_t             upmp_lasthead;
-    uint8_t             upmp_lastsect;
-    uint16_t            upmp_lastcyl;
-    uint32_t            upmp_start;
-    uint32_t            upmp_size;
-};
+    uint8_t         flags;
+    uint8_t         firsthead;
+    uint8_t         firstsectcyl[2];
+    uint8_t         type;
+    uint8_t         lasthead;
+    uint8_t         lastsectcyl[2];
+    uint32_t        start;
+    uint32_t        size;
+} __attribute__((packed));
 
-struct up_mbr_ext
+struct up_mbr_p
 {
-    int64_t             upme_absoff;
-    int64_t             upme_reloff;
-    int64_t             upme_size;
-    char                upme_buf[MBR_SIZE];
-    struct up_mbr_part  upme_part;
-    SLIST_ENTRY(up_mbr_ext) upme_next;
+    uint8_t             bootcode[446];
+    struct up_mbrpart_p part[MBR_PART_COUNT];
+    uint16_t            magic;
+} __attribute__((packed));
+
+struct up_mbrext
+{
+    int64_t             absoff;
+    int64_t             reloff;
+    int64_t             max;
+    struct up_mbrpart_p part;
+    int                 valid;
+    struct up_mbr_p     mbr;
+    SLIST_ENTRY(up_mbrext) next;
 };
 
 struct up_mbr
 {
-    char                upm_buf[MBR_SIZE];
-    struct up_mbr_part  upm_parts[MBR_PART_COUNT];
-    SLIST_HEAD(up_mbr_chain, up_mbr_ext) upm_ext[MBR_PART_COUNT];
+    int64_t             size;
+    struct up_mbr_p     mbr;
+    int                 valid[MBR_PART_COUNT];
+    SLIST_HEAD(up_mbrchain, up_mbrext) ext[MBR_PART_COUNT];
 };
 
-static int mbr_loadext(struct up_disk *disk, struct up_mbr_part *part,
-                       struct up_mbr_chain *chain);
+static int mbr_loadext(struct up_disk *disk, struct up_mbrpart_p *part,
+                       struct up_mbrchain *chain);
 static int readmbr(struct up_disk *disk, int64_t start, int64_t size,
-                   const uint8_t **buf);
-static int parsembr(const struct up_disk *disk, struct up_mbr *mbr,
-                    int64_t start, int64_t size,
-                    const uint8_t *buf, size_t buflen);
-static int parsembrext(const struct up_disk *disk, struct up_mbr_ext *ext,
-                       int64_t start, int64_t size, const uint8_t *buf,
-                       size_t buflen, struct up_mbr_part *next);
-static void parsembrpart(const uint8_t *buf, size_t buflen, int64_t start,
-                         int64_t size, struct up_mbr_part *part);
+                   const struct up_mbr_p **mbr);
+static int checkpart(struct up_mbrpart_p *part, int64_t start, int64_t size);
 static void printpart(FILE *stream, const struct up_disk *disk,
-                      const struct up_mbr_part *part, int index, int verbose);
+                      const struct up_mbrpart_p *part, int valid,
+                      int index, int verbose);
 
 int
 up_mbr_test(struct up_disk *disk, int64_t start, int64_t size)
@@ -85,7 +79,7 @@ up_mbr_test(struct up_disk *disk, int64_t start, int64_t size)
 void *
 up_mbr_load(struct up_disk *disk, int64_t start, int64_t size)
 {
-    void *              mbr;
+    void *mbr;
 
     up_mbr_testload(disk, start, size, &mbr);
     return mbr;
@@ -94,9 +88,11 @@ up_mbr_load(struct up_disk *disk, int64_t start, int64_t size)
 int
 up_mbr_testload(struct up_disk *disk, int64_t start, int64_t size, void **map)
 {
-    const uint8_t *     buf;
-    int                 res, ii;
-    struct up_mbr *     mbr;
+    const struct up_mbr_p      *buf;
+    int                         res, ii;
+    struct up_mbr              *mbr;
+
+    assert(MBR_SIZE == sizeof *buf);
 
     /* load MBR */
     *map = NULL;
@@ -106,30 +102,29 @@ up_mbr_testload(struct up_disk *disk, int64_t start, int64_t size, void **map)
     if(0 >= res)
         return res;
 
-    /* alloc mbr struct */
+    /* alloc and fill mbr struct */
     mbr = calloc(1, sizeof *mbr);
     if(!mbr)
     {
         perror("malloc");
         return -1;
     }
+    assert(sizeof mbr->mbr == sizeof *buf);
+    memcpy(&mbr->mbr, buf, sizeof *buf);
+    mbr->size = size;
 
-    /* parse MBR */
-    if(0 > parsembr(disk, mbr, start, size, buf, disk->upd_sectsize))
-    {
-        up_mbr_free(mbr);
-        return 0;
-    }
-
-    /* handle extended partitions */
+    /* check primary partitions and read extended partitions */
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
     {
-        if(MBR_EXT_ID == mbr->upm_parts[ii].upmp_type &&
-           mbr->upm_parts[ii].upmp_valid &&
-           0 > mbr_loadext(disk, &mbr->upm_parts[ii], &mbr->upm_ext[ii]))
+        /* XXX should check for overlap */
+        mbr->valid[ii] = checkpart(&mbr->mbr.part[ii], start, size);
+        if(mbr->valid[ii] && MBR_ID_EXT == mbr->mbr.part[ii].type)
         {
-            up_mbr_free(mbr);
-            return -1;
+            if(0 > mbr_loadext(disk, &mbr->mbr.part[ii], &mbr->ext[ii]))
+            {
+                up_mbr_free(mbr);
+                return -1;
+            }
         }
     }
 
@@ -138,47 +133,57 @@ up_mbr_testload(struct up_disk *disk, int64_t start, int64_t size, void **map)
 }
 
 static int
-mbr_loadext(struct up_disk *disk, struct up_mbr_part *part,
-            struct up_mbr_chain *chain)
+mbr_loadext(struct up_disk *disk, struct up_mbrpart_p *part,
+            struct up_mbrchain *chain)
 {
-    const uint8_t *     buf;
-    int                 res;
-    struct up_mbr_ext * ext, * last;
-    struct up_mbr_part  next;
+    const struct up_mbr_p      *buf;
+    int                         res;
+    struct up_mbrext           *ext, *last;
+    struct up_mbrpart_p         next;
 
     assert(SLIST_EMPTY(chain));
-    last  = NULL;
+    last = NULL;
     memset(&next, 0, sizeof next);
-    next.upmp_valid = 1;
-    next.upmp_type  = MBR_EXT_ID;
-    next.upmp_size  = part->upmp_size;
+    next.type = MBR_ID_EXT;
+    next.size = part->size;
 
-    while(MBR_EXT_ID == next.upmp_type && next.upmp_valid)
+    while(MBR_ID_EXT == next.type)
     {
-        res = readmbr(disk, part->upmp_start + next.upmp_start,
-                      next.upmp_size, &buf);
+        /* load extended mbr */
+        assert(part->size >  next.start &&
+               part->size >= next.size &&
+               part->size -  next.start >= next.size);
+        res = readmbr(disk, part->start + next.start, next.size, &buf);
         if(0 >= res)
             return res;
 
+        /* alloc and fill mbtext struct */
         ext = calloc(1, sizeof *ext);
         if(!ext)
         {
             perror("malloc");
             return -1;
         }
+        assert(sizeof ext->mbr == sizeof *buf);
+        memcpy(&ext->mbr, buf, sizeof *buf);
+        ext->absoff      = part->start + next.start;
+        ext->reloff      = next.start;
+        ext->max         = next.size;
+        ext->valid       = checkpart(&ext->mbr.part[MBR_EXTPART], 0,next.size);
+        ext->part        = ext->mbr.part[MBR_EXTPART];
+        ext->part.start += ext->absoff;
 
-        if(0 > parsembrext(disk, ext, part->upmp_start, part->upmp_size,
-                           buf, disk->upd_sectsize, &next))
-        {
-            free(ext);
-            return 0;
-        }
-
+        /* append the partition to the chain */
         if(NULL == last)
-            SLIST_INSERT_HEAD(chain, ext, upme_next);
+            SLIST_INSERT_HEAD(chain, ext, next);
         else
-            SLIST_INSERT_AFTER(last, ext, upme_next);
+            SLIST_INSERT_AFTER(last, ext, next);
         last = ext;
+
+        /* check if link to next mbr is valid */
+        next = ext->mbr.part[MBR_EXTNEXT];
+        if(!checkpart(&next, ext->reloff, part->size))
+            break;
     }
 
     return 1;
@@ -186,115 +191,46 @@ mbr_loadext(struct up_disk *disk, struct up_mbr_part *part,
 
 static int
 readmbr(struct up_disk *disk, int64_t start, int64_t size,
-        const uint8_t **buf)
+        const struct up_mbr_p **mbr)
 {
-    const uint8_t *     ret;
+    const void *buf;
 
-    if(buf)
-        *buf = NULL;
+    *mbr = NULL;
 
-    if(MBR_SIZE > size * disk->upd_sectsize || MBR_SIZE > disk->upd_sectsize)
+    if(0 >= size || sizeof *mbr > disk->upd_sectsize)
         return 0;
 
-    ret = up_disk_getsect(disk, start);
-    if(!ret)
+    buf = up_disk_getsect(disk, start);
+    if(!buf)
         return -1;
+    *mbr = buf;
 
-    if(MBR_MAGIC != UP_GETBUF16LE(ret + MBR_MAGIC_OFF))
+    if(MBR_MAGIC != UP_LETOH16((*mbr)->magic))
         return 0;
-
-    if(buf)
-        *buf = ret;
 
     return 1;
 }
 
 static int
-parsembr(const struct up_disk *disk, struct up_mbr *mbr,
-         int64_t start, int64_t size, const uint8_t *buf, size_t buflen)
+checkpart(struct up_mbrpart_p *part, int64_t start, int64_t size)
 {
-    int                 ii;
+    part->start = UP_LETOH32(part->start);
+    part->size  = UP_LETOH32(part->size);
 
-    assert(0 <= start && 0 < size);
-    assert(size * disk->upd_sectsize >= MBR_SIZE);
-    assert(MBR_SIZE == buflen);
-    assert(MBR_MAGIC == UP_GETBUF16LE(buf + MBR_MAGIC_OFF));
+    if(MBR_ID_UNUSED == part->type)
+        return 0;
 
-    memcpy(mbr->upm_buf, buf, MBR_SIZE);
-
-    for(ii = 0; MBR_PART_COUNT > ii; ii++)
-    {
-        assert(MBR_MAP_OFF + (ii * MBR_PART_SIZE) + MBR_PART_SIZE <= MBR_SIZE);
-        parsembrpart(buf + MBR_MAP_OFF + (ii * MBR_PART_SIZE), MBR_PART_SIZE,
-                     start, size, &mbr->upm_parts[ii]);
-    }
-
-    /* XXX should check for partition overlap */
-
-    return 0;
-}
-
-static int
-parsembrext(const struct up_disk *disk, struct up_mbr_ext *ext, int64_t start,
-            int64_t size, const uint8_t *buf, size_t buflen,
-            struct up_mbr_part *next)
-{
-    assert(0 < start && 0 < size);
-    assert(size * disk->upd_sectsize >= MBR_SIZE);
-    assert(MBR_SIZE == buflen);
-    assert(MBR_MAGIC == UP_GETBUF16LE(buf + MBR_MAGIC_OFF));
-
-    /* save extended mbr */
-    ext->upme_absoff = start + next->upmp_start;
-    ext->upme_reloff = next->upmp_start;
-    ext->upme_size   = next->upmp_size;
-    memcpy(ext->upme_buf, buf, MBR_SIZE);
-
-    /* read real partition */
-    parsembrpart(buf + MBR_EXT_PART_OFF, MBR_PART_SIZE, 0,
-                 ext->upme_size, &ext->upme_part);
-    ext->upme_part.upmp_start += ext->upme_absoff;
-
-    /* read link to next extended mbr */
-    memset(next, 0, sizeof *next);
-    parsembrpart(buf + MBR_EXT_NEXT_OFF, MBR_PART_SIZE,
-                 ext->upme_reloff, size, next);
-
-    return 0;
-}
-
-static void
-parsembrpart(const uint8_t *buf, size_t buflen, int64_t start, int64_t size,
-             struct up_mbr_part *part)
-{
-    assert(MBR_PART_SIZE <= buflen);
-    if(!buf[4])
-        memset(part, 0, sizeof *part);
-    else
-    {
-        /* XXX should fill in lba info from chs if needed */
-        part->upmp_flags     = buf[0];
-        part->upmp_firsthead = buf[1];
-        part->upmp_firstsect = MBR_GETSECT(buf + 2);
-        part->upmp_firstcyl  = MBR_GETCYL(buf + 2);
-        part->upmp_type      = buf[4];
-        part->upmp_lasthead  = buf[5];
-        part->upmp_lastsect  = MBR_GETSECT(buf + 6);
-        part->upmp_lastcyl   = MBR_GETCYL(buf + 6);
-        part->upmp_start     = UP_GETBUF32LE(buf + 8);
-        part->upmp_size      = UP_GETBUF32LE(buf + 12);
-        part->upmp_valid     = (start < part->upmp_start &&
-                                start + size > part->upmp_start &&
-                                start + size - part->upmp_start >=
-                                part->upmp_size);
-    }
+    /* XXX should fill in lba info from chs if needed */
+    return (start < part->start &&
+            start + size > part->start &&
+            start + size - part->start >= part->size);
 }
 
 void
 up_mbr_free(void *_mbr)
 {
-    struct up_mbr *     mbr = _mbr;
-    struct up_mbr_ext * ext;
+    struct up_mbr      *mbr = _mbr;
+    struct up_mbrext   *ext;
     int                 ii;
 
     if(!mbr)
@@ -302,9 +238,9 @@ up_mbr_free(void *_mbr)
 
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
     {
-        while((ext = SLIST_FIRST(&mbr->upm_ext[ii])))
+        while((ext = SLIST_FIRST(&mbr->ext[ii])))
         {
-            SLIST_REMOVE_HEAD(&mbr->upm_ext[ii], upme_next);
+            SLIST_REMOVE_HEAD(&mbr->ext[ii], next);
             free(ext);
         }
     }
@@ -316,21 +252,23 @@ void
 up_mbr_dump(const struct up_disk *disk, const void *_mbr, void *_stream,
             const struct up_opts *opts)
 {
-    const struct up_mbr *       mbr = _mbr;
-    FILE *                      stream = _stream;
+    const struct up_mbr        *mbr = _mbr;
+    FILE                       *stream = _stream;
     int                         ii, jj;
-    struct up_mbr_ext *         ext;
+    struct up_mbrext           *ext;
 
     /* print header */
-    printpart(stream, disk, NULL, 0, opts->upo_verbose);
+    printpart(stream, disk, NULL, 0, 0, opts->upo_verbose);
 
     jj = MBR_PART_COUNT;
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
     {
-        printpart(stream, disk, &mbr->upm_parts[ii], ii, opts->upo_verbose);
-        SLIST_FOREACH(ext, &mbr->upm_ext[ii], upme_next)
+        printpart(stream, disk, &mbr->mbr.part[ii], mbr->valid[ii],
+                  ii, opts->upo_verbose);
+        SLIST_FOREACH(ext, &mbr->ext[ii], next)
         {
-            printpart(stream, disk, &ext->upme_part, jj, opts->upo_verbose);
+            printpart(stream, disk, &ext->part, ext->valid,
+                      jj, opts->upo_verbose);
             jj++;
         }
     }
@@ -339,17 +277,17 @@ up_mbr_dump(const struct up_disk *disk, const void *_mbr, void *_stream,
         return;
 
     fprintf(stream, "\nDump of %s MBR:\n", disk->upd_name);
-    up_hexdump(mbr->upm_buf, MBR_SIZE, 0, stream);
+    up_hexdump(&mbr->mbr, sizeof mbr->mbr, 0, stream);
     putc('\n', stream);
     jj = MBR_PART_COUNT;
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
     {
-        SLIST_FOREACH(ext, &mbr->upm_ext[ii], upme_next)
+        SLIST_FOREACH(ext, &mbr->ext[ii], next)
         {
             fprintf(stream, "Dump of %s extended MBR #%d "
                     "at sector %"PRId64" (0x%08"PRIx64"):\n",
-                    disk->upd_name, jj, ext->upme_absoff, ext->upme_absoff);
-            up_hexdump(ext->upme_buf, MBR_SIZE, ext->upme_absoff, stream);
+                    disk->upd_name, jj, ext->absoff, ext->absoff);
+            up_hexdump(&ext->mbr, sizeof ext->mbr, ext->absoff, stream);
             putc('\n', stream);
             jj++;
         }
@@ -358,7 +296,7 @@ up_mbr_dump(const struct up_disk *disk, const void *_mbr, void *_stream,
 
 static void
 printpart(FILE *stream, const struct up_disk *disk,
-          const struct up_mbr_part *part, int index, int verbose)
+          const struct up_mbrpart_p *part, int valid, int index, int verbose)
 {
     char                splat;
 
@@ -375,12 +313,12 @@ printpart(FILE *stream, const struct up_disk *disk,
         return;
     }
 
-    if(MBR_UNUSED_ID == part->upmp_type && !verbose)
+    if(MBR_ID_UNUSED == part->type && !verbose)
         return;
 
-    if(!part->upmp_valid)
+    if(!valid)
         splat = 'X';
-    else if(MBR_FLAG_ACTIVE & part->upmp_flags)
+    else if(MBR_FLAG_ACTIVE & part->flags)
         splat = '*';
     else
         splat = ' ';
@@ -392,48 +330,48 @@ printpart(FILE *stream, const struct up_disk *disk,
 
     if(verbose)
         fprintf(stream, "%c %4d/%3d/%2d-%4d/%3d/%2d %10d %10d %02x %s\n",
-                splat, part->upmp_firstcyl, part->upmp_firsthead,
-                part->upmp_firstsect, part->upmp_lastcyl, part->upmp_lasthead,
-                part->upmp_lastsect, part->upmp_start, part->upmp_size,
-                part->upmp_type, up_mbr_name(part->upmp_type));
+                splat, MBR_GETCYL(part->firstsectcyl), part->firsthead,
+                MBR_GETSECT(part->firstsectcyl), MBR_GETCYL(part->lastsectcyl),
+                part->lasthead, MBR_GETSECT(part->lastsectcyl), part->start,
+                part->size, part->type, up_mbr_name(part->type));
     else
         fprintf(stream, "%c %10d %10d %02x %s\n",
-                splat, part->upmp_start, part->upmp_size,
-                part->upmp_type, up_mbr_name(part->upmp_type));
+                splat, part->start, part->size,
+                part->type, up_mbr_name(part->type));
 }
 
 int
 up_mbr_iter(struct up_disk *disk, const void *_mbr,
-            int (*func)(struct up_disk *, int64_t, int64_t, const char *, void *),
+            int (*func)(struct up_disk*, int64_t, int64_t, const char*, void*),
             void *arg)
 {
     const struct up_mbr        *mbr = _mbr;
     int                         ii, jj, res, max;
-    struct up_mbr_ext          *ext;
-    const struct up_mbr_part   *part;
+    struct up_mbrext           *ext;
+    const struct up_mbrpart_p  *part;
     char                        label[32];
 
     max = 0;
     jj  = MBR_PART_COUNT;
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
     {
-        part = &mbr->upm_parts[ii];
-        if(part->upmp_valid)
+        part = &mbr->mbr.part[ii];
+        if(mbr->valid[ii])
         {
             snprintf(label, sizeof label, "MBR partition %d", ii + 1);
-            res = func(disk, part->upmp_start, part->upmp_size, label, arg);
+            res = func(disk, part->start, part->size, label, arg);
             if(0 > res)
                 return res;
             if(res > max)
                 max = res;
         }
-        SLIST_FOREACH(ext, &mbr->upm_ext[ii], upme_next)
+        SLIST_FOREACH(ext, &mbr->ext[ii], next)
         {
-            part = &ext->upme_part;
-            if(part->upmp_valid)
+            part = &ext->part;
+            if(ext->valid)
             {
                 snprintf(label, sizeof label, "MBR partition %d", jj + 1);
-                res = func(disk, part->upmp_start, part->upmp_size, label, arg);
+                res = func(disk, part->start, part->size, label, arg);
                 if(0 > res)
                     return res;
                 if(res > max)

@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "bsdqueue.h"
 #include "disk.h"
 #include "map.h"
 #include "mbr.h"
@@ -104,7 +103,7 @@ up_mbr_testload(struct up_disk *disk, int64_t start, int64_t size,
         return -1;
     }
     *mbr = *buf;
-    map = up_map_new(start, size, UP_MAP_MBR, mbr, up_map_freeprivmap_def);
+    map = up_map_new(NULL, start, size, UP_MAP_MBR, mbr, up_map_freeprivmap_def);
     if(!map)
     {
         free(mbr);
@@ -251,18 +250,14 @@ up_mbr_dump(const struct up_disk *disk, const struct up_map *map,
 {
     const struct up_mbr_p      *mbr = map->priv;
     FILE                       *stream = _stream;
-    const struct up_part       *ii, *jj;
+    const struct up_part       *ii;
     const struct up_mbrpart    *priv;
 
     /* print header */
     printpart(stream, disk, NULL, opts->upo_verbose);
 
-    for(ii = SIMPLEQ_FIRST(&map->list); ii; ii = SIMPLEQ_NEXT(ii, link))
-    {
+    for(ii = up_map_first(map); ii; ii = up_map_next(ii))
         printpart(stream, disk, ii, opts->upo_verbose);
-        for(jj = SIMPLEQ_FIRST(&ii->children); jj; jj = SIMPLEQ_NEXT(jj, link))
-            printpart(stream, disk, jj, opts->upo_verbose);
-    }
 
     if(!opts->upo_verbose)
         return;
@@ -270,11 +265,11 @@ up_mbr_dump(const struct up_disk *disk, const struct up_map *map,
     fprintf(stream, "\nDump of %s MBR:\n", disk->upd_name);
     up_hexdump(mbr, sizeof *mbr, 0, stream);
     putc('\n', stream);
-    for(ii = SIMPLEQ_FIRST(&map->list); ii; ii = SIMPLEQ_NEXT(ii, link))
+    for(ii = up_map_first(map); ii; ii = up_map_next(ii))
     {
-        for(jj = SIMPLEQ_FIRST(&ii->children); jj; jj = SIMPLEQ_NEXT(jj, link))
+        priv = ii->priv;
+        if(MBR_PART_COUNT <= priv->index)
         {
-            priv = jj->priv;
             fprintf(stream, "Dump of %s extended MBR #%d "
                     "at sector %"PRId64" (0x%08"PRIx64"):\n",
                     disk->upd_name, priv->index, priv->extoff, priv->extoff);
@@ -340,12 +335,12 @@ up_mbr_iter(struct up_disk *disk, const struct up_map *map,
             void *arg)
 {
     int                         res, max;
-    const struct up_part       *ii, *jj;
+    const struct up_part       *ii;
     const struct up_mbrpart    *priv;
     char                        label[32];
 
     max = 0;
-    for(ii = SIMPLEQ_FIRST(&map->list); ii; ii = SIMPLEQ_NEXT(ii, link))
+    for(ii = up_map_first(map); ii; ii = up_map_next(ii))
     {
         priv = ii->priv;
         if(!UP_PART_IS_BAD(ii->flags))
@@ -356,20 +351,6 @@ up_mbr_iter(struct up_disk *disk, const struct up_map *map,
                 return res;
             if(res > max)
                 max = res;
-        }
-        for(jj = SIMPLEQ_FIRST(&ii->children); jj; jj = SIMPLEQ_NEXT(jj, link))
-        {
-            priv = jj->priv;
-            if(!UP_PART_IS_BAD(jj->flags))
-            {
-                snprintf(label, sizeof label, "MBR partition %d",
-                         priv->index + 1);
-                res = func(disk, jj->start, jj->size, label, arg);
-                if(0 > res)
-                    return res;
-                if(res > max)
-                    max = res;
-            }
         }
     }
 

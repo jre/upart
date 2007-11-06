@@ -6,13 +6,14 @@
 struct up_map;
 struct up_part;
 typedef void (*up_freepriv_map)(struct up_map *);
-typedef void (*up_freepriv_part)(struct up_map *, struct up_part *);
+typedef void (*up_freepriv_part)(struct up_part *);
 
 #define UP_PART_EMPTY           (1<<0) /* empty or deleted */
 #define UP_PART_OOB             (1<<1) /* out of bounds */
 
 #define UP_PART_IS_BAD(flags)   ((UP_PART_EMPTY|UP_PART_OOB) & (flags))
 
+SIMPLEQ_HEAD(up_map_list, up_map);
 SIMPLEQ_HEAD(up_part_list, up_part);
 
 struct up_part
@@ -22,9 +23,13 @@ struct up_part
     int                 type;
     const char *        label;
     int                 flags;
+    int                 depth;
     void *              priv;
     up_freepriv_part    freepriv;
-    struct up_part_list children;
+    struct up_map      *map;
+    struct up_part     *parent;
+    struct up_part_list subpart;
+    struct up_map_list  submap;
     SIMPLEQ_ENTRY(up_part) link;
 };
 
@@ -40,21 +45,29 @@ struct up_map
     int64_t             start;
     int64_t             size;
     enum up_map_type    type;
+    int                 depth;
     void *              priv;
     up_freepriv_map     freepriv;
+    struct up_part     *parent;
     struct up_part_list list;
+    SIMPLEQ_ENTRY(up_map) link;
 };
 
-struct up_map *up_map_new(int64_t start, int64_t size, enum up_map_type type,
-                          void *priv, up_freepriv_map freepriv);
+struct up_map *up_map_new(struct up_part *parent, int64_t start, int64_t size,
+                          enum up_map_type type, void *priv,
+                          up_freepriv_map freepriv);
 struct up_part *up_map_add(struct up_map *map, struct up_part *parent,
                            int64_t start, int64_t size, int type,
                            const char *label, int flags, void *priv,
                            up_freepriv_part freepriv);
 void up_map_free(struct up_map *map);
-void up_map_print(struct up_map *map);
-struct up_part *up_map_iter(struct up_map *map, struct up_part *prev);
 void up_map_freeprivmap_def(struct up_map *map);
-void up_map_freeprivpart_def(struct up_map *map, struct up_part *part);
+void up_map_freeprivpart_def(struct up_part *part);
+
+const struct up_part *up_map_first(const struct up_map *map);
+const struct up_part *up_map_firstsub(const struct up_part *part);
+const struct up_part *up_map_next(const struct up_part *part);
+const struct up_map  *up_map_firstmap(const struct up_part *part);
+const struct up_map  *up_map_nextmap(const struct up_map *map);
 
 #endif /* HDR_UPART_MAP */

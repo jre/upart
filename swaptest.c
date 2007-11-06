@@ -1,3 +1,127 @@
+#if 0 /*
+
+import random, struct, sys
+
+rand = random.Random("\xbd-\x03\xd1'-\xc9\x1e\x954C3\xb5\x8d\xfc\xeb")
+
+def esc(bin):
+    return ''.join(['\\x%02x' % ord(ii) for ii in bin])
+
+def mkbufargs(name, size):
+    return ', '.join(['%s[%d]' % (name, ii) for ii in range(size)])
+
+magic = ''.join(reversed(list('cigam gnikcuf')))
+data  = file(sys.argv[0]).read()
+
+print '''%s %s
+#endif
+
+#include "config.h"
+
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "util.h"
+''' % (data[:data.index(magic)+len(magic)], '*' + '/')
+
+for bits, fmt in ((16, 'H'), (32, 'L'), (64, 'Q')):
+    print '''int
+dotest%d(void)
+{
+    struct { char *big; char *lit; uint%d_t native; } tests[] = {''' % \
+    (bits, bits)
+    for dummy in xrange(128):
+        num = rand.getrandbits(bits)
+        little = struct.pack('<' + fmt, num)
+        big = struct.pack('>' + fmt, num)
+        print '        {"%s", "%s", UINT%d_C(0x%0*x)},' % \
+              (esc(big), esc(little), bits, bits / 4, num)
+    print '''    };
+    uint%(bits)d_t natl, natb, bign, litn;
+    uint8_t bufl[%(bytes)d], bufb[%(bytes)d];
+    int ii, fail;
+
+    fail = 0;
+    for(ii = 0; sizeof(tests) / sizeof(tests[0]) > ii; ii++)
+    {
+        assert(sizeof bign == %(bytes)d);
+        natl = UP_GETBUF%(bits)dLE(tests[ii].lit);
+        natb = UP_GETBUF%(bits)dBE(tests[ii].big);
+        UP_SETBUF%(bits)dLE(bufl, tests[ii].native);
+        UP_SETBUF%(bits)dBE(bufb, tests[ii].native);
+        memcpy(&bign, tests[ii].big, %(bytes)d);
+        memcpy(&litn, tests[ii].lit, %(bytes)d);
+
+        if(natl == tests[ii].native &&
+           natb == tests[ii].native &&
+           !memcmp(bufl, tests[ii].lit, %(bytes)d) &&
+           !memcmp(bufb, tests[ii].big, %(bytes)d) &&
+           litn == UP_HTOLE%(bits)d(tests[ii].native) &&
+           bign == UP_HTOBE%(bits)d(tests[ii].native) &&
+           tests[ii].native == UP_LETOH%(bits)d(litn) &&
+           tests[ii].native == UP_BETOH%(bits)d(bign))
+            continue;
+
+        fail = 1;
+        printf("%(bits)d/%%d\\t", ii);
+        if(natl != tests[ii].native)
+            printf(" getle:(%(intfmt)s!=%(intfmt)s)", natl, tests[ii].native);
+        if(natb != tests[ii].native)
+            printf(" getbe:(%(intfmt)s!=%(intfmt)s)", natb, tests[ii].native);
+        if(memcmp(bufl, tests[ii].lit, %(bytes)d))
+            printf(" setle:(%(buffmt)s!=%(buffmt)s)",
+                   %(blarg)s,
+                   %(tlarg)s);
+        if(memcmp(bufb, tests[ii].big, %(bytes)d))
+            printf(" setle:(%(buffmt)s!=%(buffmt)s)",
+                   %(bbarg)s,
+                   %(tbarg)s);
+        if(litn != UP_HTOLE%(bits)d(tests[ii].native))
+            printf(" htole:(%(intfmt)s!=%(intfmt)s)",
+                   litn, UP_HTOLE%(bits)d(tests[ii].native));
+        if(bign != UP_HTOBE%(bits)d(tests[ii].native))
+            printf(" htobe:(%(intfmt)s!=%(intfmt)s)",
+                   bign, UP_HTOBE%(bits)d(tests[ii].native));
+        if(tests[ii].native != UP_LETOH%(bits)d(litn))
+            printf(" letoh:(%(intfmt)s!=%(intfmt)s)",
+                   tests[ii].native, UP_LETOH%(bits)d(litn));
+        if(tests[ii].native != UP_BETOH%(bits)d(bign))
+            printf(" betoh:(%(intfmt)s!=%(intfmt)s)",
+                   tests[ii].native, UP_BETOH%(bits)d(bign));
+        putc('\\n', stdout);
+    }
+
+    return fail;
+}
+''' % {'bits':   bits,
+       'bytes':  bits / 8,
+       'intfmt': '%%0%d"PRIx%d"' % (bits / 4, bits),
+       'buffmt': '%02x' * (bits / 4),
+       'blarg': mkbufargs('bufl', bits / 4),
+       'bbarg': mkbufargs('bufb', bits / 4),
+       'tlarg': mkbufargs('tests[ii].lit', bits / 4),
+       'tbarg': mkbufargs('tests[ii].big', bits / 4)}
+
+print '''int
+main()
+{
+    int f16, f32, f64;
+
+    if(0 > up_getendian())
+        return 1;
+
+    f16 = dotest16();
+    f32 = dotest32();
+    f64 = dotest64();
+
+    return f16 || f32 || f64;
+}
+'''
+print "// '''"
+''' fucking magic */
+#endif
+
 #include "config.h"
 
 #include <assert.h>
@@ -196,14 +320,6 @@ dotest16(void)
     return fail;
 }
 
-#include "config.h"
-
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "util.h"
-
 int
 dotest32(void)
 {
@@ -393,14 +509,6 @@ dotest32(void)
 
     return fail;
 }
-
-#include "config.h"
-
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "util.h"
 
 int
 dotest64(void)
@@ -607,124 +715,4 @@ main()
     return f16 || f32 || f64;
 }
 
-/*
-
-#!/usr/bin/env python
-
-import random, struct, sys
-
-rand = random.Random("\xbd-\x03\xd1'-\xc9\x1e\x954C3\xb5\x8d\xfc\xeb")
-
-def esc(bin):
-    return ''.join(['\\x%02x' % ord(ii) for ii in bin])
-
-def mkbufargs(name, size):
-    return ', '.join(['%s[%d]' % (name, ii) for ii in range(size)])
-
-for bits, fmt in ((16, 'H'), (32, 'L'), (64, 'Q')):
-    print '''#include "config.h"
-
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "util.h"
-
-int
-dotest%d(void)
-{
-    struct { char *big; char *lit; uint%d_t native; } tests[] = {''' % \
-    (bits, bits)
-    for dummy in xrange(128):
-        num = rand.getrandbits(bits)
-        little = struct.pack('<' + fmt, num)
-        big = struct.pack('>' + fmt, num)
-        print '        {"%s", "%s", UINT%d_C(0x%0*x)},' % \
-              (esc(big), esc(little), bits, bits / 4, num)
-    print '''    };
-    uint%(bits)d_t natl, natb, bign, litn;
-    uint8_t bufl[%(bytes)d], bufb[%(bytes)d];
-    int ii, fail;
-
-    fail = 0;
-    for(ii = 0; sizeof(tests) / sizeof(tests[0]) > ii; ii++)
-    {
-        assert(sizeof bign == %(bytes)d);
-        natl = UP_GETBUF%(bits)dLE(tests[ii].lit);
-        natb = UP_GETBUF%(bits)dBE(tests[ii].big);
-        UP_SETBUF%(bits)dLE(bufl, tests[ii].native);
-        UP_SETBUF%(bits)dBE(bufb, tests[ii].native);
-        memcpy(&bign, tests[ii].big, %(bytes)d);
-        memcpy(&litn, tests[ii].lit, %(bytes)d);
-
-        if(natl == tests[ii].native &&
-           natb == tests[ii].native &&
-           !memcmp(bufl, tests[ii].lit, %(bytes)d) &&
-           !memcmp(bufb, tests[ii].big, %(bytes)d) &&
-           litn == UP_HTOLE%(bits)d(tests[ii].native) &&
-           bign == UP_HTOBE%(bits)d(tests[ii].native) &&
-           tests[ii].native == UP_LETOH%(bits)d(litn) &&
-           tests[ii].native == UP_BETOH%(bits)d(bign))
-            continue;
-
-        fail = 1;
-        printf("%(bits)d/%%d\\t", ii);
-        if(natl != tests[ii].native)
-            printf(" getle:(%(intfmt)s!=%(intfmt)s)", natl, tests[ii].native);
-        if(natb != tests[ii].native)
-            printf(" getbe:(%(intfmt)s!=%(intfmt)s)", natb, tests[ii].native);
-        if(memcmp(bufl, tests[ii].lit, %(bytes)d))
-            printf(" setle:(%(buffmt)s!=%(buffmt)s)",
-                   %(blarg)s,
-                   %(tlarg)s);
-        if(memcmp(bufb, tests[ii].big, %(bytes)d))
-            printf(" setle:(%(buffmt)s!=%(buffmt)s)",
-                   %(bbarg)s,
-                   %(tbarg)s);
-        if(litn != UP_HTOLE%(bits)d(tests[ii].native))
-            printf(" htole:(%(intfmt)s!=%(intfmt)s)",
-                   litn, UP_HTOLE%(bits)d(tests[ii].native));
-        if(bign != UP_HTOBE%(bits)d(tests[ii].native))
-            printf(" htobe:(%(intfmt)s!=%(intfmt)s)",
-                   bign, UP_HTOBE%(bits)d(tests[ii].native));
-        if(tests[ii].native != UP_LETOH%(bits)d(litn))
-            printf(" letoh:(%(intfmt)s!=%(intfmt)s)",
-                   tests[ii].native, UP_LETOH%(bits)d(litn));
-        if(tests[ii].native != UP_BETOH%(bits)d(bign))
-            printf(" betoh:(%(intfmt)s!=%(intfmt)s)",
-                   tests[ii].native, UP_BETOH%(bits)d(bign));
-        putc('\\n', stdout);
-    }
-
-    return fail;
-}
-''' % {'bits':   bits,
-       'bytes':  bits / 8,
-       'intfmt': '%%0%d"PRIx%d"' % (bits / 4, bits),
-       'buffmt': '%02x' * (bits / 4),
-       'blarg': mkbufargs('bufl', bits / 4),
-       'bbarg': mkbufargs('bufb', bits / 4),
-       'tlarg': mkbufargs('tests[ii].lit', bits / 4),
-       'tbarg': mkbufargs('tests[ii].big', bits / 4)}
-
-print '''int
-main()
-{
-    int f16, f32, f64;
-
-    if(0 > up_getendian())
-        return 1;
-
-    f16 = dotest16();
-    f32 = dotest32();
-    f64 = dotest64();
-
-    return f16 || f32 || f64;
-}
-
-%s
-
-%s
-%s''' % ('/' + '*', file(sys.argv[0]).read(), '*' + '/')
-
-*/
+// '''

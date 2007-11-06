@@ -1,9 +1,38 @@
 #include "config.h"
 
+#include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "util.h"
+
+int up_endian = 0;
+
+int
+up_getendian(void)
+{
+    uint32_t num = 0x04030201;
+    uint8_t bufbe[4] = {4, 3, 2, 1};
+    uint8_t bufle[4] = {1, 2, 3, 4};
+
+    assert(4 == sizeof(num) && 4 == sizeof(bufbe) && 4 == sizeof(bufle));
+    if(!memcmp(&num, bufbe, 4))
+    {
+        up_endian = UP_ENDIAN_BIG;
+        return 0;
+    }
+    else if(!memcmp(&num, bufle, 4))
+    {
+        up_endian = UP_ENDIAN_LITTLE;
+        return 0;
+    }
+    else
+    {
+        fprintf(stderr, "failed to determine machine byte order\n");
+        return -1;
+    }
+}
 
 void
 up_hexdump(const void *_buf, size_t size, size_t dispoff, void *_stream)

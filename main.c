@@ -22,6 +22,9 @@ main(int argc, char *argv[])
     struct up_disk     *disk;
     void               *mbr;
 
+    if(0 > up_getendian())
+        return EXIT_FAILURE;
+
     name = readargs(argc, argv, &opts);
     if(NULL == name)
         return EXIT_FAILURE;

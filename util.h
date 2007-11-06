@@ -1,6 +1,75 @@
 #ifndef HDR_UPART_UTIL
 #define HDR_UPART_UTIL
 
+#define UP_ENDIAN_BIG           (4321)
+#define UP_ENDIAN_LITTLE        (1234)
+extern int up_endian;
+
+/* convert NUM from big endian to host byte order */
+#define UP_BETOH16(num) \
+    (UP_ENDIAN_BIG    == up_endian ? (const uint16_t)(num) : UP_SWAP16(num))
+#define UP_BETOH32(num) \
+    (UP_ENDIAN_BIG    == up_endian ? (const uint32_t)(num) : UP_SWAP32(num))
+#define UP_BETOH64(num) \
+    (UP_ENDIAN_BIG    == up_endian ? (const uint64_t)(num) : UP_SWAP64(num))
+/* convert NUM from little endian to host byte order */
+#define UP_LETOH16(num) \
+    (UP_ENDIAN_LITTLE == up_endian ? (const uint16_t)(num) : UP_SWAP16(num))
+#define UP_LETOH32(num) \
+    (UP_ENDIAN_LITTLE == up_endian ? (const uint32_t)(num) : UP_SWAP32(num))
+#define UP_LETOH64(num) \
+    (UP_ENDIAN_LITTLE == up_endian ? (const uint64_t)(num) : UP_SWAP64(num))
+/* convert NUM from host byte order to big endian */
+#define UP_HTOBE16(num) \
+    (UP_ENDIAN_BIG    == up_endian ? (const uint16_t)(num) : UP_SWAP16(num))
+#define UP_HTOBE32(num) \
+    (UP_ENDIAN_BIG    == up_endian ? (const uint32_t)(num) : UP_SWAP32(num))
+#define UP_HTOBE64(num) \
+    (UP_ENDIAN_BIG    == up_endian ? (const uint64_t)(num) : UP_SWAP64(num))
+/* convert NUM from host byte order to little endian */
+#define UP_HTOLE16(num) \
+    (UP_ENDIAN_LITTLE == up_endian ? (const uint16_t)(num) : UP_SWAP16(num))
+#define UP_HTOLE32(num) \
+    (UP_ENDIAN_LITTLE == up_endian ? (const uint32_t)(num) : UP_SWAP32(num))
+#define UP_HTOLE64(num) \
+    (UP_ENDIAN_LITTLE == up_endian ? (const uint64_t)(num) : UP_SWAP64(num))
+
+/* convert NUM from byte order ORD to host order */
+#define UP_ETOH16(num, ord) \
+    ((ord) == up_endian ? (const uint16_t)(num) : UP_SWAP16(num))
+#define UP_ETOH32(num, ord) \
+    ((ord) == up_endian ? (const uint32_t)(num) : UP_SWAP32(num))
+#define UP_ETOH64(num, ord) \
+    ((ord) == up_endian ? (const uint64_t)(num) : UP_SWAP64(num))
+/* convert NUM from host byte order to order ORD */
+#define UP_HTOE16(num, ord) \
+    ((ord) == up_endian ? (const uint16_t)(num) : UP_SWAP16(num))
+#define UP_HTOE32(num, ord) \
+    ((ord) == up_endian ? (const uint32_t)(num) : UP_SWAP32(num))
+#define UP_HTOE64(num, ord) \
+    ((ord) == up_endian ? (const uint64_t)(num) : UP_SWAP64(num))
+
+/* byte swapping macros used by the above macros */
+#define UP_SWAP16(num) \
+    (((((const uint16_t)(num)) & UINT16_C(0x00ff)) << 8) | \
+     ((((const uint16_t)(num)) & UINT16_C(0xff00)) >> 8))
+
+#define UP_SWAP32(num) \
+    (((((const uint32_t)(num)) & UINT32_C(0x000000ff)) << 24) | \
+     ((((const uint32_t)(num)) & UINT32_C(0x0000ff00)) <<  8) | \
+     ((((const uint32_t)(num)) & UINT32_C(0x00ff0000)) >>  8) | \
+     ((((const uint32_t)(num)) & UINT32_C(0xff000000)) >> 24))
+
+#define UP_SWAP64(num) \
+    (((((const uint64_t)(num)) & UINT64_C(0x00000000000000ff)) << 56) | \
+     ((((const uint64_t)(num)) & UINT64_C(0x000000000000ff00)) << 40) | \
+     ((((const uint64_t)(num)) & UINT64_C(0x0000000000ff0000)) << 24) | \
+     ((((const uint64_t)(num)) & UINT64_C(0x00000000ff000000)) <<  8) | \
+     ((((const uint64_t)(num)) & UINT64_C(0x000000ff00000000)) >>  8) | \
+     ((((const uint64_t)(num)) & UINT64_C(0x0000ff0000000000)) >> 24) | \
+     ((((const uint64_t)(num)) & UINT64_C(0x00ff000000000000)) >> 40) | \
+     ((((const uint64_t)(num)) & UINT64_C(0xff00000000000000)) >> 56))
+
 /* read a 16, 32, or 64 bit little-endian unsigned integer from a buffer */
 
 #define UP_GETBUF16LE(buf) \
@@ -106,6 +175,9 @@
         up_setbuf64be_buf[6] = ((uint64_t)(val) >>  8) & 0xff; \
         up_setbuf64be_buf[7] =  (uint64_t)(val)        & 0xff; \
     } while(0)
+
+/* determine the current machine byte order */
+int up_getendian(void);
 
 /*
   Dump SIZE bytes of data in BUF to STREAM to stdout, in

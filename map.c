@@ -53,7 +53,10 @@ up_map_add(struct up_map *map, struct up_part *parent, int64_t start,
     part->priv        = priv;
     part->freepriv    = freepriv;
     SIMPLEQ_INIT(&part->children);
-    SIMPLEQ_INSERT_TAIL(&map->list, part, link);
+    if(parent)
+        SIMPLEQ_INSERT_TAIL(&parent->children, part, link);
+    else
+        SIMPLEQ_INSERT_TAIL(&map->list, part, link);
 
     return part;
 }

@@ -202,11 +202,13 @@ mbrext_setup(struct up_map *map)
             max = map->size - reloff;
         if(0 > max)
             max = 0;
-        if(reloff + max > map->size || 0 == max)
-            /* XXX should give better diagnostic here */
-            fprintf(stderr, "skipping logical MBR partition out of range\n");
     } while(MBR_ID_EXT == buf->part[MBR_EXTNEXT].type &&
             reloff + max <= map->size && 0 < max);
+
+    /* XXX should give better diagnostic here */
+    if(MBR_ID_EXT == buf->part[MBR_EXTNEXT].type)
+        fprintf(stderr, "skipping logical MBR partition #%d: out of range\n",
+                index);
 
     parent->extcount = index - MBR_PART_COUNT;
 

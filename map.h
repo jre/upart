@@ -32,7 +32,7 @@ enum up_map_type
 {
     UP_MAP_NONE = 0,
     UP_MAP_MBR,
-    UP_MAP_BSD,
+    //UP_MAP_BSD,
     UP_MAP_TYPE_COUNT
 };
 
@@ -67,8 +67,8 @@ void up_map_register(enum up_map_type type, const char *typestr,
                      /* free part private data, part may be NULL */
                      void (*freeprivpart)(struct up_part *, void *));
 
-int up_map_loadall(struct up_disk *disk, struct up_part *container);
-void up_map_freeall(struct up_part *container);
+int up_map_loadall(struct up_disk *disk);
+void up_map_freeall(struct up_disk *disk);
 
 int up_map_load(struct up_disk *disk, struct up_part *parent, int64_t start,
                 int64_t size, enum up_map_type type, struct up_map **mapret);
@@ -79,11 +79,11 @@ void up_map_free(struct up_map *map);
 void up_map_freeprivmap_def(struct up_map *map, void *priv);
 void up_map_freeprivpart_def(struct up_part *part, void *priv);
 
-void up_map_print(const struct up_map *map, void *stream, int verbose);
-void up_map_dump(const struct up_map *map, void *stream);
-void up_map_printall(const struct up_part *container, void *stream,
-                     int verbose);
-void up_map_dumpall(const struct up_part *container, void *stream);
+void up_map_print(const struct up_map *map, void *stream,
+                  int verbose, int recurse);
+void up_map_dump(const struct up_map *map, void *stream, int recurse);
+void up_map_printall(const struct up_disk *disk, void *stream, int verbose);
+void up_map_dumpall(const struct up_disk *disk, void *stream);
 
 const struct up_part *up_map_first(const struct up_map *map);
 const struct up_part *up_map_firstsub(const struct up_part *part);

@@ -22,6 +22,7 @@
 #endif
 
 #include "disk.h"
+#include "map.h"
 #include "util.h"
 
 #if defined(HAVE_SYS_DISKLABEL_H) && \
@@ -151,6 +152,7 @@ up_disk_close(struct up_disk *disk)
 {
     if(!disk)
         return;
+    up_map_freeall(disk);
     if(0 <= disk->upd_fd)
         close(disk->upd_fd);
     if(disk->upd_buf)

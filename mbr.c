@@ -253,6 +253,7 @@ mbr_addpart(struct up_map *map, struct up_part *parent,
     return ret;
 }
 
+/* XXX need a way to detect loops */
 static int
 mbr_loadext(struct up_disk *disk, struct up_map *map, struct up_part *parent,
             int *index)

@@ -20,7 +20,6 @@ main(int argc, char *argv[])
     struct up_opts              opts;
     char                       *name;
     struct up_disk             *disk;
-    struct up_part              container;
     const struct up_map        *ii;
     const struct up_part       *part;
 
@@ -35,29 +34,21 @@ main(int argc, char *argv[])
     disk = up_disk_open(name);
     if(!disk)
         return EXIT_FAILURE;
+    if(0 > up_map_loadall(disk))
+    {
+        up_disk_close(disk);
+        return EXIT_FAILURE;
+    }
 
     up_disk_dump(disk, stdout, &opts);
-
-    getlabel(disk, 0, disk->upd_size, &opts);
-
-    switch(up_map_loadall(disk, &container))
+    up_map_printall(disk, stdout, opts.upo_verbose);
+    if(opts.upo_verbose)
+        up_map_dumpall(disk, stdout);
+    for(ii = up_map_firstmap(disk->maps); ii; ii = up_map_nextmap(ii))
     {
-        case -1:
-            return EXIT_FAILURE;
-        case 0:
-            break;
-        case 1:
-            up_map_printall(&container, stdout, opts.upo_verbose);
-            if(opts.upo_verbose)
-                up_map_dumpall(&container, stdout);
-            for(ii = up_map_firstmap(&container); ii; ii = up_map_nextmap(ii))
-            {
-                fputc('\n', stdout);
-                for(part = up_map_first(ii); part; part = up_map_next(part))
-                    getlabel(disk, part->start, part->size, &opts);
-            }
-            up_map_freeall(&container);
-            break;
+        fputc('\n', stdout);
+        for(part = up_map_first(ii); part; part = up_map_next(part))
+            getlabel(disk, part->start, part->size, &opts);
     }
 
     up_disk_close(disk);

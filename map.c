@@ -27,11 +27,17 @@ struct up_map_funcs
     void (*freeprivpart)(struct up_part *, void *);
 };
 
+static int map_loadall(struct up_disk *disk, struct up_part *container);
+static struct up_part *map_newcontainer(int64_t size);
+static void map_freecontainer(struct up_part *container);
 static struct up_map *map_new(struct up_disk *disk, struct up_part *parent,
                               int64_t start, int64_t size,
                               enum up_map_type type, void *priv);
 static void map_freelist(struct up_part_list *list);
+static void map_printcontainer(const struct up_part *container, FILE *stream,
+                               int verbose);
 static void map_indent(int depth, FILE *stream);
+static void map_dumpcontainer(const struct up_part *container, FILE *stream);
 
 static struct up_map_funcs st_types[UP_MAP_TYPE_COUNT];
 
@@ -66,7 +72,8 @@ up_map_register(enum up_map_type type, const char *typestr,
 
 int
 up_map_load(struct up_disk *disk, struct up_part *parent, int64_t start,
-            int64_t size, enum up_map_type type, struct up_map **mapret)
+            int64_t size, enum up_map_type type,
+            struct up_map **mapret)
 {
     struct up_map_funcs*funcs;
     void               *priv;
@@ -95,7 +102,6 @@ up_map_load(struct up_disk *disk, struct up_part *parent, int64_t start,
                 return -1;
             }
             *mapret = map;
-            /* XXX recurse */
             return 1;
 
         case 0:
@@ -109,39 +115,60 @@ up_map_load(struct up_disk *disk, struct up_part *parent, int64_t start,
 }
 
 int
-up_map_loadall(struct up_disk *disk, struct up_part *container)
+up_map_loadall(struct up_disk *disk)
 {
-    enum up_map_type    type;
-    struct up_map      *map;
+    assert(!disk->maps);
 
-    memset(container, 0, sizeof *container);
-    SIMPLEQ_INIT(&container->submap);
+    disk->maps = map_newcontainer(disk->upd_size);
+    if(!disk->maps)
+        return -1;
 
-    for(type = UP_MAP_NONE + 1; UP_MAP_TYPE_COUNT > type; type++)
+    if(0 > map_loadall(disk, disk->maps))
     {
-        if(!st_types[type].registered)
-            continue;
-        if(0 > up_map_load(disk, container, 0, disk->upd_size, type, &map))
-        {
-            up_map_freeall(container);
-            return -1;
-        }
+        up_map_freeall(disk);
+        return -1;
     }
 
-    return (SIMPLEQ_FIRST(&container->submap) ? 1 : 0);
+    return 0;
+}
+
+static int
+map_loadall(struct up_disk *disk, struct up_part *container)
+{
+    enum up_map_type            type;
+    struct up_map              *map;
+    const struct up_part       *ii;
+
+    /* iterate through all partition types */
+    for(type = UP_MAP_NONE + 1; UP_MAP_TYPE_COUNT > type; type++)
+    {
+        CHECKTYPE(type);
+
+        /* try to load a map of this type */
+        if(0 > up_map_load(disk, container, container->start, container->size,
+                           type, &map))
+            return -1;
+
+        if(map)
+            /* try to recurse on each partition in the map */
+            for(ii = up_map_first(map); ii; ii = up_map_next(ii))
+                /* XXX use queue macros here once subparts are gone */
+                if(map_loadall(disk, (struct up_part*)ii))
+                    return -1;
+    }
+
+    return 0;
 }
 
 void
-up_map_freeall(struct up_part *container)
+up_map_freeall(struct up_disk *disk)
 {
-    struct up_map *ii;
+    if(!disk->maps)
+        return;
 
-    while((ii = SIMPLEQ_FIRST(&container->submap)))
-    {
-        SIMPLEQ_REMOVE_HEAD(&container->submap, link);
-        ii->parent = NULL;
-        up_map_free(ii);
-    }
+    map_freecontainer(disk->maps);
+    free(disk->maps);
+    disk->maps = NULL;
 }
 
 static struct up_map *
@@ -157,7 +184,7 @@ map_new(struct up_disk *disk, struct up_part *parent, int64_t start,
         return NULL;
     }
 
-    map->disk         = disk;   /* XXX need list of maps in disk struct too */
+    map->disk         = disk;
     map->type         = type;
     map->start        = start;
     map->size         = size;
@@ -169,6 +196,40 @@ map_new(struct up_disk *disk, struct up_part *parent, int64_t start,
         SIMPLEQ_INSERT_TAIL(&parent->submap, map, link);
 
     return map;
+}
+
+static struct up_part *
+map_newcontainer(int64_t size)
+{
+    struct up_part *container;
+
+    container = calloc(1, sizeof *container);
+    if(!container)
+    {
+        perror("malloc");
+        return NULL;
+    }
+
+    container->start  = 0;
+    container->size   = size;
+    container->depth  = 0;
+    SIMPLEQ_INIT(&container->subpart);
+    SIMPLEQ_INIT(&container->submap);
+
+    return container;
+}
+
+static void
+map_freecontainer(struct up_part *container)
+{
+    struct up_map *ii;
+
+    while((ii = SIMPLEQ_FIRST(&container->submap)))
+    {
+        SIMPLEQ_REMOVE_HEAD(&container->submap, link);
+        ii->parent = NULL;
+        up_map_free(ii);
+    }
 }
 
 struct up_part *
@@ -229,7 +290,7 @@ map_freelist(struct up_part_list *list)
         CHECKTYPE(ii->map->type);
         SIMPLEQ_REMOVE_HEAD(list, link);
         map_freelist(&ii->subpart);
-        up_map_freeall(ii);
+        map_freecontainer(ii);
         if(st_types[ii->map->type].freeprivpart && ii->priv)
             st_types[ii->map->type].freeprivpart(ii, ii->priv);
         free(ii);
@@ -249,11 +310,11 @@ up_map_freeprivpart_def(struct up_part *part, void *priv)
 }
 
 void
-up_map_print(const struct up_map *map, void *_stream, int verbose)
+up_map_print(const struct up_map *map, void *_stream, int verbose, int recurse)
 {
     FILE                       *stream = _stream;
     struct up_map_funcs        *funcs;
-    char                        buf[1024], idx[6], flag;
+    char                        buf[128], idx[6], flag;
     const struct up_part       *ii;
 
     CHECKTYPE(map->type);
@@ -304,20 +365,27 @@ up_map_print(const struct up_map *map, void *_stream, int verbose)
         map_indent(map->depth, stream);
         fprintf(stream, "%-4s %c %15"PRId64" %15"PRId64" %s\n",
                 idx, flag, ii->start, ii->size, buf);
-        /* XXX recurse */
+
+        /* recurse */
+        map_printcontainer(ii, stream, verbose);
     }
 }
 
 void
-up_map_printall(const struct up_part *container, void *_stream, int verbose)
+up_map_printall(const struct up_disk *disk, void *stream, int verbose)
 {
-    FILE               *stream = _stream;
-    const struct up_map*ii;
+    map_printcontainer(disk->maps, stream, verbose);
+}
+
+static void
+map_printcontainer(const struct up_part *container, FILE *stream, int verbose)
+{
+    const struct up_map *ii;
 
     for(ii = up_map_firstmap(container); ii; ii = up_map_nextmap(ii))
     {
         fputc('\n', stream);
-        up_map_print(ii, stream, verbose);
+        up_map_print(ii, stream, verbose, 1);
     }
 }
 
@@ -331,26 +399,35 @@ map_indent(int depth, FILE *stream)
 }
 
 void
-up_map_dump(const struct up_map *map, void *_stream)
+up_map_dump(const struct up_map *map, void *_stream, int recurse)
 {
-    FILE *stream = _stream;
+    FILE                       *stream = _stream;
+    const struct up_part       *ii;
 
     CHECKTYPE(map->type);
 
     fputc('\n', stream);
     st_types[map->type].dump(map, stream);
-    /* XXX recurse */
+
+    for(ii = up_map_first(map); ii; ii = up_map_next(ii))
+        map_dumpcontainer(ii, stream);
 }
 
 void
-up_map_dumpall(const struct up_part *container, void *stream)
+up_map_dumpall(const struct up_disk *disk, void *stream)
+{
+    map_dumpcontainer(disk->maps, stream);
+}
+
+static void
+map_dumpcontainer(const struct up_part *container, FILE *stream)
 {
     const struct up_map *ii;
 
     for(ii = up_map_firstmap(container); ii; ii = up_map_nextmap(ii))
     {
         fputc('\n', stdout);
-        up_map_dump(ii, stream);
+        up_map_dump(ii, stream, 1);
     }
 }
 

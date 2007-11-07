@@ -2,6 +2,7 @@
 #define HDR_UPART_DISK
 
 struct up_opts;
+struct up_part;
 
 struct up_disk
 {
@@ -16,6 +17,9 @@ struct up_disk
     /* don't touch these, use up_disk_read() or up_disk_getsect() instead */
     int         upd_fd;
     uint8_t *   upd_buf;
+
+    /* don't touch this either, use the up_map_*all() functions */
+    struct up_part     *maps;
 };
 
 /* Open the disk device read-only and get drive params */

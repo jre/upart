@@ -52,11 +52,12 @@ struct up_mbrpart
 
 static int mbr_load(struct up_disk *disk, int64_t start, int64_t size,
                     void **priv);
-static int mbr_setup(struct up_disk *disk, struct up_map *map);
+static int mbr_setup(struct up_map *map);
+static int mbr_getinfo(const struct up_map *part, char *buf, int size);
 static int mbr_getindex(const struct up_part *part, char *buf, int size);
-static int mbr_getlabel(const struct up_part *part, char *buf, int size);
 static int mbr_getextra(const struct up_part *part, int verbose,
                         char *buf, int size);
+static void mbr_dump(const struct up_map *map, void *stream);
 static struct up_part *mbr_addpart(struct up_map *map, struct up_part *parent,
                                    const struct up_mbrpart_p *part, int index,
                                    int64_t off, const struct up_mbr_p *mbr);
@@ -64,15 +65,13 @@ static int mbr_loadext(struct up_disk *disk, struct up_map *map,
                        struct up_part *parent, int *index);
 static int readmbr(struct up_disk *disk, int64_t start, int64_t size,
                    const struct up_mbr_p **mbr);
-static void printpart(FILE *stream, const struct up_disk *disk,
-                      const struct up_part *part, int verbose);
 
 void
 up_mbr_register(void)
 {
-    up_map_register(UP_MAP_MBR, "MBR", mbr_load, mbr_setup, mbr_getindex,
-                    mbr_getlabel, mbr_getextra, up_map_freeprivmap_def,
-                    up_map_freeprivpart_def);
+    up_map_register(UP_MAP_MBR, "MBR", mbr_load, mbr_setup, mbr_getinfo,
+                    mbr_getindex, mbr_getextra, mbr_dump,
+                    up_map_freeprivmap_def, up_map_freeprivpart_def);
 }
 
 static int
@@ -107,7 +106,7 @@ mbr_load(struct up_disk *disk, int64_t start, int64_t size, void **priv)
 }
 
 static int
-mbr_setup(struct up_disk *disk, struct up_map *map)
+mbr_setup(struct up_map *map)
 {
     struct up_mbr_p            *mbr = map->priv;
     int                         ii, jj;
@@ -125,7 +124,7 @@ mbr_setup(struct up_disk *disk, struct up_map *map)
         }
         if(UP_PART_IS_BAD(part->flags) || MBR_ID_EXT != mbr->part[ii].type)
             continue;
-        if(0 > mbr_loadext(disk, map, part, &jj))
+        if(0 > mbr_loadext(map->disk, map, part, &jj))
         {
             up_map_free(map);
             return -1;
@@ -133,6 +132,13 @@ mbr_setup(struct up_disk *disk, struct up_map *map)
     }
 
     return 0;
+}
+
+static int
+mbr_getinfo(const struct up_map *map, char *buf, int size)
+{
+    return snprintf(buf, size, "MBR partition table in sector %"PRId64" of %s",
+                    map->start, map->disk->upd_name);
 }
 
 static int
@@ -144,22 +150,62 @@ mbr_getindex(const struct up_part *part, char *buf, int size)
 }
 
 static int
-mbr_getlabel(const struct up_part *part, char *buf, int size)
-{
-    struct up_mbrpart  *priv = part->priv;
-    const char         *label;
-
-    label = up_mbr_name(priv->part.type);
-    if(label)
-        return snprintf(buf, size, "%02x %s", priv->part.type, label);
-    else
-        return snprintf(buf, size, "%02x", priv->part.type);
-}
-
-static int
 mbr_getextra(const struct up_part *part, int verbose, char *buf, int size)
 {
-    return 0;
+    struct up_mbrpart  *priv;
+    const char         *label;
+    char                active;
+    int                 firstcyl, firstsect, lastcyl, lastsect;
+
+    if(!part)
+    {
+        if(verbose)
+            return snprintf(buf, size, "A    C   H  S    C   H  S Type");
+        else
+            return snprintf(buf, size, "A Type");
+    }
+    priv = part->priv;
+
+    label     = up_mbr_name(priv->part.type);
+    active    = MBR_FLAG_ACTIVE & priv->part.flags ? '*' : ' ';
+    firstcyl  = MBR_GETCYL(priv->part.firstsectcyl);
+    firstsect = MBR_GETSECT(priv->part.firstsectcyl);
+    lastcyl   = MBR_GETCYL(priv->part.lastsectcyl);
+    lastsect  = MBR_GETSECT(priv->part.lastsectcyl);
+
+    if(verbose)
+        return snprintf(buf, size, "%c %4u/%3u/%2u-%4u/%3u/%2u %s (%02x)",
+                        active, firstcyl, priv->part.firsthead, firstsect,
+                        lastcyl, priv->part.lasthead, lastsect, label,
+                        priv->part.type);
+    else
+        return snprintf(buf, size, "%c %s (%02x)",
+                        active, label, priv->part.type);
+}
+
+static void
+mbr_dump(const struct up_map *map, void *_stream)
+{
+    FILE                       *stream = _stream;
+    const struct up_part       *ii;
+    const struct up_mbrpart    *priv;
+
+    /* dump MBR sector */
+    fprintf(stream, "Dump of %s MBR at sector %"PRId64" (0x%08"PRIx64":\n",
+            map->disk->upd_name, map->start, map->start);
+    up_hexdump(map->priv, sizeof(struct up_mbr_p), map->start, stream);
+
+    /* dump all extended MBR sectors */
+    for(ii = up_map_first(map); ii; ii = up_map_next(ii))
+    {
+        priv = ii->priv;
+        if(MBR_PART_COUNT > priv->index)
+            continue;
+        fprintf(stream, "\nDump of %s extended MBR #%d "
+                "at sector %"PRId64" (0x%08"PRIx64"):\n",
+                map->disk->upd_name, priv->index, priv->extoff, priv->extoff);
+        up_hexdump(&priv->extmbr, sizeof priv->extmbr, priv->extoff, stream);
+    }
 }
 
 static struct up_part *
@@ -269,90 +315,4 @@ readmbr(struct up_disk *disk, int64_t start, int64_t size,
         return 0;
 
     return 1;
-}
-
-void
-up_mbr_dump(const struct up_disk *disk, const struct up_map *map,
-            void *_stream, const struct up_opts *opts)
-{
-    const struct up_mbr_p      *mbr = map->priv;
-    FILE                       *stream = _stream;
-    const struct up_part       *ii;
-    const struct up_mbrpart    *priv;
-
-    /* print header */
-    printpart(stream, disk, NULL, opts->upo_verbose);
-
-    for(ii = up_map_first(map); ii; ii = up_map_next(ii))
-        printpart(stream, disk, ii, opts->upo_verbose);
-
-    if(!opts->upo_verbose)
-        return;
-
-    fprintf(stream, "\nDump of %s MBR:\n", disk->upd_name);
-    up_hexdump(mbr, sizeof *mbr, 0, stream);
-    putc('\n', stream);
-    for(ii = up_map_first(map); ii; ii = up_map_next(ii))
-    {
-        priv = ii->priv;
-        if(MBR_PART_COUNT <= priv->index)
-        {
-            fprintf(stream, "Dump of %s extended MBR #%d "
-                    "at sector %"PRId64" (0x%08"PRIx64"):\n",
-                    disk->upd_name, priv->index, priv->extoff, priv->extoff);
-            up_hexdump(&priv->extmbr, sizeof priv->extmbr,
-                       priv->extoff, stream);
-            putc('\n', stream);
-        }
-    }
-}
-
-static void
-printpart(FILE *stream, const struct up_disk *disk,
-          const struct up_part *part, int verbose)
-{
-    const struct up_mbrpart    *priv;
-    char                        splat;
-
-    if(!part)
-    {
-        if(verbose)
-            fprintf(stream, "MBR partition table for %s:\n"
-                    "         C   H  S    C   H  S      Start       Size ID\n",
-                    disk->upd_name);
-        else
-            fprintf(stream, "MBR partition table for %s:\n"
-                    "           Start       Size ID\n",
-                    disk->upd_name);
-        return;
-    }
-    priv = part->priv;
-
-    if(UP_PART_EMPTY & part->flags && !verbose)
-        return;
-
-    if(UP_PART_IS_BAD(part->flags))
-        splat = 'X';
-    else if(MBR_FLAG_ACTIVE & priv->part.flags)
-        splat = '*';
-    else
-        splat = ' ';
-
-    if(MBR_PART_COUNT > priv->index)
-        fprintf(stream, "%d:  ", priv->index + 1);
-    else
-        fprintf(stream, " %d: ", priv->index + 1);
-
-    if(verbose)
-        fprintf(stream, "%c %4u/%3u/%2u-%4u/%3u/%2u "
-                "%10"PRId64" %10"PRId64" %02x %s\n",
-                splat, MBR_GETCYL(priv->part.firstsectcyl),
-                priv->part.firsthead, MBR_GETSECT(priv->part.firstsectcyl),
-                MBR_GETCYL(priv->part.lastsectcyl), priv->part.lasthead,
-                MBR_GETSECT(priv->part.lastsectcyl), part->start, part->size,
-                priv->part.type, up_mbr_name(priv->part.type));
-    else
-        fprintf(stream, "%c %10"PRId64" %10"PRId64" %02x %s\n",
-                splat, part->start, part->size, priv->part.type,
-                up_mbr_name(priv->part.type));
 }

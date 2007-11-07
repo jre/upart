@@ -18,27 +18,31 @@ struct up_map_funcs
     int registered;
     const char *typestr;
     int (*load)(struct up_disk *, int64_t, int64_t, void **);
-    int (*setup)(struct up_disk *, struct up_map *);
+    int (*setup)(struct up_map *);
+    int (*getinfo)(const struct up_map *, char *, int);
     int (*getindex)(const struct up_part *, char *, int);
-    int (*getlabel)(const struct up_part *, char *, int);
     int (*getextra)(const struct up_part *, int, char *, int);
+    void (*dump)(const struct up_map *, void *);
     void (*freeprivmap)(struct up_map *, void *);
     void (*freeprivpart)(struct up_part *, void *);
 };
 
-static struct up_map *map_new(struct up_part *parent, int64_t start,
-                              int64_t size, enum up_map_type type, void *priv);
+static struct up_map *map_new(struct up_disk *disk, struct up_part *parent,
+                              int64_t start, int64_t size,
+                              enum up_map_type type, void *priv);
 static void map_freelist(struct up_part_list *list);
+static void map_indent(int depth, FILE *stream);
 
 static struct up_map_funcs st_types[UP_MAP_TYPE_COUNT];
 
 void
 up_map_register(enum up_map_type type, const char *typestr,
                 int (*load)(struct up_disk *, int64_t, int64_t, void **),
-                int (*setup)(struct up_disk *, struct up_map *),
+                int (*setup)(struct up_map *),
+                int (*getinfo)(const struct up_map *, char *, int),
                 int (*getindex)(const struct up_part *, char *, int),
-                int (*getlabel)(const struct up_part *, char *, int),
                 int (*getextra)(const struct up_part *, int, char *, int),
+                void (*dump)(const struct up_map *, void *),
                 void (*freeprivmap)(struct up_map *, void *),
                 void (*freeprivpart)(struct up_part *, void *))
 {
@@ -52,9 +56,10 @@ up_map_register(enum up_map_type type, const char *typestr,
     funcs->typestr            = typestr;
     funcs->load               = load;
     funcs->setup              = setup;
+    funcs->getinfo            = getinfo;
     funcs->getindex           = getindex;
-    funcs->getlabel           = getlabel;
     funcs->getextra           = getextra;
+    funcs->dump               = dump;
     funcs->freeprivmap        = freeprivmap;
     funcs->freeprivpart       = freeprivpart;
 }
@@ -77,19 +82,20 @@ up_map_load(struct up_disk *disk, struct up_part *parent, int64_t start,
     switch(funcs->load(disk, start, size, &priv))
     {
         case 1:
-            map = map_new(parent, start, size, type, priv);
+            map = map_new(disk, parent, start, size, type, priv);
             if(!map)
             {
                 if(funcs->freeprivmap && priv)
                     funcs->freeprivmap(NULL, priv);
                 return -1;
             }
-            if(0 > funcs->setup(disk, map))
+            if(0 > funcs->setup(map))
             {
                 up_map_free(map);
                 return -1;
             }
             *mapret = map;
+            /* XXX recurse */
             return 1;
 
         case 0:
@@ -139,8 +145,8 @@ up_map_freeall(struct up_part *container)
 }
 
 static struct up_map *
-map_new(struct up_part *parent, int64_t start, int64_t size,
-           enum up_map_type type, void *priv)
+map_new(struct up_disk *disk, struct up_part *parent, int64_t start,
+        int64_t size, enum up_map_type type, void *priv)
 {
     struct up_map *map;
 
@@ -151,6 +157,7 @@ map_new(struct up_part *parent, int64_t start, int64_t size,
         return NULL;
     }
 
+    map->disk         = disk;   /* XXX need list of maps in disk struct too */
     map->type         = type;
     map->start        = start;
     map->size         = size;
@@ -176,6 +183,8 @@ up_map_add(struct up_map *map, struct up_part *parent, int64_t start,
         perror("malloc");
         return NULL;
     }
+
+    /* XXX kill subpartitions, implement mbr ext as distinct type */
 
     part->start       = start;
     part->size        = size;
@@ -237,6 +246,112 @@ void
 up_map_freeprivpart_def(struct up_part *part, void *priv)
 {
     free(priv);
+}
+
+void
+up_map_print(const struct up_map *map, void *_stream, int verbose)
+{
+    FILE                       *stream = _stream;
+    struct up_map_funcs        *funcs;
+    char                        buf[1024], idx[6], flag;
+    const struct up_part       *ii;
+
+    CHECKTYPE(map->type);
+
+    funcs = &st_types[map->type];
+
+    /* print info line */
+    buf[0] = 0;
+    funcs->getinfo(map, buf, sizeof buf);
+    map_indent(map->depth, stream);
+    fputs(buf, stream);
+    fputs(":\n", stream);
+
+    /* print the header line */
+    buf[0] = 0;
+    funcs->getextra(NULL, verbose, buf, sizeof buf);
+    map_indent(map->depth, stream);
+    fputs("                 Start            Size", stream);
+    if(buf[0])
+    {
+        fputc(' ', stream);
+        fputs(buf, stream);
+    }
+    fputc('\n', stream);
+
+    /* print partitions */
+    for(ii = up_map_first(map); ii; ii = up_map_next(ii))
+    {
+        /* skip empty partitions unless verbose */
+        if(UP_PART_EMPTY & ii->flags && !verbose)
+            continue;
+
+        /* flags */
+        if(UP_PART_IS_BAD(ii->flags))
+            flag = 'X';
+        else
+            flag = ' ';
+
+        /* index */
+        funcs->getindex(ii, idx, sizeof idx - 2);
+        idx[sizeof idx - 2] = 0;
+        strncpy(strchr(idx, 0), ":", 2);
+
+        /* extra */
+        buf[0] = 0;
+        funcs->getextra(ii, verbose, buf, sizeof buf);
+
+        map_indent(map->depth, stream);
+        fprintf(stream, "%-4s %c %15"PRId64" %15"PRId64" %s\n",
+                idx, flag, ii->start, ii->size, buf);
+        /* XXX recurse */
+    }
+}
+
+void
+up_map_printall(const struct up_part *container, void *_stream, int verbose)
+{
+    FILE               *stream = _stream;
+    const struct up_map*ii;
+
+    for(ii = up_map_firstmap(container); ii; ii = up_map_nextmap(ii))
+    {
+        fputc('\n', stream);
+        up_map_print(ii, stream, verbose);
+    }
+}
+
+static void
+map_indent(int depth, FILE *stream)
+{
+    int ii;
+
+    for(ii = 1; depth > ii; ii++)
+        putc(' ', stream);
+}
+
+void
+up_map_dump(const struct up_map *map, void *_stream)
+{
+    FILE *stream = _stream;
+
+    CHECKTYPE(map->type);
+
+    fputc('\n', stream);
+    st_types[map->type].dump(map, stream);
+    /* XXX recurse */
+}
+
+void
+up_map_dumpall(const struct up_part *container, void *stream)
+{
+    const struct up_map *ii;
+
+    for(ii = up_map_firstmap(container); ii; ii = up_map_nextmap(ii))
+    {
+        fputc('\n', stdout);
+        up_map_dump(ii, stream);
+    }
 }
 
 const struct up_part *

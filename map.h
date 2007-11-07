@@ -38,6 +38,7 @@ enum up_map_type
 
 struct up_map
 {
+    struct up_disk     *disk;
     enum up_map_type    type;
     int64_t             start;
     int64_t             size;
@@ -52,13 +53,15 @@ void up_map_register(enum up_map_type type, const char *typestr,
                      /* check if map exists and allocate private data */
                      int (*load)(struct up_disk *, int64_t, int64_t, void **),
                      /* add partitions, misc setup not done in load */
-                     int (*setup)(struct up_disk *, struct up_map *),
+                     int (*setup)(struct up_map *),
+                     /* copy map header line into string */
+                     int (*getinfo)(const struct up_map *, char *, int),
                      /* copy part index into string */
                      int (*getindex)(const struct up_part *, char *, int),
-                     /* copy part label into string */
-                     int (*getlabel)(const struct up_part *, char *, int),
                      /* copy extra verbose info into string */
                      int (*getextra)(const struct up_part *, int, char *, int),
+                     /* print hex dump of raw partition data to stream */
+                     void (*dump)(const struct up_map *, void *),
                      /* free map private data, map may be NULL */
                      void (*freeprivmap)(struct up_map *, void *),
                      /* free part private data, part may be NULL */
@@ -75,6 +78,12 @@ struct up_part *up_map_add(struct up_map *map, struct up_part *parent,
 void up_map_free(struct up_map *map);
 void up_map_freeprivmap_def(struct up_map *map, void *priv);
 void up_map_freeprivpart_def(struct up_part *part, void *priv);
+
+void up_map_print(const struct up_map *map, void *stream, int verbose);
+void up_map_dump(const struct up_map *map, void *stream);
+void up_map_printall(const struct up_part *container, void *stream,
+                     int verbose);
+void up_map_dumpall(const struct up_part *container, void *stream);
 
 const struct up_part *up_map_first(const struct up_map *map);
 const struct up_part *up_map_firstsub(const struct up_part *part);

@@ -21,7 +21,7 @@ main(int argc, char *argv[])
     char                       *name;
     struct up_disk             *disk;
     struct up_part              container;
-    const struct up_map        *mbr;
+    const struct up_map        *ii;
     const struct up_part       *part;
 
     if(0 > up_getendian())
@@ -47,12 +47,13 @@ main(int argc, char *argv[])
         case 0:
             break;
         case 1:
-            mbr = up_map_firstmap(&container);
-            if(mbr && UP_MAP_MBR == mbr->type)
+            up_map_printall(&container, stdout, opts.upo_verbose);
+            if(opts.upo_verbose)
+                up_map_dumpall(&container, stdout);
+            for(ii = up_map_firstmap(&container); ii; ii = up_map_nextmap(ii))
             {
                 fputc('\n', stdout);
-                up_mbr_dump(disk, mbr, stdout, &opts);
-                for(part = up_map_first(mbr); part; part = up_map_next(part))
+                for(part = up_map_first(ii); part; part = up_map_next(part))
                     getlabel(disk, part->start, part->size, &opts);
             }
             up_map_freeall(&container);

@@ -6,8 +6,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "bsdlabel.h"
 #include "disk.h"
-#include "disklabel.h"
 #include "util.h"
 
 /*

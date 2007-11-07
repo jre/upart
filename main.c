@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bsdlabel.h"
 #include "disk.h"
-#include "disklabel.h"
 #include "map.h"
 #include "mbr.h"
 #include "util.h"

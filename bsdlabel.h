@@ -1,5 +1,5 @@
-#ifndef HDR_UPART_DISKLABEL
-#define HDR_UPART_DISKLABEL
+#ifndef HDR_UPART_BSDLABEL
+#define HDR_UPART_BSDLABEL
 
 struct up_disk;
 struct up_opts;
@@ -24,4 +24,4 @@ void up_disklabel_dump(const struct up_disk *disk, const void *label,
                        void *stream, const struct up_opts *opt,
                        const char *parent);
 
-#endif /* HDR_UPART_DISKLABEL */
+#endif /* HDR_UPART_BSDLABEL */

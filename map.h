@@ -5,8 +5,6 @@
 
 struct up_map;
 struct up_part;
-typedef void (*up_freepriv_map)(struct up_map *);
-typedef void (*up_freepriv_part)(struct up_part *);
 
 #define UP_PART_EMPTY           (1<<0) /* empty or deleted */
 #define UP_PART_OOB             (1<<1) /* out of bounds */
@@ -20,12 +18,9 @@ struct up_part
 {
     int64_t             start;
     int64_t             size;
-    int                 type;
-    const char *        label;
     int                 flags;
     int                 depth;
     void *              priv;
-    up_freepriv_part    freepriv;
     struct up_map      *map;
     struct up_part     *parent;
     struct up_part_list subpart;
@@ -38,31 +33,48 @@ enum up_map_type
     UP_MAP_NONE = 0,
     UP_MAP_MBR,
     UP_MAP_BSD,
+    UP_MAP_TYPE_COUNT
 };
 
 struct up_map
 {
+    enum up_map_type    type;
     int64_t             start;
     int64_t             size;
-    enum up_map_type    type;
     int                 depth;
     void *              priv;
-    up_freepriv_map     freepriv;
     struct up_part     *parent;
     struct up_part_list list;
     SIMPLEQ_ENTRY(up_map) link;
 };
 
-struct up_map *up_map_new(struct up_part *parent, int64_t start, int64_t size,
-                          enum up_map_type type, void *priv,
-                          up_freepriv_map freepriv);
+void up_map_register(enum up_map_type type, const char *typestr,
+                     /* check if map exists and allocate private data */
+                     int (*load)(struct up_disk *, int64_t, int64_t, void **),
+                     /* add partitions, misc setup not done in load */
+                     int (*setup)(struct up_disk *, struct up_map *),
+                     /* copy part index into string */
+                     int (*getindex)(const struct up_part *, char *, int),
+                     /* copy part label into string */
+                     int (*getlabel)(const struct up_part *, char *, int),
+                     /* copy extra verbose info into string */
+                     int (*getextra)(const struct up_part *, int, char *, int),
+                     /* free map private data, map may be NULL */
+                     void (*freeprivmap)(struct up_map *, void *),
+                     /* free part private data, part may be NULL */
+                     void (*freeprivpart)(struct up_part *, void *));
+
+int up_map_loadall(struct up_disk *disk, struct up_part *container);
+void up_map_freeall(struct up_part *container);
+
+int up_map_load(struct up_disk *disk, struct up_part *parent, int64_t start,
+                int64_t size, enum up_map_type type, struct up_map **mapret);
 struct up_part *up_map_add(struct up_map *map, struct up_part *parent,
-                           int64_t start, int64_t size, int type,
-                           const char *label, int flags, void *priv,
-                           up_freepriv_part freepriv);
+                           int64_t start, int64_t size, int flags, void *priv);
+
 void up_map_free(struct up_map *map);
-void up_map_freeprivmap_def(struct up_map *map);
-void up_map_freeprivpart_def(struct up_part *part);
+void up_map_freeprivmap_def(struct up_map *map, void *priv);
+void up_map_freeprivpart_def(struct up_part *part, void *priv);
 
 const struct up_part *up_map_first(const struct up_map *map);
 const struct up_part *up_map_firstsub(const struct up_part *part);

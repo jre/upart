@@ -20,11 +20,13 @@ main(int argc, char *argv[])
     struct up_opts              opts;
     char                       *name;
     struct up_disk             *disk;
-    struct up_map              *mbr;
+    struct up_part              container;
+    const struct up_map        *mbr;
     const struct up_part       *part;
 
     if(0 > up_getendian())
         return EXIT_FAILURE;
+    up_mbr_register();
 
     name = readargs(argc, argv, &opts);
     if(NULL == name)
@@ -38,18 +40,22 @@ main(int argc, char *argv[])
 
     getlabel(disk, 0, disk->upd_size, &opts);
 
-    switch(up_mbr_testload(disk, 0, disk->upd_size, &mbr))
+    switch(up_map_loadall(disk, &container))
     {
         case -1:
             return EXIT_FAILURE;
         case 0:
             break;
         case 1:
-            fputc('\n', stdout);
-            up_mbr_dump(disk, mbr, stdout, &opts);
-            for(part = up_map_first(mbr); part; part = up_map_next(part))
-                getlabel(disk, part->start, part->size, &opts);
-            up_map_free(mbr);
+            mbr = up_map_firstmap(&container);
+            if(mbr && UP_MAP_MBR == mbr->type)
+            {
+                fputc('\n', stdout);
+                up_mbr_dump(disk, mbr, stdout, &opts);
+                for(part = up_map_first(mbr); part; part = up_map_next(part))
+                    getlabel(disk, part->start, part->size, &opts);
+            }
+            up_map_freeall(&container);
             break;
     }
 

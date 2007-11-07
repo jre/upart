@@ -8,7 +8,7 @@ LIBS         = @LIBS@
 ALL_PROGS     = upart
 ALL_SRCS      = ${UPART_SRCS}
 ALL_HDRS      = ${UPART_HDRSRC:=.h} bsdqueue.h
-UPART_SRCS    = ${UPART_HDRSRC:=.c} main.c mbr_names.c
+UPART_SRCS    = ${UPART_HDRSRC:=.c} main.c
 UPART_HDRSRC  = disk bsdlabel map mbr util
 
 UPART_OBJS    = ${UPART_SRCS:.c=.o}

@@ -8,7 +8,4 @@ struct up_opts;
 /* register MBR partition map type */
 void up_mbr_register(void);
 
-/* return the name for a partition ID */
-const char *up_mbr_name(uint8_t type);
-
 #endif /* HDR_UPART_MBR */

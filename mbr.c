@@ -20,6 +20,7 @@
 #define MBR_EXTPART             (0)
 #define MBR_EXTNEXT             (1)
 
+#define MBR_ISPRI(idx)          (MBR_PART_COUNT > (idx))
 #define MBR_GETSECT(sc)         ((sc)[0] & 0x3f)
 #define MBR_GETCYL(sc)          ((((uint16_t)((sc)[0] & 0xc0)) << 2) | (sc)[1])
 
@@ -50,44 +51,71 @@ struct up_mbrpart
     struct up_mbr_p     extmbr;
 };
 
-static int mbr_load(struct up_disk *disk, int64_t start, int64_t size,
+struct up_mbr
+{
+    struct up_mbr_p     mbr;
+    int                 extcount;
+};
+
+static int mbr_load(struct up_disk *disk, const struct up_part *parent,
                     void **priv);
+static int mbrext_load(struct up_disk *disk, const struct up_part *parent,
+                       void **priv);
 static int mbr_setup(struct up_map *map);
+static int mbrext_setup(struct up_map *map);
 static int mbr_getinfo(const struct up_map *part, char *buf, int size);
 static int mbr_getindex(const struct up_part *part, char *buf, int size);
 static int mbr_getextra(const struct up_part *part, int verbose,
                         char *buf, int size);
 static void mbr_dump(const struct up_map *map, void *stream);
-static struct up_part *mbr_addpart(struct up_map *map, struct up_part *parent,
-                                   const struct up_mbrpart_p *part, int index,
-                                   int64_t off, const struct up_mbr_p *mbr);
-static int mbr_loadext(struct up_disk *disk, struct up_map *map,
-                       struct up_part *parent, int *index);
-static int readmbr(struct up_disk *disk, int64_t start, int64_t size,
-                   const struct up_mbr_p **mbr);
+static int mbr_addpart(struct up_map *map, const struct up_mbrpart_p *part,
+                       int index, int64_t off, const struct up_mbr_p *mbr);
+static int mbr_read(struct up_disk *disk, int64_t start, int64_t size,
+                    const struct up_mbr_p **mbr);
 
 void
 up_mbr_register(void)
 {
-    up_map_register(UP_MAP_MBR, "MBR", mbr_load, mbr_setup, mbr_getinfo,
-                    mbr_getindex, mbr_getextra, mbr_dump,
-                    up_map_freeprivmap_def, up_map_freeprivpart_def);
+    up_map_register(UP_MAP_MBR,
+                    0,
+                    mbr_load,
+                    mbr_setup,
+                    mbr_getinfo,
+                    mbr_getindex,
+                    mbr_getextra,
+                    mbr_dump,
+                    up_map_freeprivmap_def,
+                    up_map_freeprivpart_def);
+
+    up_map_register(UP_MAP_MBREXT,
+                    UP_TYPE_NOPRINTHDR,
+                    mbrext_load,
+                    mbrext_setup,
+                    NULL,
+                    mbr_getindex,
+                    mbr_getextra,
+                    mbr_dump,
+                    up_map_freeprivmap_def,
+                    up_map_freeprivpart_def);
 }
 
 static int
-mbr_load(struct up_disk *disk, int64_t start, int64_t size, void **priv)
+mbr_load(struct up_disk *disk, const struct up_part *parent, void **priv)
 {
     const struct up_mbr_p      *buf;
     int                         res;
-    struct up_mbr_p            *mbr;
+    struct up_mbr              *mbr;
 
     assert(MBR_SIZE == sizeof *buf);
-
-    /* try to load MBR */
     *priv = NULL;
-    if(start)
+
+    /* refuse to load if parent map is extended mbr */
+    if(parent->map && (UP_MAP_MBR == parent->map->type ||
+                       UP_MAP_MBREXT == parent->map->type))
         return 0;
-    res = readmbr(disk, start, size, &buf);
+
+    /* load the mbr sector */
+    res = mbr_read(disk, parent->start, parent->size, &buf);
     if(0 >= res)
         return res;
 
@@ -99,37 +127,87 @@ mbr_load(struct up_disk *disk, int64_t start, int64_t size, void **priv)
         return -1;
     }
 
-    *mbr = *buf;
-    *priv = mbr;
+    mbr->mbr          = *buf;
+    mbr->extcount     = 0;
+    *priv             = mbr;
 
     return 1;
 }
 
 static int
+mbrext_load(struct up_disk *disk, const struct up_part *parent, void **priv)
+{
+    const struct up_mbr_p *buf;
+
+    assert(MBR_SIZE == sizeof *buf);
+    *priv = NULL;
+
+    /* refuse to load unless parent is the right type of mbr partition */
+    if(!parent->map || UP_MAP_MBR != parent->map->type ||
+       MBR_ID_EXT != ((const struct up_mbrpart*)parent->priv)->part.type)
+        return 0;
+
+    /* load and discard the first extended mbr sector to check the magic */
+    return mbr_read(disk, parent->start, parent->size, &buf);
+}
+
+static int
 mbr_setup(struct up_map *map)
 {
-    struct up_mbr_p            *mbr = map->priv;
-    int                         ii, jj;
-    struct up_part             *part;
+    struct up_mbr              *mbr = map->priv;
+    int                         ii;
 
-    /* add primary partitions and logical subpartitions */
-    jj = MBR_PART_COUNT;
+    /* add primary partitions */
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
+        if(0 > mbr_addpart(map, &mbr->mbr.part[ii], ii, 0, NULL))
+            return -1;
+
+    return 0;
+}
+
+/* XXX need a way to detect loops */
+static int
+mbrext_setup(struct up_map *map)
+{
+    struct up_mbr              *parent;
+    const struct up_mbr_p      *buf;
+    int                         res, index;
+    int64_t                     absoff, reloff, max;
+
+    assert(UP_MAP_MBR == map->parent->map->type);
+
+    parent    = map->parent->map->priv;
+    absoff    = map->start;
+    reloff    = 0;
+    max       = map->size;
+    index     = MBR_PART_COUNT + parent->extcount;
+
+    do
     {
-        part = mbr_addpart(map, NULL, &mbr->part[ii], ii, 0, NULL);
-        if(!part)
-        {
-            up_map_free(map);
+        /* load extended mbr */
+        assert(absoff >= map->start && absoff + max <= map->start + map->size);
+        res = mbr_read(map->disk, absoff, max, &buf);
+        if(0 >= res)
+            return res;
+
+        if(0 > mbr_addpart(map, &buf->part[MBR_EXTPART], index, absoff, buf))
             return -1;
-        }
-        if(UP_PART_IS_BAD(part->flags) || MBR_ID_EXT != mbr->part[ii].type)
-            continue;
-        if(0 > mbr_loadext(map->disk, map, part, &jj))
-        {
-            up_map_free(map);
-            return -1;
-        }
-    }
+        index++;
+
+        max    = buf->part[MBR_EXTNEXT].size;
+        reloff = buf->part[MBR_EXTNEXT].start;
+        absoff = reloff + map->start;
+        if(reloff + max > map->size)
+            max = map->size - reloff;
+        if(0 > max)
+            max = 0;
+        if(reloff + max > map->size || 0 == max)
+            /* XXX should give better diagnostic here */
+            fprintf(stderr, "skipping logical MBR partition out of range\n");
+    } while(MBR_ID_EXT == buf->part[MBR_EXTNEXT].type &&
+            reloff + max <= map->size && 0 < max);
+
+    parent->extcount = index - MBR_PART_COUNT;
 
     return 0;
 }
@@ -174,12 +252,12 @@ mbr_getextra(const struct up_part *part, int verbose, char *buf, int size)
     lastsect  = MBR_GETSECT(priv->part.lastsectcyl);
 
     if(verbose)
-        return snprintf(buf, size, "%c %4u/%3u/%2u-%4u/%3u/%2u %s (%02x)",
+        return snprintf(buf, size, "%c %4u/%3u/%2u-%4u/%3u/%2u %s (0x%02x)",
                         active, firstcyl, priv->part.firsthead, firstsect,
                         lastcyl, priv->part.lasthead, lastsect, label,
                         priv->part.type);
     else
-        return snprintf(buf, size, "%c %s (%02x)",
+        return snprintf(buf, size, "%c %s (0x%02x)",
                         active, label, priv->part.type);
 }
 
@@ -199,7 +277,7 @@ mbr_dump(const struct up_map *map, void *_stream)
     for(ii = up_map_first(map); ii; ii = up_map_next(ii))
     {
         priv = ii->priv;
-        if(MBR_PART_COUNT > priv->index)
+        if(MBR_ISPRI(priv->index))
             continue;
         fprintf(stream, "\nDump of %s extended MBR #%d "
                 "at sector %"PRId64" (0x%08"PRIx64"):\n",
@@ -208,23 +286,21 @@ mbr_dump(const struct up_map *map, void *_stream)
     }
 }
 
-static struct up_part *
-mbr_addpart(struct up_map *map, struct up_part *parent,
-            const struct up_mbrpart_p *part, int index, int64_t extoff,
-            const struct up_mbr_p *extmbr)
+static int
+mbr_addpart(struct up_map *map, const struct up_mbrpart_p *part, int index,
+            int64_t extoff, const struct up_mbr_p *extmbr)
 {
     struct up_mbrpart  *priv;
-    struct up_part     *ret;
     int                 flags;
 
-    assert((!parent && MBR_PART_COUNT >  index && 0 == extoff && !extmbr) ||
-           ( parent && MBR_PART_COUNT <= index && 0 <  extoff &&  extmbr));
+    assert(( MBR_ISPRI(index) && 0 == extoff && !extmbr) ||
+           (!MBR_ISPRI(index) && 0 <  extoff &&  extmbr));
 
     priv = calloc(1, sizeof *priv);
     if(!priv)
     {
         perror("malloc");
-        return NULL;
+        return -1;
     }
 
     priv->part = *part;
@@ -241,63 +317,20 @@ mbr_addpart(struct up_map *map, struct up_part *parent,
     if(MBR_ID_UNUSED == part->type)
         flags |= UP_PART_EMPTY;
     if(part->start < map->start ||
-       part->start + part->size > map->start + map->size ||
-       (parent && (part->start < parent->start ||
-                   part->start + part->size > parent->start + parent->size)))
+       part->start + part->size > map->start + map->size)
         flags |= UP_PART_OOB;
 
-    ret = up_map_add(map, parent, part->start, part->size, flags, priv);
-    if(!ret)
-        free(priv);
-
-    return ret;
-}
-
-/* XXX need a way to detect loops */
-static int
-mbr_loadext(struct up_disk *disk, struct up_map *map, struct up_part *parent,
-            int *index)
-{
-    const struct up_mbr_p      *buf;
-    int                         res;
-    int64_t                     absoff, reloff, max;
-
-    absoff = parent->start;
-    reloff = 0;
-    max    = parent->size;
-
-    do
+    if(!up_map_add(map, part->start, part->size, flags, priv))
     {
-        /* load extended mbr */
-        assert(absoff >= parent->start &&
-               absoff + max <= parent->start + parent->size);
-        res = readmbr(disk, absoff, max, &buf);
-        if(0 >= res)
-            return res;
+        free(priv);
+        return -1;
+    }
 
-        if(!mbr_addpart(map, parent, &buf->part[MBR_EXTPART], *index,
-                        absoff, buf))
-            return -1;
-        (*index)++;
-
-        max    = buf->part[MBR_EXTNEXT].size;
-        reloff = buf->part[MBR_EXTNEXT].start;
-        absoff = reloff + parent->start;
-        if(reloff + max > parent->size)
-            max = parent->size - reloff;
-        if(0 > max)
-            max = 0;
-        if(reloff + max > parent->size || 0 == max)
-            /* XXX should give better diagnostic here */
-            fprintf(stderr, "skipping logical MBR partition out of range\n");
-    } while(MBR_ID_EXT == buf->part[MBR_EXTNEXT].type &&
-            reloff + max <= parent->size && 0 < max);
-
-    return 1;
+    return 0;
 }
 
 static int
-readmbr(struct up_disk *disk, int64_t start, int64_t size,
+mbr_read(struct up_disk *disk, int64_t start, int64_t size,
         const struct up_mbr_p **mbr)
 {
     const void *buf;

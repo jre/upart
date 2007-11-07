@@ -11,13 +11,12 @@
 
 #define CHECKTYPE(typ) \
     assert(UP_MAP_NONE < (typ) && UP_MAP_TYPE_COUNT > (typ) && \
-           st_types[(typ)].registered)
+           UP_TYPE_REGISTERED & st_types[(typ)].flags)
 
 struct up_map_funcs
 {
-    int registered;
-    const char *typestr;
-    int (*load)(struct up_disk *, int64_t, int64_t, void **);
+    int flags;
+    int (*load)(struct up_disk *, const struct up_part *, void **);
     int (*setup)(struct up_map *);
     int (*getinfo)(const struct up_map *, char *, int);
     int (*getindex)(const struct up_part *, char *, int);
@@ -31,9 +30,7 @@ static int map_loadall(struct up_disk *disk, struct up_part *container);
 static struct up_part *map_newcontainer(int64_t size);
 static void map_freecontainer(struct up_part *container);
 static struct up_map *map_new(struct up_disk *disk, struct up_part *parent,
-                              int64_t start, int64_t size,
                               enum up_map_type type, void *priv);
-static void map_freelist(struct up_part_list *list);
 static void map_printcontainer(const struct up_part *container, FILE *stream,
                                int verbose);
 static void map_indent(int depth, FILE *stream);
@@ -42,8 +39,8 @@ static void map_dumpcontainer(const struct up_part *container, FILE *stream);
 static struct up_map_funcs st_types[UP_MAP_TYPE_COUNT];
 
 void
-up_map_register(enum up_map_type type, const char *typestr,
-                int (*load)(struct up_disk *, int64_t, int64_t, void **),
+up_map_register(enum up_map_type type, int flags,
+                int (*load)(struct up_disk *, const struct up_part *, void **),
                 int (*setup)(struct up_map *),
                 int (*getinfo)(const struct up_map *, char *, int),
                 int (*getindex)(const struct up_part *, char *, int),
@@ -55,11 +52,11 @@ up_map_register(enum up_map_type type, const char *typestr,
     struct up_map_funcs *funcs;
 
     assert(UP_MAP_NONE < type && UP_MAP_TYPE_COUNT > type);
-    assert(!st_types[type].registered);
+    assert(!(UP_TYPE_REGISTERED & st_types[type].flags));
+    assert(!(UP_TYPE_REGISTERED & flags));
 
     funcs                     = &st_types[type];
-    funcs->registered         = 1;
-    funcs->typestr            = typestr;
+    funcs->flags              = UP_TYPE_REGISTERED | flags;
     funcs->load               = load;
     funcs->setup              = setup;
     funcs->getinfo            = getinfo;
@@ -71,25 +68,25 @@ up_map_register(enum up_map_type type, const char *typestr,
 }
 
 int
-up_map_load(struct up_disk *disk, struct up_part *parent, int64_t start,
-            int64_t size, enum up_map_type type,
-            struct up_map **mapret)
+up_map_load(struct up_disk *disk, struct up_part *parent,
+            enum up_map_type type, struct up_map **mapret)
 {
     struct up_map_funcs*funcs;
     void               *priv;
     struct up_map      *map;
 
     CHECKTYPE(type);
-    assert(0 <= start && 0 <= size && start + size <= disk->upd_size);
+    assert(0 <= parent->start && 0 <= parent->size &&
+           parent->start + parent->size <= disk->upd_size);
 
     funcs     = &st_types[type];
     *mapret   = NULL;
     priv      = NULL;
 
-    switch(funcs->load(disk, start, size, &priv))
+    switch(funcs->load(disk, parent, &priv))
     {
         case 1:
-            map = map_new(disk, parent, start, size, type, priv);
+            map = map_new(disk, parent, type, priv);
             if(!map)
             {
                 if(funcs->freeprivmap && priv)
@@ -135,9 +132,9 @@ up_map_loadall(struct up_disk *disk)
 static int
 map_loadall(struct up_disk *disk, struct up_part *container)
 {
-    enum up_map_type            type;
-    struct up_map              *map;
-    const struct up_part       *ii;
+    enum up_map_type    type;
+    struct up_map      *map;
+    struct up_part     *ii;
 
     /* iterate through all partition types */
     for(type = UP_MAP_NONE + 1; UP_MAP_TYPE_COUNT > type; type++)
@@ -145,16 +142,16 @@ map_loadall(struct up_disk *disk, struct up_part *container)
         CHECKTYPE(type);
 
         /* try to load a map of this type */
-        if(0 > up_map_load(disk, container, container->start, container->size,
-                           type, &map))
+        if(0 > up_map_load(disk, container, type, &map))
             return -1;
 
-        if(map)
-            /* try to recurse on each partition in the map */
-            for(ii = up_map_first(map); ii; ii = up_map_next(ii))
-                /* XXX use queue macros here once subparts are gone */
-                if(map_loadall(disk, (struct up_part*)ii))
-                    return -1;
+        if(!map)
+            continue;
+
+        /* try to recurse on each partition in the map */
+        for(ii = SIMPLEQ_FIRST(&map->list); ii; ii = SIMPLEQ_NEXT(ii, link))
+            if(!UP_PART_IS_BAD(ii->flags) && map_loadall(disk, ii))
+                return -1;
     }
 
     return 0;
@@ -172,8 +169,8 @@ up_map_freeall(struct up_disk *disk)
 }
 
 static struct up_map *
-map_new(struct up_disk *disk, struct up_part *parent, int64_t start,
-        int64_t size, enum up_map_type type, void *priv)
+map_new(struct up_disk *disk, struct up_part *parent,
+        enum up_map_type type, void *priv)
 {
     struct up_map *map;
 
@@ -186,9 +183,9 @@ map_new(struct up_disk *disk, struct up_part *parent, int64_t start,
 
     map->disk         = disk;
     map->type         = type;
-    map->start        = start;
-    map->size         = size;
-    map->depth        = (parent ? parent->depth + 1 : 0);
+    map->start        = parent->start;
+    map->size         = parent->size;
+    map->depth        = (parent->map ? parent->map->depth + 1 : 0);
     map->priv         = priv;
     map->parent       = parent;
     SIMPLEQ_INIT(&map->list);
@@ -212,8 +209,6 @@ map_newcontainer(int64_t size)
 
     container->start  = 0;
     container->size   = size;
-    container->depth  = 0;
-    SIMPLEQ_INIT(&container->subpart);
     SIMPLEQ_INIT(&container->submap);
 
     return container;
@@ -233,8 +228,8 @@ map_freecontainer(struct up_part *container)
 }
 
 struct up_part *
-up_map_add(struct up_map *map, struct up_part *parent, int64_t start,
-           int64_t size, int flags, void *priv)
+up_map_add(struct up_map *map, int64_t start, int64_t size,
+           int flags, void *priv)
 {
     struct up_part *part;
 
@@ -245,21 +240,13 @@ up_map_add(struct up_map *map, struct up_part *parent, int64_t start,
         return NULL;
     }
 
-    /* XXX kill subpartitions, implement mbr ext as distinct type */
-
     part->start       = start;
     part->size        = size;
     part->flags       = flags;
-    part->depth       = (parent ? parent->depth + 1 : map->depth);
     part->priv        = priv;
     part->map         = map;
-    part->parent      = parent;
-    SIMPLEQ_INIT(&part->subpart);
     SIMPLEQ_INIT(&part->submap);
-    if(parent)
-        SIMPLEQ_INSERT_TAIL(&parent->subpart, part, link);
-    else
-        SIMPLEQ_INSERT_TAIL(&map->list, part, link);
+    SIMPLEQ_INSERT_TAIL(&map->list, part, link);
 
     return part;
 }
@@ -267,6 +254,8 @@ up_map_add(struct up_map *map, struct up_part *parent, int64_t start,
 void
 up_map_free(struct up_map *map)
 {
+    struct up_part *ii;
+
     if(!map)
         return;
 
@@ -274,27 +263,22 @@ up_map_free(struct up_map *map)
     /* freeing a map with a parent isn't supported due to laziness */
     assert(!map->parent);
 
-    map_freelist(&map->list);
-    if(st_types[map->type].freeprivmap && map->priv)
-        st_types[map->type].freeprivmap(map, map->priv);
-    free(map);
-}
-
-static void
-map_freelist(struct up_part_list *list)
-{
-    struct up_part     *ii;
-
-    while((ii = SIMPLEQ_FIRST(list)))
+    /* free partitions */
+    while((ii = SIMPLEQ_FIRST(&map->list)))
     {
-        CHECKTYPE(ii->map->type);
-        SIMPLEQ_REMOVE_HEAD(list, link);
-        map_freelist(&ii->subpart);
+        SIMPLEQ_REMOVE_HEAD(&map->list, link);
         map_freecontainer(ii);
         if(st_types[ii->map->type].freeprivpart && ii->priv)
             st_types[ii->map->type].freeprivpart(ii, ii->priv);
         free(ii);
     }
+
+    /* free private data */
+    if(st_types[map->type].freeprivmap && map->priv)
+        st_types[map->type].freeprivmap(map, map->priv);
+
+    /* free map */
+    free(map);
 }
 
 void
@@ -322,23 +306,29 @@ up_map_print(const struct up_map *map, void *_stream, int verbose, int recurse)
     funcs = &st_types[map->type];
 
     /* print info line */
-    buf[0] = 0;
-    funcs->getinfo(map, buf, sizeof buf);
-    map_indent(map->depth, stream);
-    fputs(buf, stream);
-    fputs(":\n", stream);
+    if(funcs->getinfo)
+    {
+        buf[0] = 0;
+        funcs->getinfo(map, buf, sizeof buf);
+        map_indent(map->depth, stream);
+        fputs(buf, stream);
+        fputs(":\n", stream);
+    }
 
     /* print the header line */
-    buf[0] = 0;
-    funcs->getextra(NULL, verbose, buf, sizeof buf);
-    map_indent(map->depth, stream);
-    fputs("                 Start            Size", stream);
-    if(buf[0])
+    if(!(UP_TYPE_NOPRINTHDR & funcs->flags))
     {
-        fputc(' ', stream);
-        fputs(buf, stream);
+        buf[0] = 0;
+        funcs->getextra(NULL, verbose, buf, sizeof buf);
+        map_indent(map->depth, stream);
+        fputs("                 Start            Size", stream);
+        if(buf[0])
+        {
+            fputc(' ', stream);
+            fputs(buf, stream);
+        }
+        fputc('\n', stream);
     }
-    fputc('\n', stream);
 
     /* print partitions */
     for(ii = up_map_first(map); ii; ii = up_map_next(ii))
@@ -384,7 +374,6 @@ map_printcontainer(const struct up_part *container, FILE *stream, int verbose)
 
     for(ii = up_map_firstmap(container); ii; ii = up_map_nextmap(ii))
     {
-        fputc('\n', stream);
         up_map_print(ii, stream, verbose, 1);
     }
 }
@@ -394,7 +383,7 @@ map_indent(int depth, FILE *stream)
 {
     int ii;
 
-    for(ii = 1; depth > ii; ii++)
+    for(ii = 0; depth > ii; ii++)
         putc(' ', stream);
 }
 
@@ -438,33 +427,9 @@ up_map_first(const struct up_map *map)
 }
 
 const struct up_part *
-up_map_firstsub(const struct up_part *part)
-{
-    return SIMPLEQ_FIRST(&part->subpart);
-}
-
-const struct up_part *
 up_map_next(const struct up_part *part)
 {
-    const struct up_part *next;
-
-    /* first subpartition */
-    if((next = up_map_firstsub(part)))
-    {
-        assert(part == next->parent);
-        return next;
-    }
-
-    /* next peer partition */
-    if((next = SIMPLEQ_NEXT(part, link)))
-        return next;
-
-    /* parent partition's next peer partition */
-    if(part->parent && (next = SIMPLEQ_NEXT(part->parent, link)))
-        return next;
-
-    /* no more partitions */
-    return NULL;
+    return SIMPLEQ_NEXT(part, link);
 }
 
 const struct up_map *

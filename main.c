@@ -41,6 +41,7 @@ main(int argc, char *argv[])
     }
 
     up_disk_dump(disk, stdout, &opts);
+    fputc('\n', stdout);
     up_map_printall(disk, stdout, opts.upo_verbose);
     if(opts.upo_verbose)
         up_map_dumpall(disk, stdout);

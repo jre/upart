@@ -6,6 +6,9 @@
 struct up_map;
 struct up_part;
 
+#define UP_TYPE_REGISTERED      (1<<0)
+#define UP_TYPE_NOPRINTHDR      (1<<1)
+
 #define UP_PART_EMPTY           (1<<0) /* empty or deleted */
 #define UP_PART_OOB             (1<<1) /* out of bounds */
 
@@ -19,11 +22,8 @@ struct up_part
     int64_t             start;
     int64_t             size;
     int                 flags;
-    int                 depth;
     void *              priv;
     struct up_map      *map;
-    struct up_part     *parent;
-    struct up_part_list subpart;
     struct up_map_list  submap;
     SIMPLEQ_ENTRY(up_part) link;
 };
@@ -32,6 +32,7 @@ enum up_map_type
 {
     UP_MAP_NONE = 0,
     UP_MAP_MBR,
+    UP_MAP_MBREXT,
     //UP_MAP_BSD,
     UP_MAP_TYPE_COUNT
 };
@@ -49,9 +50,9 @@ struct up_map
     SIMPLEQ_ENTRY(up_map) link;
 };
 
-void up_map_register(enum up_map_type type, const char *typestr,
+void up_map_register(enum up_map_type type, int flags,
                      /* check if map exists and allocate private data */
-                     int (*load)(struct up_disk *, int64_t, int64_t, void **),
+                     int (*load)(struct up_disk*,const struct up_part*,void**),
                      /* add partitions, misc setup not done in load */
                      int (*setup)(struct up_map *),
                      /* copy map header line into string */
@@ -70,10 +71,10 @@ void up_map_register(enum up_map_type type, const char *typestr,
 int up_map_loadall(struct up_disk *disk);
 void up_map_freeall(struct up_disk *disk);
 
-int up_map_load(struct up_disk *disk, struct up_part *parent, int64_t start,
-                int64_t size, enum up_map_type type, struct up_map **mapret);
-struct up_part *up_map_add(struct up_map *map, struct up_part *parent,
-                           int64_t start, int64_t size, int flags, void *priv);
+int up_map_load(struct up_disk *disk, struct up_part *parent,
+                enum up_map_type type, struct up_map **mapret);
+struct up_part *up_map_add(struct up_map *map, int64_t start, int64_t size,
+                           int flags, void *priv);
 
 void up_map_free(struct up_map *map);
 void up_map_freeprivmap_def(struct up_map *map, void *priv);
@@ -86,7 +87,6 @@ void up_map_printall(const struct up_disk *disk, void *stream, int verbose);
 void up_map_dumpall(const struct up_disk *disk, void *stream);
 
 const struct up_part *up_map_first(const struct up_map *map);
-const struct up_part *up_map_firstsub(const struct up_part *part);
 const struct up_part *up_map_next(const struct up_part *part);
 const struct up_map  *up_map_firstmap(const struct up_part *part);
 const struct up_map  *up_map_nextmap(const struct up_map *map);

@@ -96,7 +96,7 @@ up_mbr_register(void)
                     mbr_getindex,
                     mbr_getextra,
                     mbr_dump,
-                    up_map_freeprivmap_def,
+                    NULL,
                     up_map_freeprivpart_def);
 }
 
@@ -319,9 +319,6 @@ mbr_addpart(struct up_map *map, const struct up_mbrpart_p *part, int index,
     flags = 0;
     if(MBR_ID_UNUSED == part->type)
         flags |= UP_PART_EMPTY;
-    if(part->start < map->start ||
-       part->start + part->size > map->start + map->size)
-        flags |= UP_PART_OOB;
 
     if(!up_map_add(map, part->start, part->size, flags, priv))
     {

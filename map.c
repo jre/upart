@@ -240,6 +240,11 @@ up_map_add(struct up_map *map, int64_t start, int64_t size,
         return NULL;
     }
 
+    if(0 == size)
+        flags |= UP_PART_EMPTY;
+    if(start < map->start || start + size > map->start + map->size)
+        flags |= UP_PART_OOB;
+
     part->start       = start;
     part->size        = size;
     part->flags       = flags;

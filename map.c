@@ -18,7 +18,7 @@ struct up_map_funcs
     int flags;
     int (*load)(struct up_disk *, const struct up_part *, void **);
     int (*setup)(struct up_map *);
-    int (*getinfo)(const struct up_map *, char *, int);
+    int (*getinfo)(const struct up_map *, int, char *, int);
     int (*getindex)(const struct up_part *, char *, int);
     int (*getextra)(const struct up_part *, int, char *, int);
     void (*dump)(const struct up_map *, void *);
@@ -42,7 +42,7 @@ void
 up_map_register(enum up_map_type type, int flags,
                 int (*load)(struct up_disk *, const struct up_part *, void **),
                 int (*setup)(struct up_map *),
-                int (*getinfo)(const struct up_map *, char *, int),
+                int (*getinfo)(const struct up_map *, int, char *, int),
                 int (*getindex)(const struct up_part *, char *, int),
                 int (*getextra)(const struct up_part *, int, char *, int),
                 void (*dump)(const struct up_map *, void *),
@@ -303,7 +303,7 @@ up_map_print(const struct up_map *map, void *_stream, int verbose, int recurse)
 {
     FILE                       *stream = _stream;
     struct up_map_funcs        *funcs;
-    char                        buf[128], idx[6], flag;
+    char                        buf[512], idx[6], flag;
     const struct up_part       *ii;
 
     CHECKTYPE(map->type);
@@ -314,10 +314,10 @@ up_map_print(const struct up_map *map, void *_stream, int verbose, int recurse)
     if(funcs->getinfo)
     {
         buf[0] = 0;
-        funcs->getinfo(map, buf, sizeof buf);
+        funcs->getinfo(map, verbose, buf, sizeof buf);
         map_indent(map->depth, stream);
         fputs(buf, stream);
-        fputs(":\n", stream);
+        putc('\n', stream);
     }
 
     /* print the header line */
@@ -329,10 +329,10 @@ up_map_print(const struct up_map *map, void *_stream, int verbose, int recurse)
         fputs("                 Start            Size", stream);
         if(buf[0])
         {
-            fputc(' ', stream);
+            putc(' ', stream);
             fputs(buf, stream);
         }
-        fputc('\n', stream);
+        putc('\n', stream);
     }
 
     /* print partitions */
@@ -400,7 +400,7 @@ up_map_dump(const struct up_map *map, void *_stream, int recurse)
 
     CHECKTYPE(map->type);
 
-    fputc('\n', stream);
+    putc('\n', stream);
     st_types[map->type].dump(map, stream);
 
     for(ii = up_map_first(map); ii; ii = up_map_next(ii))
@@ -420,7 +420,7 @@ map_dumpcontainer(const struct up_part *container, FILE *stream)
 
     for(ii = up_map_firstmap(container); ii; ii = up_map_nextmap(ii))
     {
-        fputc('\n', stdout);
+        putc('\n', stream);
         up_map_dump(ii, stream, 1);
     }
 }

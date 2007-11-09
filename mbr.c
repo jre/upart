@@ -63,7 +63,8 @@ static int mbrext_load(struct up_disk *disk, const struct up_part *parent,
                        void **priv);
 static int mbr_setup(struct up_map *map);
 static int mbrext_setup(struct up_map *map);
-static int mbr_getinfo(const struct up_map *part, char *buf, int size);
+static int mbr_getinfo(const struct up_map *part, int verbose,
+                       char *buf, int size);
 static int mbr_getindex(const struct up_part *part, char *buf, int size);
 static int mbr_getextra(const struct up_part *part, int verbose,
                         char *buf, int size);
@@ -216,9 +217,9 @@ mbrext_setup(struct up_map *map)
 }
 
 static int
-mbr_getinfo(const struct up_map *map, char *buf, int size)
+mbr_getinfo(const struct up_map *map, int verbose, char *buf, int size)
 {
-    return snprintf(buf, size, "MBR partition table in sector %"PRId64" of %s",
+    return snprintf(buf, size, "MBR partition table in sector %"PRId64" of %s:",
                     map->start, map->disk->upd_name);
 }
 
@@ -272,7 +273,7 @@ mbr_dump(const struct up_map *map, void *_stream)
     const struct up_mbrpart    *priv;
 
     /* dump MBR sector */
-    fprintf(stream, "Dump of %s MBR at sector %"PRId64" (0x%08"PRIx64":\n",
+    fprintf(stream, "Dump of %s MBR at sector %"PRId64" (0x%08"PRIx64"):\n",
             map->disk->upd_name, map->start, map->start);
     up_hexdump(map->priv, sizeof(struct up_mbr_p), map->start, stream);
 
@@ -518,7 +519,7 @@ static const char *mbr_name_table[] =
     /* 0xa2 */ NULL,
     /* 0xa3 */ NULL,
     /* 0xa4 */ NULL,
-    /* 0xa5 */ "FreeBSD or Dragonfly",
+    /* 0xa5 */ "FreeBSD or DragonFly",
     /* 0xa6 */ "OpenBSD",
     /* 0xa7 */ NULL,
     /* 0xa8 */ "MacOS X UFS", /* XXX verify this */

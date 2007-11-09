@@ -33,7 +33,7 @@ enum up_map_type
     UP_MAP_NONE = 0,
     UP_MAP_MBR,
     UP_MAP_MBREXT,
-    //UP_MAP_BSD,
+    UP_MAP_BSD,
     UP_MAP_TYPE_COUNT
 };
 
@@ -56,7 +56,7 @@ void up_map_register(enum up_map_type type, int flags,
                      /* add partitions, misc setup not done in load */
                      int (*setup)(struct up_map *),
                      /* copy map header line into string */
-                     int (*getinfo)(const struct up_map *, char *, int),
+                     int (*getinfo)(const struct up_map *, int, char *, int),
                      /* copy part index into string */
                      int (*getindex)(const struct up_part *, char *, int),
                      /* copy extra verbose info into string */

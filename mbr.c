@@ -96,7 +96,7 @@ up_mbr_register(void)
                     NULL,
                     mbr_getindex,
                     mbr_getextra,
-                    mbr_dump,
+                    NULL,
                     NULL,
                     up_map_freeprivpart_def);
 }

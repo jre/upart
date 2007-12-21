@@ -400,6 +400,9 @@ up_map_dump(const struct up_map *map, void *_stream, int recurse)
 
     CHECKTYPE(map->type);
 
+    if(!st_types[map->type].dump)
+        return;
+
     putc('\n', stream);
     st_types[map->type].dump(map, stream);
 

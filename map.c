@@ -16,8 +16,9 @@
 struct up_map_funcs
 {
     int flags;
-    int (*load)(struct up_disk *, const struct up_part *, void **);
-    int (*setup)(struct up_map *);
+    int (*load)(struct up_disk *, const struct up_part *, void **,
+                struct up_opts *);
+    int (*setup)(struct up_map *, struct up_opts *);
     int (*getinfo)(const struct up_map *, int, char *, int);
     int (*getindex)(const struct up_part *, char *, int);
     int (*getextra)(const struct up_part *, int, char *, int);
@@ -26,7 +27,8 @@ struct up_map_funcs
     void (*freeprivpart)(struct up_part *, void *);
 };
 
-static int map_loadall(struct up_disk *disk, struct up_part *container);
+static int map_loadall(struct up_disk *disk, struct up_part *container,
+                       struct up_opts *opts);
 static struct up_part *map_newcontainer(int64_t size);
 static void map_freecontainer(struct up_part *container);
 static struct up_map *map_new(struct up_disk *disk, struct up_part *parent,
@@ -40,8 +42,9 @@ static struct up_map_funcs st_types[UP_MAP_TYPE_COUNT];
 
 void
 up_map_register(enum up_map_type type, int flags,
-                int (*load)(struct up_disk *, const struct up_part *, void **),
-                int (*setup)(struct up_map *),
+                int (*load)(struct up_disk *, const struct up_part *, void **,
+                            struct up_opts *),
+                int (*setup)(struct up_map *, struct up_opts *),
                 int (*getinfo)(const struct up_map *, int, char *, int),
                 int (*getindex)(const struct up_part *, char *, int),
                 int (*getextra)(const struct up_part *, int, char *, int),
@@ -69,7 +72,8 @@ up_map_register(enum up_map_type type, int flags,
 
 int
 up_map_load(struct up_disk *disk, struct up_part *parent,
-            enum up_map_type type, struct up_map **mapret)
+            enum up_map_type type, struct up_map **mapret,
+            struct up_opts *opts)
 {
     struct up_map_funcs*funcs;
     void               *priv;
@@ -83,7 +87,7 @@ up_map_load(struct up_disk *disk, struct up_part *parent,
     *mapret   = NULL;
     priv      = NULL;
 
-    switch(funcs->load(disk, parent, &priv))
+    switch(funcs->load(disk, parent, &priv, opts))
     {
         case 1:
             map = map_new(disk, parent, type, priv);
@@ -93,7 +97,7 @@ up_map_load(struct up_disk *disk, struct up_part *parent,
                     funcs->freeprivmap(NULL, priv);
                 return -1;
             }
-            if(0 > funcs->setup(map))
+            if(0 > funcs->setup(map, opts))
             {
                 up_map_free(map);
                 return -1;
@@ -112,7 +116,7 @@ up_map_load(struct up_disk *disk, struct up_part *parent,
 }
 
 int
-up_map_loadall(struct up_disk *disk)
+up_map_loadall(struct up_disk *disk, struct up_opts *opts)
 {
     assert(!disk->maps);
 
@@ -120,7 +124,7 @@ up_map_loadall(struct up_disk *disk)
     if(!disk->maps)
         return -1;
 
-    if(0 > map_loadall(disk, disk->maps))
+    if(0 > map_loadall(disk, disk->maps, opts))
     {
         up_map_freeall(disk);
         return -1;
@@ -130,7 +134,8 @@ up_map_loadall(struct up_disk *disk)
 }
 
 static int
-map_loadall(struct up_disk *disk, struct up_part *container)
+map_loadall(struct up_disk *disk, struct up_part *container,
+            struct up_opts *opts)
 {
     enum up_map_type    type;
     struct up_map      *map;
@@ -142,7 +147,7 @@ map_loadall(struct up_disk *disk, struct up_part *container)
         CHECKTYPE(type);
 
         /* try to load a map of this type */
-        if(0 > up_map_load(disk, container, type, &map))
+        if(0 > up_map_load(disk, container, type, &map, opts))
             return -1;
 
         if(!map)
@@ -150,7 +155,7 @@ map_loadall(struct up_disk *disk, struct up_part *container)
 
         /* try to recurse on each partition in the map */
         for(ii = SIMPLEQ_FIRST(&map->list); ii; ii = SIMPLEQ_NEXT(ii, link))
-            if(!UP_PART_IS_BAD(ii->flags) && map_loadall(disk, ii))
+            if(!UP_PART_IS_BAD(ii->flags) && map_loadall(disk, ii, opts))
                 return -1;
     }
 

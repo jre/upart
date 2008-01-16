@@ -36,7 +36,7 @@ main(int argc, char *argv[])
     disk = up_disk_open(name, &opts);
     if(!disk)
         return EXIT_FAILURE;
-    if(0 > up_map_loadall(disk))
+    if(0 > up_map_loadall(disk, &opts))
     {
         up_disk_close(disk);
         return EXIT_FAILURE;
@@ -59,7 +59,7 @@ readargs(int argc, char *argv[], struct up_opts *opts)
     int opt;
 
     memset(opts, 0, sizeof *opts);
-    while(0 < (opt = getopt(argc, argv, "c:fh:s:vz:")))
+    while(0 < (opt = getopt(argc, argv, "c:fh:rs:vz:")))
     {
         switch(opt)
         {
@@ -81,6 +81,9 @@ readargs(int argc, char *argv[], struct up_opts *opts)
                     usage(argv[0], "illegal tracks per cylinder (head) count: %s", optarg);
                     return NULL;
                 }
+                break;
+            case 'r':
+                opts->relaxed = 1;
                 break;
             case 's':
                 opts->sects = strtol(optarg, NULL, 0);
@@ -138,6 +141,7 @@ usage(const char *argv0, const char *message, ...)
            "  -c cyls   total number of cylinders (cylinders)\n"
            "  -f        path is a plain file and not a device\n"
            "  -h heads  number of tracks per cylinder (heads)\n"
+           "  -r        relax some checks when reading maps\n"
            "  -s sects  number of sectors per track (sectors)\n"
            "  -v        print partition maps verbosely\n"
            "  -z size   sector size in bytes\n", name, name);

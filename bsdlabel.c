@@ -147,8 +147,8 @@ static char *up_fstypes[] =
 };
 
 static int bsdlabel_load(struct up_disk *disk, const struct up_part *parent,
-                         void **priv);
-static int bsdlabel_setup(struct up_map *map);
+                         void **priv, struct up_opts *opts);
+static int bsdlabel_setup(struct up_map *map, struct up_opts *opts);
 static int bsdlabel_info(const struct up_map *map, int verbose,
                          char *buf, int size);
 static int bsdlabel_index(const struct up_part *part, char *buf, int size);
@@ -178,7 +178,8 @@ void up_bsdlabel_register(void)
 }
 
 static int
-bsdlabel_load(struct up_disk *disk, const struct up_part *parent, void **priv)
+bsdlabel_load(struct up_disk *disk, const struct up_part *parent, void **priv,
+              struct up_opts *opts)
 {
     int                 res, sectoff, byteoff, endian, size;
     const uint8_t      *buf;
@@ -228,8 +229,8 @@ bsdlabel_load(struct up_disk *disk, const struct up_part *parent, void **priv)
                               LABEL_LGETINT16(label, maxpart));
     if(byteoff + size > disk->upd_sectsize)
     {
-        /* XXX better diagnostic */
-        fprintf(stderr, "ignoring truncated BSD disklabel\n");
+        fprintf(stderr, "ignoring truncated BSD disklabel (sector %"
+                PRId64"\n", parent->start);
         bsdlabel_freemap(NULL, label);
         return -1;
     }
@@ -238,10 +239,16 @@ bsdlabel_load(struct up_disk *disk, const struct up_part *parent, void **priv)
     if(bsdlabel_cksum(label->buf + byteoff, size) !=
        LABEL_LGETINT16(label, checksum))
     {
-        /* XXX better diagnostic */
-        fprintf(stderr, "ignoring BSD disklabel with bad checksum\n");
-        bsdlabel_freemap(NULL, label);
-        return -1;
+        if(opts->relaxed)
+            fprintf(stderr, "warning: BSD disklabel with bad checksum "
+                    "(sector %"PRId64"\n", parent->start);
+        else
+        {
+            fprintf(stderr, "ignoring BSD disklabel with bad checksum "
+                    "(sector %"PRId64"\n", parent->start);
+            bsdlabel_freemap(NULL, label);
+            return -1;
+        }
     }
 
     *priv = label;
@@ -250,7 +257,7 @@ bsdlabel_load(struct up_disk *disk, const struct up_part *parent, void **priv)
 }
 
 static int
-bsdlabel_setup(struct up_map *map)
+bsdlabel_setup(struct up_map *map, struct up_opts *opts)
 {
     struct up_bsd              *label = map->priv;
     int                         ii, max, flags;

@@ -55,8 +55,8 @@ struct up_apmpart
 };
 
 static int apm_load(struct up_disk *disk, const struct up_part *parent,
-                    void **priv);
-static int apm_setup(struct up_map *map);
+                    void **priv, struct up_opts *opts);
+static int apm_setup(struct up_map *map, struct up_opts *opts);
 static int apm_info(const struct up_map *map, int verbose,
                     char *buf, int size);
 static int apm_index(const struct up_part *part, char *buf, int size);
@@ -84,7 +84,8 @@ void up_apm_register(void)
 }
 
 static int
-apm_load(struct up_disk *disk, const struct up_part *parent, void **priv)
+apm_load(struct up_disk *disk, const struct up_part *parent, void **priv,
+         struct up_opts *opts)
 {
     int                 res;
     struct up_apm      *apm;
@@ -139,7 +140,7 @@ apm_load(struct up_disk *disk, const struct up_part *parent, void **priv)
 }
 
 static int
-apm_setup(struct up_map *map)
+apm_setup(struct up_map *map, struct up_opts *opts)
 {
     struct up_apm              *apm = map->priv;
     int                         ii, flags;

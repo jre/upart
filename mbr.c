@@ -58,11 +58,11 @@ struct up_mbr
 };
 
 static int mbr_load(struct up_disk *disk, const struct up_part *parent,
-                    void **priv);
+                    void **priv, struct up_opts *opts);
 static int mbrext_load(struct up_disk *disk, const struct up_part *parent,
-                       void **priv);
-static int mbr_setup(struct up_map *map);
-static int mbrext_setup(struct up_map *map);
+                       void **priv, struct up_opts *opts);
+static int mbr_setup(struct up_map *map, struct up_opts *opts);
+static int mbrext_setup(struct up_map *map, struct up_opts *opts);
 static int mbr_getinfo(const struct up_map *part, int verbose,
                        char *buf, int size);
 static int mbr_getindex(const struct up_part *part, char *buf, int size);
@@ -102,7 +102,8 @@ up_mbr_register(void)
 }
 
 static int
-mbr_load(struct up_disk *disk, const struct up_part *parent, void **priv)
+mbr_load(struct up_disk *disk, const struct up_part *parent, void **priv,
+         struct up_opts *opts)
 {
     const struct up_mbr_p      *buf;
     int                         res;
@@ -137,7 +138,8 @@ mbr_load(struct up_disk *disk, const struct up_part *parent, void **priv)
 }
 
 static int
-mbrext_load(struct up_disk *disk, const struct up_part *parent, void **priv)
+mbrext_load(struct up_disk *disk, const struct up_part *parent, void **priv,
+            struct up_opts *opts)
 {
     const struct up_mbr_p *buf;
 
@@ -154,7 +156,7 @@ mbrext_load(struct up_disk *disk, const struct up_part *parent, void **priv)
 }
 
 static int
-mbr_setup(struct up_map *map)
+mbr_setup(struct up_map *map, struct up_opts *opts)
 {
     struct up_mbr              *mbr = map->priv;
     int                         ii;
@@ -169,7 +171,7 @@ mbr_setup(struct up_map *map)
 
 /* XXX need a way to detect loops */
 static int
-mbrext_setup(struct up_map *map)
+mbrext_setup(struct up_map *map, struct up_opts *opts)
 {
     struct up_mbr              *parent;
     const struct up_mbr_p      *buf;

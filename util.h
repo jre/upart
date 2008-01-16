@@ -199,8 +199,9 @@ struct up_opts
     int64_t             heads;
     int64_t             sects;
     int64_t             sectsize;
-    unsigned int        verbose  : 1;
-    unsigned int        plainfile : 1;
+    unsigned int        verbose       : 1;
+    unsigned int        plainfile     : 1;
+    unsigned int        relaxed       : 1;
 };
 
 #endif /* HDR_UPART_UTIL */

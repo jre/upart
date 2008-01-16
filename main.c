@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "apm.h"
 #include "bsdlabel.h"
 #include "disk.h"
 #include "map.h"
@@ -26,6 +27,7 @@ main(int argc, char *argv[])
         return EXIT_FAILURE;
     up_mbr_register();
     up_bsdlabel_register();
+    up_apm_register();
 
     name = readargs(argc, argv, &opts);
     if(NULL == name)

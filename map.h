@@ -34,6 +34,7 @@ enum up_map_type
     UP_MAP_MBR,
     UP_MAP_MBREXT,
     UP_MAP_BSD,
+    UP_MAP_APM,
     UP_MAP_TYPE_COUNT
 };
 

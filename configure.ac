@@ -36,5 +36,5 @@ AC_OUTPUT
 
 cat <<EOF
 
-Configuration complete, now type 'name' to build.
+Configuration complete, now type 'make' to build.
 EOF

@@ -195,7 +195,12 @@ float up_fmtsize(int64_t num, const char **units);
 
 struct up_opts
 {
-    unsigned int        upo_verbose  : 1;
+    int64_t             cyls;
+    int64_t             heads;
+    int64_t             sects;
+    int64_t             sectsize;
+    unsigned int        verbose  : 1;
+    unsigned int        plainfile : 1;
 };
 
 #endif /* HDR_UPART_UTIL */

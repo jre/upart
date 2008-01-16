@@ -23,7 +23,7 @@ struct up_disk
 };
 
 /* Open the disk device read-only and get drive params */
-struct up_disk *up_disk_open(const char *path);
+struct up_disk *up_disk_open(const char *path, const struct up_opts *opts);
 
 /* Read from disk into buffer. Note that START, SIZE, and the return
    value are in sectors but bufsize is in bytes. */

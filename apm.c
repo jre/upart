@@ -177,7 +177,7 @@ apm_setup(struct up_map *map, struct up_opts *opts)
 static int
 apm_info(const struct up_map *map, int verbose, char *buf, int size)
 {
-    return snprintf(buf, size, "Apple partition map based in sector %"PRId64
+    return snprintf(buf, size, "Apple partition map in sector %"PRId64
                     " of %s:", map->start, map->disk->upd_name);
 }
 
@@ -195,10 +195,10 @@ apm_extra(const struct up_part *part, int verbose, char *buf, int size)
     struct up_apmpart *priv;
 
     if(!part)
-        return snprintf(buf, size, "%-20s %s", "Type", "Name");
+        return snprintf(buf, size, "%-24s %s", "Type", "Name");
 
     priv = part->priv;
-    return snprintf(buf, size, "%-20s %s", priv->part.type, priv->part.name);
+    return snprintf(buf, size, "%-24s %s", priv->part.type, priv->part.name);
 }
 
 static void
@@ -209,7 +209,8 @@ apm_dump(const struct up_map *map, void *stream)
     fprintf(stream, "Dump of %s Apple partition map in sector %"PRId64
             " (0x%"PRIx64"):\n", map->disk->upd_name, map->start + APM_OFFSET,
             map->start + APM_OFFSET);
-    up_hexdump(priv->buf, priv->size, map->start + APM_OFFSET, stream);
+    up_hexdump(priv->buf, priv->size, map->disk->upd_sectsize *
+               (map->start + APM_OFFSET), stream);
 }
 
 static void

@@ -65,7 +65,7 @@ up_hexdump(const void *_buf, size_t size, size_t dispoff, void *_stream)
             {
                 /* for hexdump -C compatible output, use this instead */
                 /* if('\xff' == (int)(buf[jj]) || isprint(buf[jj])) */
-                if(isprint(buf[jj]))
+                if(isprint((int)buf[jj]))
                     putc(buf[jj], stream);
                 else
                     putc('.', stream);
@@ -85,7 +85,7 @@ up_hexdump(const void *_buf, size_t size, size_t dispoff, void *_stream)
         {
             /* for hexdump -C compatible output, use this instead */
             /* if('\xff' == (int)(buf[jj]) || isprint(buf[jj])) */
-            if(isprint(buf[jj]))
+            if(isprint((int)buf[jj]))
                 putc(buf[jj], stream);
             else
                 putc('.', stream);

@@ -12,6 +12,12 @@
 #include <sys/param.h>
 #endif
 #include <sys/stat.h>
+#ifdef HAVE_LINUX_FS_H
+#include <linux/fs.h>
+#endif
+#ifdef HAVE_LINUX_HDREG_H
+#include <linux/hdreg.h>
+#endif
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -31,6 +37,15 @@
     (defined(DIOCGPDINFO) || defined(DIOCGDINFO))
 #define HAVE_GETPARAMS_DISKLABEL
 #endif
+#if defined(HAVE_LINUX_FS_H) || defined(HAVE_LINUX_HDREG_H)
+#define HAVE_GETPARAMS_LINUX
+#endif
+
+#ifdef O_LARGEFILE
+#define OPENFLAGS O_RDONLY | O_LARGEFILE
+#else
+#define OPENFLAGS O_RDONLY
+#endif
 
 static int up_opendisk(const char *name, char **path, const struct up_opts *opts);
 #ifdef HAVE_OPENDISK
@@ -40,6 +55,10 @@ static int getparams(int fd, struct up_disk *disk, const struct up_opts *opts);
 #ifdef HAVE_GETPARAMS_DISKLABEL
 static int getparams_disklabel(int fd, struct up_disk *disk,
                                const struct up_opts *opts);
+#endif
+#ifdef HAVE_GETPARAMS_LINUX
+static int getparams_linux(int fd, struct up_disk *disk,
+                           const struct up_opts *opts);
 #endif
 static int fixparams(struct up_disk *disk, const struct up_opts *opts);
 static int fixparams_checkone(struct up_disk *disk);
@@ -275,7 +294,7 @@ up_opendisk(const char *name, char **path, const struct up_opts *opts)
     if(!opts->plainfile)
         return up_opendisk_libutil(name, path);
 #endif
-    return open(name, O_RDONLY);
+    return open(name, OPENFLAGS);
 }
 
 #ifdef HAVE_OPENDISK
@@ -286,7 +305,7 @@ up_opendisk_libutil(const char *name, char **path)
     int fd;
 
     buf[0] = 0;
-    fd = opendisk(name, O_RDONLY, buf, sizeof buf, 0);
+    fd = opendisk(name, OPENFLAGS, buf, sizeof buf, 0);
     if(0 <= fd && buf[0])
         *path = strdup(buf);
 
@@ -298,9 +317,14 @@ static int
 getparams(int fd, struct up_disk *disk, const struct up_opts *opts)
 {
 #ifdef HAVE_GETPARAMS_DISKLABEL
-    if(0 == getparams_disklabel(fd, disk, opts)) return 0;
+    if(0 == getparams_disklabel(fd, disk, opts))
+        return 0;
 #endif
-        return -1;
+#ifdef HAVE_GETPARAMS_LINUX
+    if(0 == getparams_linux(fd, disk, opts))
+        return 0;
+#endif
+    return -1;
 }
 
 #ifdef HAVE_GETPARAMS_DISKLABEL
@@ -339,6 +363,41 @@ getparams_disklabel(int fd, struct up_disk *disk, const struct up_opts *opts)
     return 0;
 }
 #endif /* GETPARAMS_DISKLABEL */
+
+#ifdef HAVE_GETPARAMS_LINUX
+static int
+getparams_linux(int fd, struct up_disk *disk, const struct up_opts *opts)
+{
+    /* XXX rather than an ugly maze of #ifdefs I'll just assume these
+           all exist for now and fix it later if it ever breaks */
+    struct hd_geometry geom;
+    int smallsize;
+    uint64_t bigsize;
+
+    if(0 == ioctl(fd, HDIO_GETGEO, &geom))
+    {
+        disk->upd_cyls  = geom.cylinders;
+        disk->upd_heads = geom.heads;
+        disk->upd_sects = geom.sectors;
+    }
+    if(0 == ioctl(fd, BLKSSZGET, &smallsize))
+    {
+        disk->upd_sectsize = smallsize;
+        if(0 == ioctl(fd, BLKGETSIZE64, &bigsize))
+            disk->upd_size = bigsize / disk->upd_sectsize;
+    }
+    else if(0 == ioctl(fd, BLKGETSIZE, &smallsize))
+        disk->upd_size = smallsize;
+    else
+    {
+        fprintf(stderr, "failed to read disk size for %s: %s\n",
+                disk->upd_path, strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+#endif
 
 static int
 fixparams(struct up_disk *disk, const struct up_opts *opts)

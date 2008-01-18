@@ -21,6 +21,10 @@
 #undef HAVE_UTIL_H
 #undef HAVE_OPENDISK
 
+/* linux headers */
+#undef HAVE_LINUX_FS_H
+#undef HAVE_LINUX_HDREG_H
+
 /* it's kind of bogus to include these here but I'd rather not look at
    this ugly mess of #ifdefs at the top of every single file */
 #ifdef HAVE_SYS_TYPES_H

@@ -16,7 +16,9 @@ data  = file(sys.argv[0]).read()
 print '''%s %s
 #endif
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <assert.h>
 #include <stdio.h>
@@ -122,7 +124,9 @@ print "// '''"
 ''' fucking magic */
 #endif
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <assert.h>
 #include <stdio.h>

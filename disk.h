@@ -1,8 +1,20 @@
 #ifndef HDR_UPART_DISK
 #define HDR_UPART_DISK
 
+#include "bsdtree.h"
+
 struct up_opts;
 struct up_part;
+
+struct up_disk_sectnode
+{
+    int64_t first;
+    int64_t last;
+    const void *ref;
+    RB_ENTRY(up_disk_sectnode) link;
+};
+
+RB_HEAD(up_disk_sectmap, up_disk_sectnode);
 
 struct up_disk
 {
@@ -20,6 +32,9 @@ struct up_disk
 
     /* don't touch this either, use the up_map_*all() functions */
     struct up_part     *maps;
+
+    /* you should be noticing a pattern by now */
+    struct up_disk_sectmap upd_sectsused;
 };
 
 /* Open the disk device read-only and get drive params */
@@ -33,6 +48,22 @@ int64_t up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
 /* Read a single sector. The returned pointer is valid until function
    is called again. */
 const void *up_disk_getsect(struct up_disk *disk, int64_t sect);
+
+/* return true if a sector is marked as used, false otherwise */
+int up_disk_check1sect(struct up_disk *disk, int64_t sect);
+
+/* return true if any sector in a range is marked as used, false otherwise */
+int up_disk_checksectrange(struct up_disk *disk, int64_t first, int64_t size);
+
+/* mark a sector as used and return 0, return -1 if already used */
+int up_disk_mark1sect(struct up_disk *disk, int64_t sect, const void *ref);
+
+/* mark range of sectors as used and return 0, return -1 if already used */
+int up_disk_marksectrange(struct up_disk *disk, int64_t first, int64_t size,
+                          const void *ref);
+
+/* mark all sectors associated with REF unused */
+void up_disk_sectsunref(struct up_disk *disk, const void *ref);
 
 /* Close disk and free struct. */
 void up_disk_close(struct up_disk *disk);

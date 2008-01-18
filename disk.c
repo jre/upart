@@ -43,6 +43,10 @@ static int getparams_disklabel(int fd, struct up_disk *disk,
 #endif
 static int fixparams(struct up_disk *disk, const struct up_opts *opts);
 static int fixparams_checkone(struct up_disk *disk);
+static int sectcmp(struct up_disk_sectnode *left,
+                   struct up_disk_sectnode *right);
+
+RB_GENERATE_STATIC(up_disk_sectmap, up_disk_sectnode, link, sectcmp);
 
 struct up_disk *
 up_disk_open(const char *name, const struct up_opts *opts)
@@ -68,6 +72,7 @@ up_disk_open(const char *name, const struct up_opts *opts)
         return NULL;
     }
     disk->upd_fd = fd;
+    RB_INIT(&disk->upd_sectsused);
 
     /* device name */
     disk->upd_name = strdup(name);
@@ -153,12 +158,104 @@ up_disk_getsect(struct up_disk *disk, int64_t sect)
         return disk->upd_buf;
 }
 
+int
+up_disk_check1sect(struct up_disk *disk, int64_t sect)
+{
+    return up_disk_checksectrange(disk, sect, 1);
+}
+
+int
+up_disk_checksectrange(struct up_disk *disk, int64_t start, int64_t size)
+{
+    struct up_disk_sectnode key;
+
+    assert(0 < size);
+    memset(&key, 0, sizeof key);
+    key.first = start;
+    key.last  = start + size - 1;
+    if(NULL == RB_FIND(up_disk_sectmap, &disk->upd_sectsused, &key))
+    {
+        /*
+        printf("check %"PRId64"+%"PRId64": free\n", start, size);
+        */
+        return 0;
+    }
+    else
+    {
+        /*
+        printf("check %"PRId64"+%"PRId64": used\n", start, size);
+        */
+        return 1;
+    }
+}
+
+int
+up_disk_mark1sect(struct up_disk *disk, int64_t sect, const void *ref)
+{
+    return up_disk_marksectrange(disk, sect, 1, ref);
+}
+
+int
+up_disk_marksectrange(struct up_disk *disk, int64_t first, int64_t size,
+                      const void *ref)
+{
+    struct up_disk_sectnode *new;
+
+    assert(0 < size);
+    new = calloc(1, sizeof *new);
+    if(NULL == new)
+    {
+        perror("malloc");
+        return -1;
+    }
+    new->first = first;
+    new->last  = first + size - 1;
+    new->ref   = ref;
+    if(NULL == RB_INSERT(up_disk_sectmap, &disk->upd_sectsused, new))
+    {
+        /*
+        printf("mark %"PRId64"+%"PRId64" with %p\n", first, size, ref);
+        */
+        return 0;
+    }
+    else
+    {
+        /*
+        printf("failed to mark %"PRId64"+%"PRId64" with %p, already used\n",
+               first, size, ref);
+        */
+        free(new);
+        return -1;
+    }
+}
+
+void
+up_disk_sectsunref(struct up_disk *disk, const void *ref)
+{
+    struct up_disk_sectnode *ii, *inc;
+
+    for(ii = RB_MIN(up_disk_sectmap, &disk->upd_sectsused); ii; ii = inc)
+    {
+        inc = RB_NEXT(up_disk_sectmap, &disk->upd_sectsused, ii);
+        if(ref == ii->ref)
+        {
+            /*
+            printf("unmark %"PRId64"+%"PRId64" with %p\n",
+                   ii->first, ii->last - ii->first + 1, ii->ref);
+            */
+            RB_REMOVE(up_disk_sectmap, &disk->upd_sectsused, ii);
+            free(ii);
+        }
+    }
+}
+
 void
 up_disk_close(struct up_disk *disk)
 {
     if(!disk)
         return;
     up_map_freeall(disk);
+    assert(RB_EMPTY(&disk->upd_sectsused));
     if(0 <= disk->upd_fd)
         close(disk->upd_fd);
     if(disk->upd_buf)
@@ -352,4 +449,36 @@ up_disk_dump(const struct up_disk *disk, void *_stream,
             "    sectors per track:   %d (sectors)\n"
             "\n", disk->upd_path, disk->upd_sectsize, disk->upd_size,
             (int)disk->upd_cyls, (int)disk->upd_heads, (int)disk->upd_sects);
+}
+
+static int
+sectcmp(struct up_disk_sectnode *left, struct up_disk_sectnode *right)
+{
+    if(left->last < right->first)
+    {
+        /*
+        printf("cmp (%"PRId64"+%"PRId64") < (%"PRId64"+%"PRId64")\n",
+               left->first, left->last - left->first + 1,
+               right->first, right->last - right->first + 1);
+        */
+        return -1;
+    }
+    else if(left->first > right->last)
+    {
+        /*
+        printf("cmp (%"PRId64"+%"PRId64") > (%"PRId64"+%"PRId64")\n",
+               left->first, left->last - left->first + 1,
+               right->first, right->last - right->first + 1);
+        */
+        return 1;
+    }
+    else
+    {
+        /*
+        printf("cmp (%"PRId64"+%"PRId64") = (%"PRId64"+%"PRId64")\n",
+               left->first, left->last - left->first + 1,
+               right->first, right->last - right->first + 1);
+        */
+        return 0;
+    }
 }

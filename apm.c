@@ -46,6 +46,8 @@ struct up_apm
 {
     uint8_t            *buf;
     size_t              size;
+    int64_t             firstsect;
+    int64_t             sectcount;
 };
 
 struct up_apmpart
@@ -97,11 +99,6 @@ apm_load(struct up_disk *disk, const struct up_part *parent, void **priv,
     if(disk->upd_sectsize > APM_ENTRY_SIZE)
         return 0;
 
-    /* refuse to load if parent map is an apm too */
-    /* XXX need a better way to do this */
-    if(parent->map && UP_MAP_APM == parent->map->type)
-      return 0;
-
     /* find partitions */
     res = apm_find(disk, parent->start, parent->size, &start, &size);
     if(0 >= res)
@@ -122,6 +119,8 @@ apm_load(struct up_disk *disk, const struct up_part *parent, void **priv,
         free(apm);
         return -1;
     }
+    apm->firstsect = start;
+    apm->sectcount = size;
 
     /* read map */
     res64 = up_disk_read(disk, start, size, apm->buf, apm->size);
@@ -146,6 +145,9 @@ apm_setup(struct up_map *map, struct up_opts *opts)
     int                         ii, flags;
     struct up_apmpart          *part;
     int64_t                     start, size;
+
+    if(0 > up_disk_marksectrange(map->disk, apm->firstsect, apm->sectcount, map))
+        return -1;
 
     for(ii = 0; apm->size / map->disk->upd_sectsize > ii; ii++)
     {
@@ -243,6 +245,8 @@ apm_find(struct up_disk *disk, int64_t start, int64_t size,
 
     for(off = 0; off + APM_OFFSET < size; off++)
     {
+        if(up_disk_check1sect(disk, start + off + APM_OFFSET))
+            return 0;
         buf = up_disk_getsect(disk, start + off + APM_OFFSET);
         if(!buf)
             return -1;
@@ -261,10 +265,15 @@ apm_find(struct up_disk *disk, int64_t start, int64_t size,
             if(start + APM_OFFSET != pstart || off > blocks ||
                blocks > psize || pstart + psize > start + size)
             {
-                fprintf(stderr, "invalid apple partition map\n");
+                fprintf(stderr, "invalid apple partition map in sector "
+                        "%"PRId64"+%d, %s partition in sector %"PRId64"\n",
+                        start, APM_OFFSET, APM_MAP_PART_TYPE,
+                        start + off + APM_OFFSET);
                 return 0;
             }
-            *startret = APM_OFFSET;
+            if(up_disk_checksectrange(disk, start + APM_OFFSET, blocks))
+                return 0;
+            *startret = start + APM_OFFSET;
             *sizeret  = blocks;
             return 1;
         }

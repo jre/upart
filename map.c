@@ -287,6 +287,9 @@ up_map_free(struct up_map *map)
     if(st_types[map->type].freeprivmap && map->priv)
         st_types[map->type].freeprivmap(map, map->priv);
 
+    /* mark sectors unused */
+    up_disk_sectsunref(map->disk, map);
+
     /* free map */
     free(map);
 }

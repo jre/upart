@@ -161,6 +161,9 @@ mbr_setup(struct up_map *map, struct up_opts *opts)
     struct up_mbr              *mbr = map->priv;
     int                         ii;
 
+    if(0 > up_disk_mark1sect(map->disk, map->start, map))
+        return -1;
+
     /* add primary partitions */
     for(ii = 0; MBR_PART_COUNT > ii; ii++)
         if(0 > mbr_addpart(map, &mbr->mbr.part[ii], ii, 0, NULL))
@@ -194,6 +197,8 @@ mbrext_setup(struct up_map *map, struct up_opts *opts)
         if(0 >= res)
             return res;
 
+        if(0 > up_disk_mark1sect(map->disk, absoff, map))
+            return -1;
         if(0 > mbr_addpart(map, &buf->part[MBR_EXTPART], index, absoff, buf))
             return -1;
         index++;
@@ -343,6 +348,8 @@ mbr_read(struct up_disk *disk, int64_t start, int64_t size,
     if(0 >= size || sizeof *mbr > disk->upd_sectsize)
         return 0;
 
+    if(up_disk_check1sect(disk, start))
+        return 0;
     buf = up_disk_getsect(disk, start);
     if(!buf)
         return -1;

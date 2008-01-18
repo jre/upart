@@ -15,6 +15,7 @@
 #include "map.h"
 #include "mbr.h"
 #include "util.h"
+#include "vtoc.h"
 
 static char *readargs(int argc, char *argv[], struct up_opts *opts);
 static void usage(const char *argv0, const char *fmt, ...);
@@ -31,6 +32,7 @@ main(int argc, char *argv[])
     up_mbr_register();
     up_bsdlabel_register();
     up_apm_register();
+    up_vtoc_register();
 
     name = readargs(argc, argv, &opts);
     if(NULL == name)

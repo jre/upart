@@ -193,6 +193,9 @@ void up_hexdump(const void *buf, size_t size, size_t dispoff, void *stream);
 float up_fmtsize(int64_t num, const char **units);
 #define UP_BESTDECIMAL(d)       (10.0 > (d) ? 2 : (100.0 > (d) ? 1 : 0))
 
+/* Like snprintf(), except it appends to the end of a string. */
+int up_scatprintf(char *str, size_t size, const char *format, ...);
+
 struct up_opts
 {
     int64_t             cyls;

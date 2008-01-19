@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -114,4 +115,23 @@ up_fmtsize(int64_t num, const char **units)
         *units = sizes[ii];
 
     return ret;
+}
+
+int
+up_scatprintf(char *str, size_t size, const char *format, ...)
+{
+    char *nul;
+    va_list ap;
+    int res;
+
+    nul = memchr(str, '\0', size);
+    assert(NULL != nul);
+    va_start(ap, format);
+    res = vsnprintf(nul, size - (nul - str), format, ap);
+    va_end(ap);
+
+    if(0 > res)
+        return res;
+    else
+        return res + (nul - str);
 }

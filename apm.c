@@ -13,12 +13,25 @@
 #include "map.h"
 #include "util.h"
 
+/*
+  http://developer.apple.com/documentation/mac/Devices/Devices-121.html#MARKER-2-27
+*/
+
 /* XXX this is probably way broken on block sizes other than 512 */
 
 #define APM_ENTRY_SIZE          (512)
 #define APM_OFFSET              (1)
 #define APM_MAGIC               (0x504d)
 #define APM_MAP_PART_TYPE       "Apple_partition_map"
+
+#define BZB_MAGIC               (0xabadbabe)
+#define BZB_TYPE_UNIX           (0x1)
+#define BZB_TYPE_AUTO           (0x2)
+#define BZB_TYPE_SWAP           (0x3)
+#define BZB_FLAG_ROOT           (1 << 31)
+#define BZB_FLAG_USR            (1 << 30)
+#define BZB_FLAG_CRIT           (1 << 29)
+#define BZB_FLAG_SLICE(val)     (((0x1f << 16) & val) >> 16)
 
 struct up_apm_p
 {
@@ -40,8 +53,20 @@ struct up_apm_p
     uint32_t            bootentry2;
     uint32_t            bootsum;
     char                cpu[16];
-    uint8_t             bootargs[128];
-    uint8_t             pad[248];
+    uint32_t            bzbmagic;
+    uint8_t             bzbcluster;
+    uint8_t             bzbtype;
+    uint16_t            bzbinode;
+    uint32_t            bzbflags;
+    uint32_t            bzbtcreat;
+    uint32_t            bzbtmount;
+    uint32_t            bzbtumount;
+    uint32_t            abmsize;
+    uint32_t            abments;
+    uint32_t            abmstart;
+    uint32_t            abmpad[7];
+    char                bzbmountpoint[64];
+    uint32_t            pad[62];
 } __attribute__((packed));
 
 struct up_apm
@@ -56,6 +81,14 @@ struct up_apmpart
 {
     struct up_apm_p     part;
     int                 index;
+};
+
+static const char *bzb_types[] =
+{
+    NULL,
+    "fs",
+    "efs",
+    "swap",
 };
 
 static int apm_load(struct up_disk *disk, const struct up_part *parent,
@@ -181,6 +214,7 @@ apm_setup(struct up_map *map, struct up_opts *opts)
 static int
 apm_info(const struct up_map *map, int verbose, char *buf, int size)
 {
+    /* XXX display driver info here like pdisk does? */
     return snprintf(buf, size, "Apple partition map in sector %"PRId64
                     " of %s:", map->start, map->disk->upd_name);
 }
@@ -196,13 +230,62 @@ apm_index(const struct up_part *part, char *buf, int size)
 static int
 apm_extra(const struct up_part *part, int verbose, char *buf, int size)
 {
-    struct up_apmpart *priv;
+    struct up_apmpart  *priv;
+    struct up_apm_p    *raw;
+    char                type[sizeof(raw->type)+1], name[sizeof(raw->name)+1];
+    uint32_t            flags, slice;
+    int                 res;
 
     if(!part)
-        return snprintf(buf, size, "%-24s %s", "Type", "Name");
+    {
+        if(!verbose)
+            return snprintf(buf, size, "%-24s %s", "Type", "Name");
+        else
+            return snprintf(buf, size, "%-24s %-24s %-10s %s",
+                            "Type", "Name", "Status", "A/UX boot data");
+    }
 
     priv = part->priv;
-    return snprintf(buf, size, "%-24s %s", priv->part.type, priv->part.name);
+    raw  = &priv->part;
+    memcpy(type, raw->type, sizeof raw->type);
+    type[sizeof(type)-1] = '\0';
+    memcpy(name, raw->name, sizeof raw->name);
+    name[sizeof(name)-1] = '\0';
+
+    if(!verbose)
+        res = snprintf(buf, size, "%-24s %s", type, name);
+    else
+        res = snprintf(buf, size, "%-24s %-24s 0x%08x",
+                       type, name, UP_BETOH32(raw->status));
+
+    if(BZB_MAGIC == UP_BETOH32(raw->bzbmagic))
+    {
+        flags = UP_BETOH32(raw->bzbflags);
+        slice = BZB_FLAG_SLICE(flags);
+        strlcat(buf, " ", size);
+        if(slice)
+            res = up_scatprintf(buf, size, "slice %d, ", slice);
+        if(0 > res || res >= size)
+            return res;
+        if(raw->bzbcluster)
+            res = up_scatprintf(buf, size, "cluster %d, ", raw->bzbcluster);
+        if(0 > res || res >= size)
+            return res;
+        if(BZB_FLAG_ROOT & flags)
+            strlcat(buf, "root, ", size);
+        if(BZB_FLAG_USR & flags)
+            strlcat(buf, "usr, ", size);
+        if(BZB_FLAG_CRIT & flags)
+            strlcat(buf, "crit, ", size);
+        if(sizeof(bzb_types) / sizeof(bzb_types[0]) > raw->bzbtype &&
+           NULL != bzb_types[raw->bzbtype])
+            strlcat(buf, bzb_types[raw->bzbtype], size);
+        res = strlen(buf);
+        if(2 <= res && ',' == buf[res-2] && ' ' == buf[res-1])
+            buf[res -= 2] = '\0';
+    }
+
+    return res;
 }
 
 static void

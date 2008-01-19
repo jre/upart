@@ -149,8 +149,8 @@ static char *up_fstypes[] =
 };
 
 static int bsdlabel_load(struct up_disk *disk, const struct up_part *parent,
-                         void **priv, struct up_opts *opts);
-static int bsdlabel_setup(struct up_map *map, struct up_opts *opts);
+                         void **priv, const struct up_opts *opts);
+static int bsdlabel_setup(struct up_map *map, const struct up_opts *opts);
 static int bsdlabel_info(const struct up_map *map, int verbose,
                          char *buf, int size);
 static int bsdlabel_index(const struct up_part *part, char *buf, int size);
@@ -181,7 +181,7 @@ void up_bsdlabel_register(void)
 
 static int
 bsdlabel_load(struct up_disk *disk, const struct up_part *parent, void **priv,
-              struct up_opts *opts)
+              const struct up_opts *opts)
 {
     int                 res, sectoff, byteoff, endian, size;
     const uint8_t      *buf;
@@ -255,7 +255,7 @@ bsdlabel_load(struct up_disk *disk, const struct up_part *parent, void **priv,
 }
 
 static int
-bsdlabel_setup(struct up_map *map, struct up_opts *opts)
+bsdlabel_setup(struct up_map *map, const struct up_opts *opts)
 {
     struct up_bsd              *label = map->priv;
     int                         ii, max, flags;

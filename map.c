@@ -19,8 +19,8 @@ struct up_map_funcs
 {
     int flags;
     int (*load)(struct up_disk *, const struct up_part *, void **,
-                struct up_opts *);
-    int (*setup)(struct up_map *, struct up_opts *);
+                const struct up_opts *);
+    int (*setup)(struct up_map *, const struct up_opts *);
     int (*getinfo)(const struct up_map *, int, char *, int);
     int (*getindex)(const struct up_part *, char *, int);
     int (*getextra)(const struct up_part *, int, char *, int);
@@ -30,7 +30,7 @@ struct up_map_funcs
 };
 
 static int map_loadall(struct up_disk *disk, struct up_part *container,
-                       struct up_opts *opts);
+                       const struct up_opts *opts);
 static struct up_part *map_newcontainer(int64_t size);
 static void map_freecontainer(struct up_part *container);
 static struct up_map *map_new(struct up_disk *disk, struct up_part *parent,
@@ -45,8 +45,8 @@ static struct up_map_funcs st_types[UP_MAP_TYPE_COUNT];
 void
 up_map_register(enum up_map_type type, int flags,
                 int (*load)(struct up_disk *, const struct up_part *, void **,
-                            struct up_opts *),
-                int (*setup)(struct up_map *, struct up_opts *),
+                            const struct up_opts *),
+                int (*setup)(struct up_map *, const struct up_opts *),
                 int (*getinfo)(const struct up_map *, int, char *, int),
                 int (*getindex)(const struct up_part *, char *, int),
                 int (*getextra)(const struct up_part *, int, char *, int),
@@ -75,7 +75,7 @@ up_map_register(enum up_map_type type, int flags,
 int
 up_map_load(struct up_disk *disk, struct up_part *parent,
             enum up_map_type type, struct up_map **mapret,
-            struct up_opts *opts)
+            const struct up_opts *opts)
 {
     struct up_map_funcs*funcs;
     void               *priv;
@@ -118,7 +118,7 @@ up_map_load(struct up_disk *disk, struct up_part *parent,
 }
 
 int
-up_map_loadall(struct up_disk *disk, struct up_opts *opts)
+up_map_loadall(struct up_disk *disk, const struct up_opts *opts)
 {
     assert(!disk->maps);
 
@@ -137,7 +137,7 @@ up_map_loadall(struct up_disk *disk, struct up_opts *opts)
 
 static int
 map_loadall(struct up_disk *disk, struct up_part *container,
-            struct up_opts *opts)
+            const struct up_opts *opts)
 {
     enum up_map_type    type;
     struct up_map      *map;

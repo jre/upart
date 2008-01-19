@@ -92,8 +92,8 @@ static const char *bzb_types[] =
 };
 
 static int apm_load(struct up_disk *disk, const struct up_part *parent,
-                    void **priv, struct up_opts *opts);
-static int apm_setup(struct up_map *map, struct up_opts *opts);
+                    void **priv, const struct up_opts *opts);
+static int apm_setup(struct up_map *map, const struct up_opts *opts);
 static int apm_info(const struct up_map *map, int verbose,
                     char *buf, int size);
 static int apm_index(const struct up_part *part, char *buf, int size);
@@ -104,7 +104,8 @@ static void apm_freemap(struct up_map *map, void *priv);
 static void apm_bounds(const struct up_apm_p *map,
                        int64_t *start, int64_t *size);
 static int apm_find(struct up_disk *disk, int64_t start, int64_t size,
-                    int64_t *startret, int64_t *sizeret);
+                    int64_t *startret, int64_t *sizeret,
+                    const struct up_opts *opts);
 
 void up_apm_register(void)
 {
@@ -122,7 +123,7 @@ void up_apm_register(void)
 
 static int
 apm_load(struct up_disk *disk, const struct up_part *parent, void **priv,
-         struct up_opts *opts)
+         const struct up_opts *opts)
 {
     int                 res;
     struct up_apm      *apm;
@@ -135,7 +136,7 @@ apm_load(struct up_disk *disk, const struct up_part *parent, void **priv,
         return 0;
 
     /* find partitions */
-    res = apm_find(disk, parent->start, parent->size, &start, &size);
+    res = apm_find(disk, parent->start, parent->size, &start, &size, opts);
     if(0 >= res)
         return res;
 
@@ -174,7 +175,7 @@ apm_load(struct up_disk *disk, const struct up_part *parent, void **priv,
 }
 
 static int
-apm_setup(struct up_map *map, struct up_opts *opts)
+apm_setup(struct up_map *map, const struct up_opts *opts)
 {
     struct up_apm              *apm = map->priv;
     int                         ii, flags;
@@ -319,7 +320,7 @@ apm_bounds(const struct up_apm_p *map, int64_t *start, int64_t *size)
 
 static int
 apm_find(struct up_disk *disk, int64_t start, int64_t size,
-         int64_t *startret, int64_t *sizeret)
+         int64_t *startret, int64_t *sizeret, const struct up_opts *opts)
 {
     int                        off;
     const struct up_apm_p     *buf;
@@ -354,12 +355,13 @@ apm_find(struct up_disk *disk, int64_t start, int64_t size,
                         "%"PRId64"+%d, %s partition in sector %"PRId64"\n",
                         start, APM_OFFSET, APM_MAP_PART_TYPE,
                         start + off + APM_OFFSET);
-                return 0;
+                if(!opts->relaxed)
+                    return 0;
             }
             if(up_disk_checksectrange(disk, start + APM_OFFSET, blocks))
                 return 0;
             *startret = start + APM_OFFSET;
-            *sizeret  = blocks;
+            *sizeret  = MIN(blocks, size - APM_OFFSET);
             return 1;
         }
     }

@@ -58,9 +58,9 @@ struct up_map
 void up_map_register(enum up_map_type type, int flags,
                      /* check if map exists and allocate private data */
                      int (*load)(struct up_disk *,const struct up_part *,
-                                 void **, struct up_opts *),
+                                 void **, const struct up_opts *),
                      /* add partitions, misc setup not done in load */
-                     int (*setup)(struct up_map *, struct up_opts *),
+                     int (*setup)(struct up_map *, const struct up_opts *),
                      /* copy map header line into string */
                      int (*getinfo)(const struct up_map *, int, char *, int),
                      /* copy part index into string */
@@ -74,12 +74,12 @@ void up_map_register(enum up_map_type type, int flags,
                      /* free part private data, part may be NULL */
                      void (*freeprivpart)(struct up_part *, void *));
 
-int up_map_loadall(struct up_disk *disk, struct up_opts *opts);
+int up_map_loadall(struct up_disk *disk, const struct up_opts *opts);
 void up_map_freeall(struct up_disk *disk);
 
 int up_map_load(struct up_disk *disk, struct up_part *parent,
                 enum up_map_type type, struct up_map **mapret,
-                struct up_opts *opts);
+                const struct up_opts *opts);
 struct up_part *up_map_add(struct up_map *map, int64_t start, int64_t size,
                            int flags, void *priv);
 

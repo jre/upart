@@ -1,6 +1,14 @@
 #ifndef HDR_UPART_UTIL
 #define HDR_UPART_UTIL
 
+#ifndef MIN
+#define MIN(aa, bb)             ((aa) < (bb) ? (aa) : (bb))
+#endif
+
+#ifndef MAX
+#define MAX(aa, bb)             ((aa) > (bb) ? (aa) : (bb))
+#endif
+
 #define UP_ENDIAN_BIG           (4321)
 #define UP_ENDIAN_LITTLE        (1234)
 extern int up_endian;

@@ -94,8 +94,8 @@ static const char *up_parttypes[] =
 };
 
 static int vtoc_load(struct up_disk *disk, const struct up_part *parent,
-                     void **priv, struct up_opts *opts);
-static int vtoc_setup(struct up_map *map, struct up_opts *opts);
+                     void **priv, const struct up_opts *opts);
+static int vtoc_setup(struct up_map *map, const struct up_opts *opts);
 static int vtoc_info(const struct up_map *map, int verbose,
                      char *buf, int size);
 static int vtoc_index(const struct up_part *part, char *buf, int size);
@@ -121,7 +121,7 @@ void up_vtoc_register(void)
 
 static int
 vtoc_load(struct up_disk *disk, const struct up_part *parent, void **priv,
-          struct up_opts *opts)
+          const struct up_opts *opts)
 {
     int                 res;
     const uint8_t      *buf;
@@ -153,7 +153,7 @@ vtoc_load(struct up_disk *disk, const struct up_part *parent, void **priv,
 }
 
 static int
-vtoc_setup(struct up_map *map, struct up_opts *opts)
+vtoc_setup(struct up_map *map, const struct up_opts *opts)
 {
     struct up_vtoc             *priv = map->priv;
     struct up_vtoc_p           *vtoc = &priv->vtoc;

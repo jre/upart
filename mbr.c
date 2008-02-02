@@ -114,9 +114,9 @@ mbr_load(struct up_disk *disk, const struct up_part *parent, void **priv,
     assert(MBR_SIZE == sizeof *buf);
     *priv = NULL;
 
-    /* refuse to load if parent map is extended mbr */
-    if(parent->map && (UP_MAP_MBR == parent->map->type ||
-                       UP_MAP_MBREXT == parent->map->type))
+    /* don't load if there's a parent map to avoid false positives
+       with partition boot sectors */
+    if(parent->map)
         return 0;
 
     /* load the mbr sector */

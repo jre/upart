@@ -533,14 +533,14 @@ static const char *mbr_name_table[] =
     /* 0xa5 */ "FreeBSD or DragonFly",
     /* 0xa6 */ "OpenBSD",
     /* 0xa7 */ NULL,
-    /* 0xa8 */ "MacOS X UFS", /* XXX verify this */
+    /* 0xa8 */ "Apple UFS",
     /* 0xa9 */ "NetBSD",
     /* 0xaa */ NULL,
-    /* 0xab */ "MacOS X Boot", /* XXX verify this */
+    /* 0xab */ "Apple Boot",
     /* 0xac */ NULL,
     /* 0xad */ NULL,
     /* 0xae */ NULL,
-    /* 0xaf */ "MacOS X HFS+",
+    /* 0xaf */ "Apple HFS+",
     /* 0xb0 */ NULL,
     /* 0xb1 */ NULL,
     /* 0xb2 */ NULL,

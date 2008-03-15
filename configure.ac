@@ -35,6 +35,9 @@ AC_DEFINE([HAVE_OPENDISK])])
 dnl some linux headers
 AC_CHECK_HEADERS([linux/fs.h linux/hdreg.h])
 
+dnl look for strlcat()
+AC_CHECK_FUNCS([strlcat])
+
 AC_OUTPUT
 
 cat <<EOF

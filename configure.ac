@@ -27,6 +27,9 @@ AC_CHECK_HEADERS([sys/dkio.h],,,
 #include <sys/disklabel.h>
 #endif])
 
+dnl freebsd headers
+AC_CHECK_HEADERS([sys/disk.h])
+
 dnl look for opendisk() in libutil
 AC_SEARCH_LIBS([opendisk], [util],
 [AC_CHECK_HEADERS([util.h])

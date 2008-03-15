@@ -10,6 +10,9 @@
 #ifdef HAVE_SYS_DKIO_H
 #include <sys/dkio.h>
 #endif
+#ifdef HAVE_SYS_DISK_H
+#include <sys/disk.h>
+#endif
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
@@ -39,6 +42,9 @@
     (defined(DIOCGPDINFO) || defined(DIOCGDINFO))
 #define HAVE_GETPARAMS_DISKLABEL
 #endif
+#if defined(HAVE_SYS_DISK_H) && defined(DIOCGSECTORSIZE)
+#define HAVE_GETPARAMS_FREEBSD
+#endif
 #if defined(HAVE_LINUX_FS_H) || defined(HAVE_LINUX_HDREG_H)
 #define HAVE_GETPARAMS_LINUX
 #endif
@@ -50,13 +56,14 @@
 #endif
 
 static int up_opendisk(const char *name, char **path, const struct up_opts *opts);
-#ifdef HAVE_OPENDISK
-static int up_opendisk_libutil(const char *name, char **path);
-#endif
 static int getparams(int fd, struct up_disk *disk, const struct up_opts *opts);
 #ifdef HAVE_GETPARAMS_DISKLABEL
 static int getparams_disklabel(int fd, struct up_disk *disk,
                                const struct up_opts *opts);
+#endif
+#ifdef HAVE_GETPARAMS_FREEBSD
+static int getparams_freebsd(int fd, struct up_disk *disk,
+                             const struct up_opts *opts);
 #endif
 #ifdef HAVE_GETPARAMS_LINUX
 static int getparams_linux(int fd, struct up_disk *disk,
@@ -291,33 +298,38 @@ up_disk_close(struct up_disk *disk)
 static int
 up_opendisk(const char *name, char **path, const struct up_opts *opts)
 {
-    *path = NULL;
-#ifdef HAVE_OPENDISK
-    if(!opts->plainfile)
-        return up_opendisk_libutil(name, path);
-#endif
-    return open(name, OPENFLAGS);
-}
-
-#ifdef HAVE_OPENDISK
-static int
-up_opendisk_libutil(const char *name, char **path)
-{
     char buf[MAXPATHLEN];
-    int fd;
+    int ret;
 
+    *path = NULL;
+
+#ifdef HAVE_OPENDISK
     buf[0] = 0;
-    fd = opendisk(name, OPENFLAGS, buf, sizeof buf, 0);
-    if(0 <= fd && buf[0])
+    ret = opendisk(name, OPENFLAGS, buf, sizeof buf, 0);
+    if(0 <= ret && buf[0])
         *path = strdup(buf);
-
-    return fd;
-}
+    return ret;
 #endif
+
+    ret = open(name, OPENFLAGS);
+    if(0 > ret && ENOENT == errno)
+    {
+        strlcpy(buf, "/dev/", sizeof buf);
+        strlcat(buf, name, sizeof buf);
+        ret = open(buf, OPENFLAGS);
+        if(0 <= ret)
+            *path = strdup(buf);
+    }
+    return ret;
+}
 
 static int
 getparams(int fd, struct up_disk *disk, const struct up_opts *opts)
 {
+#ifdef HAVE_GETPARAMS_FREEBSD
+    if(0 == getparams_freebsd(fd, disk, opts))
+        return 0;
+#endif
 #ifdef HAVE_GETPARAMS_DISKLABEL
     if(0 == getparams_disklabel(fd, disk, opts))
         return 0;
@@ -365,6 +377,41 @@ getparams_disklabel(int fd, struct up_disk *disk, const struct up_opts *opts)
     return 0;
 }
 #endif /* GETPARAMS_DISKLABEL */
+
+#ifdef HAVE_GETPARAMS_FREEBSD
+static int
+getparams_freebsd(int fd, struct up_disk *disk, const struct up_opts *opts)
+{
+    u_int ival;
+    off_t oval;
+
+    if(0 == ioctl(fd, DIOCGSECTORSIZE, &ival))
+        disk->upd_sectsize = ival;
+    else
+        fprintf(stderr, "failed to read disk size for %s: %s\n",
+                disk->upd_path, strerror(errno));
+
+    if(0 < disk->upd_sectsize && 0 == ioctl(fd, DIOCGMEDIASIZE, &oval))
+        disk->upd_size = oval / disk->upd_sectsize;
+    else
+        fprintf(stderr, "failed to read sector size for %s: %s\n",
+                disk->upd_path, strerror(errno));
+
+    if(0 == ioctl(fd, DIOCGFWSECTORS, &ival))
+        disk->upd_sects = ival;
+    else
+        fprintf(stderr, "failed to read sectors per track for %s: %s\n",
+                disk->upd_path, strerror(errno));
+
+    if(0 == ioctl(fd, DIOCGFWHEADS, &ival))
+        disk->upd_heads = ival;
+    else
+        fprintf(stderr, "failed to read heads (tracks per cylinder) for %s: %s\n",
+                disk->upd_path, strerror(errno));
+
+    return 0;
+}
+#endif
 
 #ifdef HAVE_GETPARAMS_LINUX
 static int

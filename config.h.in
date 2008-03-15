@@ -17,6 +17,9 @@
 #undef HAVE_SYS_DISKLABEL_H
 #undef HAVE_SYS_DKIO_H
 
+/* freebsd headers */
+#undef HAVE_SYS_DISK_H
+
 /* libutil, for opendisk() */
 #undef HAVE_UTIL_H
 #undef HAVE_OPENDISK

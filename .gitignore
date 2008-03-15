@@ -1,0 +1,8 @@
+*~
+*.o
+autom4te.cache
+common.mk
+config.h
+config.log
+config.status
+upart

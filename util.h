@@ -204,6 +204,11 @@ float up_fmtsize(int64_t num, const char **units);
 /* Like snprintf(), except it appends to the end of a string. */
 int up_scatprintf(char *str, size_t size, const char *format, ...);
 
+/* see strlcpy(3) manpage */
+#ifndef HAVE_STRLCPY
+size_t strlcpy(char *dst, const char *src, size_t siz);
+#endif
+
 /* see strlcat(3) manpage */
 #ifndef HAVE_STRLCAT
 size_t strlcat(char *dst, const char *src, size_t siz);

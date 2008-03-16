@@ -38,8 +38,8 @@ AC_DEFINE([HAVE_OPENDISK])])
 dnl some linux headers
 AC_CHECK_HEADERS([linux/fs.h linux/hdreg.h])
 
-dnl look for strlcat()
-AC_CHECK_FUNCS([strlcat])
+dnl look for sane string functions
+AC_CHECK_FUNCS([strlcpy strlcat])
 
 AC_OUTPUT
 

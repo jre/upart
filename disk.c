@@ -48,6 +48,9 @@
 #if defined(HAVE_LINUX_FS_H) || defined(HAVE_LINUX_HDREG_H)
 #define HAVE_GETPARAMS_LINUX
 #endif
+#if defined(HAVE_SYS_DISK_H) && defined(DKIOCGETBLOCKSIZE)
+#define HAVE_GETPARAMS_DARWIN
+#endif
 
 #ifdef O_LARGEFILE
 #define OPENFLAGS O_RDONLY | O_LARGEFILE
@@ -67,6 +70,10 @@ static int getparams_freebsd(int fd, struct up_disk *disk,
 #endif
 #ifdef HAVE_GETPARAMS_LINUX
 static int getparams_linux(int fd, struct up_disk *disk,
+                           const struct up_opts *opts);
+#endif
+#ifdef HAVE_GETPARAMS_DARWIN
+static int getparams_darwin(int fd, struct up_disk *disk,
                            const struct up_opts *opts);
 #endif
 static int fixparams(struct up_disk *disk, const struct up_opts *opts);
@@ -338,6 +345,10 @@ getparams(int fd, struct up_disk *disk, const struct up_opts *opts)
     if(0 == getparams_linux(fd, disk, opts))
         return 0;
 #endif
+#ifdef HAVE_GETPARAMS_DARWIN
+    if(0 == getparams_darwin(fd, disk, opts))
+        return 0;
+#endif
     return -1;
 }
 
@@ -447,6 +458,28 @@ getparams_linux(int fd, struct up_disk *disk, const struct up_opts *opts)
     return 0;
 }
 #endif
+
+#ifdef HAVE_GETPARAMS_DARWIN
+static int
+getparams_darwin(int fd, struct up_disk *disk, const struct up_opts *opts)
+{
+    uint32_t smallsize;
+    uint64_t bigsize;
+
+    if(0 == ioctl(fd, DKIOCGETBLOCKSIZE, &smallsize))
+        disk->upd_sectsize = smallsize;
+    else
+        fprintf(stderr, "failed to read sector size for %s: %s\n",
+                disk->upd_path, strerror(errno));
+    if(0 == ioctl(fd, DKIOCGETBLOCKCOUNT, &bigsize))
+        disk->upd_size = bigsize;
+    else
+        fprintf(stderr, "failed to read sector size for %s: %s\n",
+                disk->upd_path, strerror(errno));
+
+    return 0;
+}
+#endif /* HAVE_GETPARAMS_DARWIN */
 
 static int
 fixparams(struct up_disk *disk, const struct up_opts *opts)

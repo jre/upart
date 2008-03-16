@@ -406,10 +406,10 @@ static struct
     const char *name;
 } gpt_labels[] =
 {
-    {0, 0, 0, "\0\0\0\0\0\0\0\0", "unused"},
+    {0, 0, 0, (const uint8_t*)"\0\0\0\0\0\0\0\0", "unused"},
     {0x48465300, 0, 0x11aa, gpt_data4_apple, "Apple HFS+"},
     {0x55465300, 0, 0x11aa, gpt_data4_apple, "Apple UFS"},
-    {0xebd0a0a2, 0xb9e5, 0x4433, "\x87\xc0\x68\xb6\xb7\x26\x99\xc7", "Microsoft Data"},
+    {0xebd0a0a2, 0xb9e5, 0x4433, (const uint8_t*)"\x87\xc0\x68\xb6\xb7\x26\x99\xc7", "Microsoft Data"},
     {0x6A898CC3, 0x1dd2, 0x11b2, gpt_data4_sun, "Solaris /usr or Apple ZFS"},
 };
 

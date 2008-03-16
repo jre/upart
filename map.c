@@ -104,6 +104,8 @@ up_map_load(struct up_disk *disk, struct up_part *parent,
                 up_map_free(map);
                 return -1;
             }
+            map->parent = parent;
+            SIMPLEQ_INSERT_TAIL(&parent->submap, map, link);
             *mapret = map;
             return 1;
 
@@ -194,10 +196,7 @@ map_new(struct up_disk *disk, struct up_part *parent,
     map->size         = parent->size;
     map->depth        = (parent->map ? parent->map->depth + 1 : 0);
     map->priv         = priv;
-    map->parent       = parent;
     SIMPLEQ_INIT(&map->list);
-    if(parent)
-        SIMPLEQ_INSERT_TAIL(&parent->submap, map, link);
 
     return map;
 }

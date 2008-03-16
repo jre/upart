@@ -12,6 +12,7 @@
 #include "apm.h"
 #include "bsdlabel.h"
 #include "disk.h"
+#include "gpt.h"
 #include "map.h"
 #include "mbr.h"
 #include "util.h"
@@ -33,6 +34,7 @@ main(int argc, char *argv[])
     up_bsdlabel_register();
     up_apm_register();
     up_vtoc_register();
+    up_gpt_register();
 
     name = readargs(argc, argv, &opts);
     if(NULL == name)

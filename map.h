@@ -32,6 +32,8 @@ struct up_part
 enum up_map_type
 {
     UP_MAP_NONE = 0,
+    /* GPT needs to go before MBR */
+    UP_MAP_GPT,
     UP_MAP_MBR,
     UP_MAP_MBREXT,
     UP_MAP_APM,

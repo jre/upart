@@ -407,6 +407,7 @@ static struct
 } gpt_labels[] =
 {
     {0, 0, 0, (const uint8_t*)"\0\0\0\0\0\0\0\0", "unused"},
+    {0xc12a7328, 0xf81f, 0x11d2, (const uint8_t*)"\xba\x4b\x00\xa0\xc9\x3e\xc9\x3b", "EFI System Partition"},
     {0x48465300, 0, 0x11aa, gpt_data4_apple, "Apple HFS+"},
     {0x55465300, 0, 0x11aa, gpt_data4_apple, "Apple UFS"},
     {0xebd0a0a2, 0xb9e5, 0x4433, (const uint8_t*)"\x87\xc0\x68\xb6\xb7\x26\x99\xc7", "Microsoft Data"},

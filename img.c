@@ -95,7 +95,8 @@ up_img_save(const struct up_disk *disk, void *_stream,
     /* write sectors with sector headers into data buffer */
     ptr = data;
     up_disk_sectsiter(disk, img_save_iter, &ptr);
-    assert(ptr - data == datalen);
+    assert(ptr - data <= datalen);
+    datalen = ptr - data;
 
     /* fill out header */
     memset(&hdr, 0, sizeof hdr);

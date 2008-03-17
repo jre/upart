@@ -165,7 +165,7 @@ gpt_setup(struct up_map *map, const struct up_opts *opts)
 
     /* calculate partition buffer size */
     partbytes = UP_LETOH32(gpt->maxpart) * GPT_PART_SIZE;
-    partsects = partbytes * map->disk->upd_sectsize;
+    partsects = partbytes / map->disk->upd_sectsize;
 
     /* save sectors from primary and secondary maps */
     data1 = up_disk_savesectrange(map->disk, GPT_PRIOFF(map->start, map->size),
@@ -176,7 +176,8 @@ gpt_setup(struct up_map *map, const struct up_opts *opts)
         return -1;
 
     /* verify the crc */
-    if(UP_LETOH32(gpt->partcrc) != (up_crc32(data1, partbytes, ~0) ^ ~0))
+    if(UP_LETOH32(gpt->partcrc) !=
+       (up_crc32(data1 + map->disk->upd_sectsize,  partbytes, ~0) ^ ~0))
     {
         fprintf(stderr, "bad gpt partition crc\n");
         return 0;
@@ -196,7 +197,7 @@ gpt_setup(struct up_map *map, const struct up_opts *opts)
         part->part = *pk;
         part->index = priv->partitions;
         if(!up_map_add(map, UP_LETOH64(pk->start), UP_LETOH64(pk->end)
-                       - UP_LETOH64(pk->start) + 1, 0, part))
+                       - UP_LETOH64(pk->start), 0, part))
         {
             free(part);
             return -1;

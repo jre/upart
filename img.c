@@ -84,19 +84,24 @@ up_img_save(const struct up_disk *disk, void *_stream,
     /* allocate the data buffer */
     datalen = disk->upd_sectsused_count *
         (disk->upd_sectsize + sizeof(struct up_imgsect_p));
-    data = up_malloc(disk->upd_sectsused_count,
-                     disk->upd_sectsize + sizeof(struct up_imgsect_p));
-    if(!data)
+    if(0 == disk->upd_sectsused_count)
+        data = NULL;
+    else
     {
-        perror("malloc");
-        return -1;
-    }
+        data = up_malloc(disk->upd_sectsused_count,
+                         disk->upd_sectsize + sizeof(struct up_imgsect_p));
+        if(!data)
+        {
+            perror("malloc");
+            return -1;
+        }
 
-    /* write sectors with sector headers into data buffer */
-    ptr = data;
-    up_disk_sectsiter(disk, img_save_iter, &ptr);
-    assert(ptr - data <= datalen);
-    datalen = ptr - data;
+        /* write sectors with sector headers into data buffer */
+        ptr = data;
+        up_disk_sectsiter(disk, img_save_iter, &ptr);
+        assert(ptr - data <= datalen);
+        datalen = ptr - data;
+    }
 
     /* fill out header */
     memset(&hdr, 0, sizeof hdr);
@@ -127,12 +132,15 @@ up_img_save(const struct up_disk *disk, void *_stream,
     }
 
     /* write the data buffer */
-    if(datalen != fwrite(data, 1, datalen, stream))
+    if(0 < datalen)
     {
-        fprintf(stderr, "error writing to %s: %s\n",
-                file, strerror(errno));
-        free(data);
-        return -1;
+        if(datalen != fwrite(data, 1, datalen, stream))
+        {
+            fprintf(stderr, "error writing to %s: %s\n",
+                    file, strerror(errno));
+            free(data);
+            return -1;
+        }
     }
 
     free(data);

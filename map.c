@@ -113,6 +113,7 @@ up_map_load(struct up_disk *disk, struct up_part *parent,
                     funcs->freeprivmap(NULL, priv);
                 return -1;
             }
+            map->parent = parent; /* XXX this is so broken */
             res = funcs->setup(map, opts);
             if(0 >= res)
             {
@@ -122,7 +123,6 @@ up_map_load(struct up_disk *disk, struct up_part *parent,
                 up_map_free(map);
                 return res;
             }
-            map->parent = parent;
             SIMPLEQ_INSERT_TAIL(&parent->submap, map, link);
             *mapret = map;
             return 1;

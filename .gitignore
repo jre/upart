@@ -3,6 +3,7 @@
 .depend
 autom4te.cache
 common.mk
+config.cache
 config.h
 config.log
 config.status

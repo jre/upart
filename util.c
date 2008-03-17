@@ -5,8 +5,10 @@
 #include <sys/types.h>
 #include <assert.h>
 #include <ctype.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "util.h"
@@ -135,6 +137,18 @@ up_scatprintf(char *str, size_t size, const char *format, ...)
         return res;
     else
         return res + (nul - str);
+}
+
+void *
+up_malloc(size_t nmemb, size_t size)
+{
+    if(SIZE_MAX / nmemb < size)
+    {
+        errno = ENOMEM;
+        return NULL;
+    }
+    else
+        return malloc(nmemb * size);
 }
 
 #ifndef HAVE_STRLCPY

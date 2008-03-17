@@ -63,9 +63,9 @@ static int getparams_darwin(int fd, struct up_disk *disk,
 #endif
 
 int
-up_os_opendisk(const char *name, char **path, const struct up_opts *opts)
+up_os_opendisk(const char *name, const char **path, const struct up_opts *opts)
 {
-    char buf[MAXPATHLEN];
+    static char buf[MAXPATHLEN];
     int ret;
 
     *path = NULL;
@@ -74,7 +74,7 @@ up_os_opendisk(const char *name, char **path, const struct up_opts *opts)
     buf[0] = 0;
     ret = opendisk(name, OPENFLAGS, buf, sizeof buf, 0);
     if(0 <= ret && buf[0])
-        *path = strdup(buf);
+        *path = buf;
     return ret;
 #endif
 
@@ -85,7 +85,7 @@ up_os_opendisk(const char *name, char **path, const struct up_opts *opts)
         strlcat(buf, name, sizeof buf);
         ret = open(buf, OPENFLAGS);
         if(0 <= ret)
-            *path = strdup(buf);
+            *path = buf;
     }
     return ret;
 }
@@ -156,6 +156,9 @@ getparams_freebsd(int fd, struct up_disk *disk, const struct up_opts *opts)
     u_int ival;
     off_t oval;
 
+    if(opts->plainfile)
+        return -1;
+
     if(0 == ioctl(fd, DIOCGSECTORSIZE, &ival))
         disk->upd_sectsize = ival;
     else
@@ -194,6 +197,9 @@ getparams_linux(int fd, struct up_disk *disk, const struct up_opts *opts)
     int smallsize;
     uint64_t bigsize;
 
+    if(opts->plainfile)
+        return -1;
+
     if(0 == ioctl(fd, HDIO_GETGEO, &geom))
     {
         disk->upd_cyls  = geom.cylinders;
@@ -225,6 +231,9 @@ getparams_darwin(int fd, struct up_disk *disk, const struct up_opts *opts)
 {
     uint32_t smallsize;
     uint64_t bigsize;
+
+    if(opts->plainfile)
+        return -1;
 
     if(0 == ioctl(fd, DKIOCGETBLOCKSIZE, &smallsize))
         disk->upd_sectsize = smallsize;

@@ -9,7 +9,7 @@ ALL_PROGS     = upart
 ALL_SRCS      = ${UPART_SRCS}
 ALL_HDRS      = ${UPART_HDRSRC:=.h} bsdqueue.h
 UPART_SRCS    = ${UPART_HDRSRC:=.c} main.c
-UPART_HDRSRC  = apm bsdlabel crc32 disk gpt map mbr os util vtoc
+UPART_HDRSRC  = apm bsdlabel crc32 disk gpt img map mbr os util vtoc
 
 UPART_OBJS    = ${UPART_SRCS:.c=.o}
 ALL_OBJS      = ${ALL_SRCS:.c=.o}

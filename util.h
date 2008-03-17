@@ -204,6 +204,9 @@ float up_fmtsize(int64_t num, const char **units);
 /* Like snprintf(), except it appends to the end of a string. */
 int up_scatprintf(char *str, size_t size, const char *format, ...);
 
+/* Like calloc(), except doesn't zero the memory */
+void *up_malloc(size_t nmemb, size_t size);
+
 /* see strlcpy(3) manpage */
 #ifndef HAVE_STRLCPY
 size_t strlcpy(char *dst, const char *src, size_t siz);
@@ -220,6 +223,8 @@ struct up_opts
     int64_t             heads;
     int64_t             sects;
     int64_t             sectsize;
+    const char         *serialize;
+    const char         *label;
     unsigned int        verbose       : 1;
     unsigned int        plainfile     : 1;
     unsigned int        relaxed       : 1;

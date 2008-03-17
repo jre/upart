@@ -2,6 +2,7 @@
 #include "config.h"
 #endif
 
+#include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -13,6 +14,7 @@
 #include "bsdlabel.h"
 #include "disk.h"
 #include "gpt.h"
+#include "img.h"
 #include "map.h"
 #include "mbr.h"
 #include "util.h"
@@ -20,6 +22,7 @@
 
 static char *readargs(int argc, char *argv[], struct up_opts *opts);
 static void usage(const char *argv0, const char *fmt, ...);
+static int serialize(const struct up_disk *disk, const struct up_opts *opts);
 
 int
 main(int argc, char *argv[])
@@ -49,6 +52,12 @@ main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    if(opts.serialize && 0 > serialize(disk, &opts))
+    {
+        up_disk_close(disk);
+        return EXIT_FAILURE;
+    }
+
     up_disk_print(disk, stdout, &opts);
     fputc('\n', stdout);
     up_map_printall(disk, stdout, opts.verbose);
@@ -66,7 +75,7 @@ readargs(int argc, char *argv[], struct up_opts *opts)
     int opt;
 
     memset(opts, 0, sizeof *opts);
-    while(0 < (opt = getopt(argc, argv, "c:fh:rs:vz:")))
+    while(0 < (opt = getopt(argc, argv, "c:fh:l:rs:vw:z:")))
     {
         switch(opt)
         {
@@ -89,6 +98,9 @@ readargs(int argc, char *argv[], struct up_opts *opts)
                     return NULL;
                 }
                 break;
+            case 'l':
+                opts->label = optarg;
+                break;
             case 'r':
                 opts->relaxed = 1;
                 break;
@@ -102,6 +114,9 @@ readargs(int argc, char *argv[], struct up_opts *opts)
                 break;
             case 'v':
                 opts->verbose = 1;
+                break;
+            case 'w':
+                opts->serialize = optarg;
                 break;
             case 'z':
                 opts->sectsize = strtol(optarg, NULL, 0);
@@ -117,6 +132,11 @@ readargs(int argc, char *argv[], struct up_opts *opts)
         }
     }
 
+    if(opts->label && !opts->serialize)
+    {
+        usage(argv[0], "-w is required for -l");
+        return NULL;
+    }
     if(optind + 1 == argc)
         return argv[optind];
     else
@@ -148,8 +168,40 @@ usage(const char *argv0, const char *message, ...)
            "  -c cyls   total number of cylinders (cylinders)\n"
            "  -f        path is a plain file and not a device\n"
            "  -h heads  number of tracks per cylinder (heads)\n"
+           "  -l label  label to use with -w option\n"
            "  -r        relax some checks when reading maps\n"
            "  -s sects  number of sectors per track (sectors)\n"
            "  -v        print partition maps verbosely\n"
+           "  -l file   write disk and partition info to file\n"
            "  -z size   sector size in bytes\n", name, name);
+}
+
+static int
+serialize(const struct up_disk *disk, const struct up_opts *opts)
+{
+    FILE *out;
+
+    out = fopen(opts->serialize, "wb");
+    if(!out)
+    {
+        fprintf(stderr, "failed to open file for writing: %s: %s\n",
+                opts->serialize, strerror(errno));
+        return -1;
+    }
+
+    if(0 > up_img_save(disk, out, (opts->label ? opts->label : disk->upd_path),
+                       opts->serialize))
+    {
+        fclose(out);
+        return -1;
+    }
+
+    if(fclose(out))
+    {
+        fprintf(stderr, "failed to write to file: %s: %s\n",
+                opts->serialize, strerror(errno));
+        return -1;
+    }
+
+    return 0;
 }

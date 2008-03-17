@@ -6,6 +6,7 @@
 struct up_opts;
 struct up_map;
 struct up_part;
+struct up_img;
 
 struct up_disk_sectnode
 {
@@ -29,19 +30,17 @@ struct up_disk
     int64_t     upd_sects;          /* number of sectors per track */
     int64_t     upd_size;           /* total number of sects */
 
-    /* don't touch these, use up_disk_read() or up_disk_getsect() instead */
-    int         upd_fd;
-    uint8_t *   upd_buf;
-
-    /* don't touch this either, use the up_map_*all() functions */
-    struct up_part     *maps;
-
-    /* you should be noticing a pattern by now */
-    struct up_disk_sectmap upd_sectsused;
+    /* don't touch any of these */
+    int                     upd_fd;
+    uint8_t                *upd_buf;
+    struct up_img          *upd_img;
+    struct up_part         *maps;
+    struct up_disk_sectmap  upd_sectsused;
+    int64_t                 upd_sectsused_count;
 };
 
 /* Open the disk device read-only and get drive params */
-struct up_disk *up_disk_open(const char *path, const struct up_opts *opts);
+struct up_disk *up_disk_open(const char *path, struct up_opts *opts);
 
 /* Read from disk into buffer. Note that START, SIZE, and the return
    value are in sectors but bufsize is in bytes. */
@@ -68,6 +67,12 @@ const void *up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t s
 
 /* mark all sectors associated with REF unused */
 void up_disk_sectsunref(struct up_disk *disk, const void *ref);
+
+/* iterate through marked sectors */
+void up_disk_sectsiter(const struct up_disk *disk,
+                       void (*func)(const struct up_disk *,
+                                    const struct up_disk_sectnode *, void *),
+                       void *arg);
 
 /* Close disk and free struct. */
 void up_disk_close(struct up_disk *disk);

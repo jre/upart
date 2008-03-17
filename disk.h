@@ -4,14 +4,17 @@
 #include "bsdtree.h"
 
 struct up_opts;
+struct up_map;
 struct up_part;
 
 struct up_disk_sectnode
 {
-    int64_t first;
-    int64_t last;
-    const void *ref;
-    RB_ENTRY(up_disk_sectnode) link;
+    int64_t                     first;
+    int64_t                     last;
+    const struct up_map        *ref;
+    void                       *data;
+    int                         tag;
+    RB_ENTRY(up_disk_sectnode)  link;
 };
 
 RB_HEAD(up_disk_sectmap, up_disk_sectnode);
@@ -56,11 +59,12 @@ int up_disk_check1sect(struct up_disk *disk, int64_t sect);
 int up_disk_checksectrange(struct up_disk *disk, int64_t first, int64_t size);
 
 /* mark a sector as used and return 0, return -1 if already used */
-int up_disk_mark1sect(struct up_disk *disk, int64_t sect, const void *ref);
+const void *up_disk_save1sect(struct up_disk *disk, int64_t sect,
+                              const struct up_map *ref, int tag);
 
 /* mark range of sectors as used and return 0, return -1 if already used */
-int up_disk_marksectrange(struct up_disk *disk, int64_t first, int64_t size,
-                          const void *ref);
+const void *up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t size,
+                                  const struct up_map *ref, int tag);
 
 /* mark all sectors associated with REF unused */
 void up_disk_sectsunref(struct up_disk *disk, const void *ref);
@@ -69,7 +73,10 @@ void up_disk_sectsunref(struct up_disk *disk, const void *ref);
 void up_disk_close(struct up_disk *disk);
 
 /* Print disk info to STREAM. */
-void up_disk_dump(const struct up_disk *disk, void *_stream,
+void up_disk_print(const struct up_disk *disk, void *_stream,
                   const struct up_opts *opt);
+
+/* Print hexdump of sectors with partition information to STREAM. */
+void up_disk_dump(const struct up_disk *disk, void *_stream);
 
 #endif /* HDR_UPART_DISK */

@@ -101,20 +101,20 @@ static int vtoc_info(const struct up_map *map, int verbose,
 static int vtoc_index(const struct up_part *part, char *buf, int size);
 static int vtoc_extra(const struct up_part *part, int verbose,
                       char *buf, int size);
-static void vtoc_dump(const struct up_map *map, void *stream);
 static int vtoc_read(struct up_disk *disk, int64_t start, int64_t size,
                      const uint8_t **ret);
 
 void up_vtoc_register(void)
 {
     up_map_register(UP_MAP_VTOC,
+                    "VTOC",
                     0,
                     vtoc_load,
                     vtoc_setup,
                     vtoc_info,
                     vtoc_index,
                     vtoc_extra,
-                    vtoc_dump,
+                    NULL,
                     up_map_freeprivmap_def,
                     up_map_freeprivpart_def);
 }
@@ -161,7 +161,7 @@ vtoc_setup(struct up_map *map, const struct up_opts *opts)
     struct up_vtocpart         *part;
     int64_t                     start, size;
 
-    if(0 > up_disk_mark1sect(map->disk, map->start + VTOC_OFF, map))
+    if(!up_disk_save1sect(map->disk, map->start + VTOC_OFF, map, 0))
         return -1;
 
     max = UP_LETOH16(vtoc->partcount);
@@ -194,7 +194,7 @@ vtoc_setup(struct up_map *map, const struct up_opts *opts)
         }
     }
 
-    return 0;
+    return 1;
 }
 
 static int
@@ -281,16 +281,6 @@ vtoc_extra(const struct up_part *part, int verbose, char *buf, int size)
         return snprintf(buf, size, "%-5s %s", flagstr, up_parttypes[type]);
     else
         return snprintf(buf, size, "%-5s %u", flagstr, type);
-}
-
-static void
-vtoc_dump(const struct up_map *map, void *stream)
-{
-    struct up_vtoc *priv = map->priv;
-
-    fprintf(stream, "Dump of %s vtoc at sector %"PRId64" (0x%"PRIx64") off %d:\n",
-            map->disk->upd_name, map->start, map->start, VTOC_OFF);
-    up_hexdump(&priv->vtoc, sizeof priv->vtoc, map->start + VTOC_OFF, stream);
 }
 
 static int

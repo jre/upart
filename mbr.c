@@ -22,7 +22,6 @@
 #define MBR_EXTPART             (0)
 #define MBR_EXTNEXT             (1)
 
-#define MBR_ISPRI(idx)          (MBR_PART_COUNT > (idx))
 #define MBR_GETSECT(sc)         ((sc)[0] & 0x3f)
 #define MBR_GETCYL(sc)          ((((uint16_t)((sc)[0] & 0xc0)) << 2) | (sc)[1])
 
@@ -70,7 +69,6 @@ static int mbr_getinfo(const struct up_map *part, int verbose,
 static int mbr_getindex(const struct up_part *part, char *buf, int size);
 static int mbr_getextra(const struct up_part *part, int verbose,
                         char *buf, int size);
-static void mbr_dump(const struct up_map *map, void *stream);
 static int mbr_addpart(struct up_map *map, const struct up_mbrpart_p *part,
                        int index, int64_t off, const struct up_mbr_p *mbr);
 static int mbr_read(struct up_disk *disk, int64_t start, int64_t size,
@@ -81,17 +79,19 @@ void
 up_mbr_register(void)
 {
     up_map_register(UP_MAP_MBR,
+                    "MBR",
                     0,
                     mbr_load,
                     mbr_setup,
                     mbr_getinfo,
                     mbr_getindex,
                     mbr_getextra,
-                    mbr_dump,
+                    NULL,
                     up_map_freeprivmap_def,
                     up_map_freeprivpart_def);
 
     up_map_register(UP_MAP_MBREXT,
+                    "extended MBR",
                     UP_TYPE_NOPRINTHDR,
                     mbrext_load,
                     mbrext_setup,
@@ -163,7 +163,7 @@ mbr_setup(struct up_map *map, const struct up_opts *opts)
     struct up_mbr              *mbr = map->priv;
     int                         ii;
 
-    if(0 > up_disk_mark1sect(map->disk, map->start, map))
+    if(!up_disk_save1sect(map->disk, map->start, map, 0))
         return -1;
 
     /* add primary partitions */
@@ -171,7 +171,7 @@ mbr_setup(struct up_map *map, const struct up_opts *opts)
         if(0 > mbr_addpart(map, &mbr->mbr.part[ii], ii, 0, NULL))
             return -1;
 
-    return 0;
+    return 1;
 }
 
 /* XXX need a way to detect loops */
@@ -180,7 +180,7 @@ mbrext_setup(struct up_map *map, const struct up_opts *opts)
 {
     struct up_mbr              *parent;
     const struct up_mbr_p      *buf;
-    int                         res, index;
+    int                         index;
     int64_t                     absoff, reloff, max;
 
     assert(UP_MAP_MBR == map->parent->map->type);
@@ -195,12 +195,11 @@ mbrext_setup(struct up_map *map, const struct up_opts *opts)
     {
         /* load extended mbr */
         assert(absoff >= map->start && absoff + max <= map->start + map->size);
-        res = mbr_read(map->disk, absoff, max, &buf);
-        if(0 >= res)
-            return res;
-
-        if(0 > up_disk_mark1sect(map->disk, absoff, map))
+        buf = up_disk_save1sect(map->disk, absoff, map, 1);
+        if(!buf)
             return -1;
+        if(MBR_MAGIC != UP_LETOH16(buf->magic))
+            return 0;
         if(0 > mbr_addpart(map, &buf->part[MBR_EXTPART], index, absoff, buf))
             return -1;
         index++;
@@ -222,7 +221,7 @@ mbrext_setup(struct up_map *map, const struct up_opts *opts)
 
     parent->extcount = index - MBR_PART_COUNT;
 
-    return 0;
+    return 1;
 }
 
 static int
@@ -274,31 +273,6 @@ mbr_getextra(const struct up_part *part, int verbose, char *buf, int size)
                         active, label, priv->part.type);
 }
 
-static void
-mbr_dump(const struct up_map *map, void *_stream)
-{
-    FILE                       *stream = _stream;
-    const struct up_part       *ii;
-    const struct up_mbrpart    *priv;
-
-    /* dump MBR sector */
-    fprintf(stream, "Dump of %s MBR at sector %"PRId64" (0x%08"PRIx64"):\n",
-            map->disk->upd_name, map->start, map->start);
-    up_hexdump(map->priv, sizeof(struct up_mbr_p), map->start, stream);
-
-    /* dump all extended MBR sectors */
-    for(ii = up_map_first(map); ii; ii = up_map_next(ii))
-    {
-        priv = ii->priv;
-        if(MBR_ISPRI(priv->index))
-            continue;
-        fprintf(stream, "\nDump of %s extended MBR #%d "
-                "at sector %"PRId64" (0x%08"PRIx64"):\n",
-                map->disk->upd_name, priv->index, priv->extoff, priv->extoff);
-        up_hexdump(&priv->extmbr, sizeof priv->extmbr, priv->extoff, stream);
-    }
-}
-
 static int
 mbr_addpart(struct up_map *map, const struct up_mbrpart_p *part, int index,
             int64_t extoff, const struct up_mbr_p *extmbr)
@@ -306,8 +280,8 @@ mbr_addpart(struct up_map *map, const struct up_mbrpart_p *part, int index,
     struct up_mbrpart  *priv;
     int                 flags;
 
-    assert(( MBR_ISPRI(index) && 0 == extoff && !extmbr) ||
-           (!MBR_ISPRI(index) && 0 <  extoff &&  extmbr));
+    assert((MBR_PART_COUNT >  index && 0 == extoff && !extmbr) ||
+           (MBR_PART_COUNT <= index && 0 <  extoff &&  extmbr));
 
     priv = calloc(1, sizeof *priv);
     if(!priv)

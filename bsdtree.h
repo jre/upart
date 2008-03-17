@@ -668,7 +668,7 @@ name##_RB_NEXT(struct type *elm)					\
 }									\
 									\
 attr struct type *							\
-name##_RB_MINMAX(struct name *head, int val)				\
+name##_RB_MINMAX(const struct name *head, int val)			\
 {									\
 	struct type *tmp = RB_ROOT(head);				\
 	struct type *parent = NULL;					\

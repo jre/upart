@@ -71,10 +71,10 @@ struct up_apm_p
 
 struct up_apm
 {
-    uint8_t            *buf;
     size_t              size;
     int64_t             firstsect;
     int64_t             sectcount;
+    const uint8_t      *tmpbuf;
 };
 
 struct up_apmpart
@@ -99,8 +99,6 @@ static int apm_info(const struct up_map *map, int verbose,
 static int apm_index(const struct up_part *part, char *buf, int size);
 static int apm_extra(const struct up_part *part, int verbose,
                      char *buf, int size);
-static void apm_dump(const struct up_map *map, void *stream);
-static void apm_freemap(struct up_map *map, void *priv);
 static void apm_bounds(const struct up_apm_p *map,
                        int64_t *start, int64_t *size);
 static int apm_find(struct up_disk *disk, int64_t start, int64_t size,
@@ -110,14 +108,15 @@ static int apm_find(struct up_disk *disk, int64_t start, int64_t size,
 void up_apm_register(void)
 {
     up_map_register(UP_MAP_APM,
+                    "Apple partition map",
                     0,
                     apm_load,
                     apm_setup,
                     apm_info,
                     apm_index,
                     apm_extra,
-                    apm_dump,
-                    apm_freemap,
+                    NULL,
+                    up_map_freeprivmap_def,
                     up_map_freeprivpart_def);
 }
 
@@ -127,7 +126,7 @@ apm_load(struct up_disk *disk, const struct up_part *parent, void **priv,
 {
     int                 res;
     struct up_apm      *apm;
-    int64_t             start, size, res64;
+    int64_t             start, size;
 
     assert(APM_ENTRY_SIZE == sizeof(struct up_apm_p));
     *priv = NULL;
@@ -148,26 +147,8 @@ apm_load(struct up_disk *disk, const struct up_part *parent, void **priv,
         return -1;
     }
     apm->size = disk->upd_sectsize * size;
-    apm->buf  = calloc(disk->upd_sectsize, size);
-    if(!apm->buf)
-    {
-        perror("malloc");
-        free(apm);
-        return -1;
-    }
     apm->firstsect = start;
     apm->sectcount = size;
-
-    /* read map */
-    res64 = up_disk_read(disk, start, size, apm->buf, apm->size);
-    if(size > res64)
-    {
-        if(0 <= res64)
-            fprintf(stderr, "failed to read entire map\n");
-        free(apm->buf);
-        free(apm);
-        return -1;
-    }
 
     *priv = apm;
 
@@ -181,9 +162,12 @@ apm_setup(struct up_map *map, const struct up_opts *opts)
     int                         ii, flags;
     struct up_apmpart          *part;
     int64_t                     start, size;
+    const uint8_t              *data;
 
-    if(0 > up_disk_marksectrange(map->disk, apm->firstsect, apm->sectcount, map))
+    data = up_disk_savesectrange(map->disk, apm->firstsect, apm->sectcount, map, 0);
+    if(!data)
         return -1;
+    apm->tmpbuf = data;
 
     for(ii = 0; apm->size / map->disk->upd_sectsize > ii; ii++)
     {
@@ -193,7 +177,7 @@ apm_setup(struct up_map *map, const struct up_opts *opts)
             perror("malloc");
             return -1;
         }
-        memcpy(&part->part, apm->buf + ii * map->disk->upd_sectsize,
+        memcpy(&part->part, data + ii * map->disk->upd_sectsize,
                sizeof part->part);
         part->index   = ii;
         apm_bounds(&part->part, &start, &size);
@@ -209,7 +193,7 @@ apm_setup(struct up_map *map, const struct up_opts *opts)
         }
     }
 
-    return 0;
+    return 1;
 }
 
 static int
@@ -287,27 +271,6 @@ apm_extra(const struct up_part *part, int verbose, char *buf, int size)
     }
 
     return res;
-}
-
-static void
-apm_dump(const struct up_map *map, void *stream)
-{
-    struct up_apm *priv = map->priv;
-
-    fprintf(stream, "Dump of %s Apple partition map in sector %"PRId64
-            " (0x%"PRIx64"):\n", map->disk->upd_name, map->start + APM_OFFSET,
-            map->start + APM_OFFSET);
-    up_hexdump(priv->buf, priv->size, map->disk->upd_sectsize *
-               (map->start + APM_OFFSET), stream);
-}
-
-static void
-apm_freemap(struct up_map *map, void *priv)
-{
-    struct up_apm *apm = priv;
-
-    free(apm->buf);
-    free(apm);
 }
 
 static void

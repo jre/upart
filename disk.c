@@ -16,6 +16,8 @@
 #include "os.h"
 #include "util.h"
 
+/* #define DEBUG_SECTOR_SAVE */
+
 static int fixparams(struct up_disk *disk, const struct up_opts *opts);
 static int fixparams_checkone(struct up_disk *disk);
 static int sectcmp(struct up_disk_sectnode *left,
@@ -150,58 +152,80 @@ up_disk_checksectrange(struct up_disk *disk, int64_t start, int64_t size)
     key.last  = start + size - 1;
     if(NULL == RB_FIND(up_disk_sectmap, &disk->upd_sectsused, &key))
     {
-        /*
+#ifdef DEBUG_SECTOR_SAVE
         printf("check %"PRId64"+%"PRId64": free\n", start, size);
-        */
+#endif
         return 0;
     }
     else
     {
-        /*
+#ifdef DEBUG_SECTOR_SAVE
         printf("check %"PRId64"+%"PRId64": used\n", start, size);
-        */
+#endif
         return 1;
     }
 }
 
-int
-up_disk_mark1sect(struct up_disk *disk, int64_t sect, const void *ref)
+const void *
+up_disk_save1sect(struct up_disk *disk, int64_t sect,
+                  const struct up_map *ref, int tag)
 {
-    return up_disk_marksectrange(disk, sect, 1, ref);
+    return up_disk_savesectrange(disk, sect, 1, ref, tag);
 }
 
-int
-up_disk_marksectrange(struct up_disk *disk, int64_t first, int64_t size,
-                      const void *ref)
+const void *
+up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t size,
+                      const struct up_map *ref, int tag)
 {
     struct up_disk_sectnode *new;
 
+    /* allocate data structure */
     assert(0 < size);
     new = calloc(1, sizeof *new);
     if(NULL == new)
     {
         perror("malloc");
-        return -1;
+        return NULL;
     }
+    new->data  = NULL;
     new->first = first;
     new->last  = first + size - 1;
     new->ref   = ref;
-    if(NULL == RB_INSERT(up_disk_sectmap, &disk->upd_sectsused, new))
+    new->tag   = tag;
+    new->data  = calloc(size, disk->upd_sectsize);
+    if(!new->data)
     {
-        /*
-        printf("mark %"PRId64"+%"PRId64" with %p\n", first, size, ref);
-        */
-        return 0;
+        perror("malloc");
+        free(new);
+        return NULL;
     }
-    else
+
+    /* try to read the sectors from disk */
+    if(size != up_disk_read(disk, first, size, new->data,
+                            size * disk->upd_sectsize))
     {
-        /*
+        free(new->data);
+        free(new);
+        return NULL;
+    }
+
+    /* insert it in the tree if the sectors aren't marked as used */
+    if(RB_INSERT(up_disk_sectmap, &disk->upd_sectsused, new))
+    {
+#ifdef DEBUG_SECTOR_SAVE
         printf("failed to mark %"PRId64"+%"PRId64" with %p, already used\n",
                first, size, ref);
-        */
+#endif
+        free(new->data);
         free(new);
-        return -1;
+        return NULL;
     }
+#ifdef DEBUG_SECTOR_SAVE
+    printf("mark %"PRId64"+%"PRId64" with %p\n", first, size, ref);
+#endif
+
+    /* return the data */
+    return new->data;
 }
 
 void
@@ -214,11 +238,12 @@ up_disk_sectsunref(struct up_disk *disk, const void *ref)
         inc = RB_NEXT(up_disk_sectmap, &disk->upd_sectsused, ii);
         if(ref == ii->ref)
         {
-            /*
+#ifdef DEBUG_SECTOR_SAVE
             printf("unmark %"PRId64"+%"PRId64" with %p\n",
                    ii->first, ii->last - ii->first + 1, ii->ref);
-            */
+#endif
             RB_REMOVE(up_disk_sectmap, &disk->upd_sectsused, ii);
+            free(ii->data);
             free(ii);
         }
     }
@@ -330,8 +355,8 @@ fixparams_checkone(struct up_disk *disk)
 }
 
 void
-up_disk_dump(const struct up_disk *disk, void *_stream,
-             const struct up_opts *opt)
+up_disk_print(const struct up_disk *disk, void *_stream,
+              const struct up_opts *opt)
 {
     FILE *              stream = _stream;
     const char *        unit;
@@ -351,6 +376,17 @@ up_disk_dump(const struct up_disk *disk, void *_stream,
             "    sectors per track:   %d (sectors)\n"
             "\n", disk->upd_path, disk->upd_sectsize, disk->upd_size,
             (int)disk->upd_cyls, (int)disk->upd_heads, (int)disk->upd_sects);
+}
+
+void
+up_disk_dump(const struct up_disk *disk, void *stream)
+{
+    struct up_disk_sectnode *node;
+
+    for(node = RB_MIN(up_disk_sectmap, &disk->upd_sectsused); node;
+        node = RB_NEXT(up_disk_sectmap, &disk->upd_sectsused, node))
+        up_map_dumpsect(node->ref, stream, node->first,
+                        node->last - node->first + 1, node->data, node->tag);
 }
 
 static int

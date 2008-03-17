@@ -49,11 +49,11 @@ main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    up_disk_dump(disk, stdout, &opts);
+    up_disk_print(disk, stdout, &opts);
     fputc('\n', stdout);
     up_map_printall(disk, stdout, opts.verbose);
-    if(opts.verbose)
-        up_map_dumpall(disk, stdout);
+    if(opts.verbose)    
+        up_disk_dump(disk, stdout);
 
     up_disk_close(disk);
 

@@ -57,7 +57,7 @@ struct up_map
     SIMPLEQ_ENTRY(up_map) link;
 };
 
-void up_map_register(enum up_map_type type, int flags,
+void up_map_register(enum up_map_type type, const char *label, int flags,
                      /* check if map exists and allocate private data */
                      int (*load)(struct up_disk *,const struct up_part *,
                                  void **, const struct up_opts *),
@@ -69,8 +69,9 @@ void up_map_register(enum up_map_type type, int flags,
                      int (*getindex)(const struct up_part *, char *, int),
                      /* copy extra verbose info into string */
                      int (*getextra)(const struct up_part *, int, char *, int),
-                     /* print hex dump of raw partition data to stream */
-                     void (*dump)(const struct up_map *, void *),
+                     /* copy extra information for sector dump into string */
+                     int (*getdumpextra)(const struct up_map *, int64_t,
+                                         const void *, int64_t, int, char *, int),
                      /* free map private data, map may be NULL */
                      void (*freeprivmap)(struct up_map *, void *),
                      /* free part private data, part may be NULL */
@@ -91,9 +92,9 @@ void up_map_freeprivpart_def(struct up_part *part, void *priv);
 
 void up_map_print(const struct up_map *map, void *stream,
                   int verbose, int recurse);
-void up_map_dump(const struct up_map *map, void *stream, int recurse);
+void up_map_dumpsect(const struct up_map *map, void *_stream, int64_t start,
+                     int64_t size, const void *data, int tag);
 void up_map_printall(const struct up_disk *disk, void *stream, int verbose);
-void up_map_dumpall(const struct up_disk *disk, void *stream);
 
 const struct up_part *up_map_first(const struct up_map *map);
 const struct up_part *up_map_next(const struct up_part *part);

@@ -88,13 +88,10 @@ static int gpt_getinfo(const struct up_map *part, int verbose,
 static int gpt_getindex(const struct up_part *part, char *buf, int size);
 static int gpt_getextra(const struct up_part *part, int verbose,
                         char *buf, int size);
-static void gpt_dump(const struct up_map *map, void *stream);
 static int gpt_findhdr(struct up_disk *disk, int64_t start, int64_t size,
                        struct up_gpt_p *gpt);
 static int gpt_readhdr(struct up_disk *disk, int64_t start, int64_t size,
                        const struct up_gpt_p **gpt);
-static int gpt_readpart(struct up_disk *disk, int64_t start,
-                        const struct up_gptpart_p **part);
 static int gpt_checkcrc(struct up_gpt_p *gpt);
 static const char *gpt_typename(const struct up_guid_p *guid);
 
@@ -102,13 +99,14 @@ void
 up_gpt_register(void)
 {
     up_map_register(UP_MAP_GPT,
+                    "EFI GPT",
                     0,
                     gpt_load,
                     gpt_setup,
                     gpt_getinfo,
                     gpt_getindex,
                     gpt_getextra,
-                    gpt_dump,
+                    NULL,
                     up_map_freeprivmap_def,
                     up_map_freeprivpart_def);
 }
@@ -162,60 +160,52 @@ gpt_setup(struct up_map *map, const struct up_opts *opts)
     struct up_gpt_p            *gpt = &priv->gpt;
     struct up_gptpart          *part;
     const struct up_gptpart_p  *pk;
-    uint64_t                    partsect, maxsect;
-    uint32_t                    partleft, crc;
-    int                         count;
+    uint64_t                    partsects, partbytes;
+    const uint8_t              *data1, *data2;
 
-    crc = ~0;
+    /* calculate partition buffer size */
+    partbytes = UP_LETOH32(gpt->maxpart) * GPT_PART_SIZE;
+    partsects = partbytes * map->disk->upd_sectsize;
 
-    /* XXX returning -1 here trips assertion in up_map_free() */
-
-    if(0 > up_disk_mark1sect(map->disk, GPT_PRIOFF(map->start, map->size), map) ||
-       0 > up_disk_mark1sect(map->disk, GPT_SECOFF(map->start, map->size), map))
+    /* save sectors from primary and secondary maps */
+    data1 = up_disk_savesectrange(map->disk, GPT_PRIOFF(map->start, map->size),
+                                  1 + partsects, map, 0);
+    data2 = up_disk_savesectrange(map->disk, GPT_SECOFF(map->start, map->size)
+                                  - partsects, 1 + partsects, map, 0);
+    if(!data1 || !data2)
         return -1;
 
-    partsect = UP_LETOH64(gpt->partsect);
-    maxsect  = UP_LETOH64(gpt->firstsect);
-    partleft = UP_LETOH32(gpt->maxpart);
-    while(partsect < maxsect && 0 < partleft)
-    {
-        count = gpt_readpart(map->disk, partsect, &pk);
-        if(0 > count)
-            return -1;
-        crc = up_crc32(pk, map->disk->upd_sectsize, crc);
-        if(0 > up_disk_mark1sect(map->disk, partsect, map))
-            return -1;
-        partsect++;
-        while(0 < count)
-        {
-            part = calloc(1, sizeof *part);
-            if(!part)
-            {
-                perror("malloc");
-                return -1;
-            }
-            part->part = *pk;
-            part->index = priv->partitions;
-            if(!up_map_add(map, UP_LETOH64(pk->start),
-                           UP_LETOH64(pk->end) - UP_LETOH64(pk->start), 0, part))
-            {
-                free(part);
-                return -1;
-            }
-            priv->partitions++;
-            pk++;
-            count--;
-        }
-    }
-
-    /* this check should probably be done before adding all the partitions */
-    if(UP_LETOH32(gpt->partcrc) != (crc ^ ~0))
+    /* verify the crc */
+    if(UP_LETOH32(gpt->partcrc) != (up_crc32(data1, partbytes, ~0) ^ ~0))
     {
         fprintf(stderr, "bad gpt partition crc\n");
-        return -1;
+        return 0;
     }
 
-    return 0;
+    /* walk through the partition buffer and add all partitions found */
+    pk = (const struct up_gptpart_p *)(data1 + map->disk->upd_sectsize);
+    while((const uint8_t *)pk + sizeof *pk
+          <= data1 + map->disk->upd_sectsize * partsects)
+    {
+        part = calloc(1, sizeof *part);
+        if(!part)
+        {
+            perror("malloc");
+            return -1;
+        }
+        part->part = *pk;
+        part->index = priv->partitions;
+        if(!up_map_add(map, UP_LETOH64(pk->start), UP_LETOH64(pk->end)
+                       - UP_LETOH64(pk->start) + 1, 0, part))
+        {
+            free(part);
+            return -1;
+        }
+        priv->partitions++;
+        pk++;
+    }
+
+    return 1;
 }
 
 static int
@@ -294,12 +284,6 @@ gpt_getextra(const struct up_part *part, int verbose, char *buf, int size)
     }
 }
 
-static void
-gpt_dump(const struct up_map *map, void *stream)
-{
-    /* XXX unimplemented */
-}
-
 static int
 gpt_findhdr(struct up_disk *disk, int64_t start, int64_t size,
             struct up_gpt_p *gpt)
@@ -359,27 +343,6 @@ gpt_readhdr(struct up_disk *disk, int64_t start, int64_t size,
     *gpt = buf;
 
     return 1;
-}
-
-static int
-gpt_readpart(struct up_disk *disk, int64_t start,
-             const struct up_gptpart_p **part)
-{
-    const void *buf;
-
-    *part = NULL;
-
-    if(sizeof *part > disk->upd_sectsize)
-        return 0;
-
-    if(up_disk_check1sect(disk, start))
-        return 0;
-    buf = up_disk_getsect(disk, start);
-    if(!buf)
-        return -1;
-    *part = buf;
-
-    return disk->upd_sectsize / sizeof **part;
 }
 
 static int

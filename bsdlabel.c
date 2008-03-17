@@ -28,7 +28,6 @@
 #define LABEL_MAGIC0LE          (0x57)
 #define LABEL_OFF_MAGIC1        (0x0)
 #define LABEL_OFF_MAGIC2        (0x84)
-#define LABEL_OFF_CKSUM         (0x88)
 #define LABEL_BASE_SIZE         (0x94)
 #define LABEL_PART_SIZE         (0x10)
 
@@ -88,8 +87,6 @@ struct up_bsd
     int                 sectoff;
     int                 byteoff;
     int                 endian;
-    uint8_t            *buf;
-    int                 bufsize;
     struct up_bsd_p     label;
 };
 
@@ -156,18 +153,20 @@ static int bsdlabel_info(const struct up_map *map, int verbose,
 static int bsdlabel_index(const struct up_part *part, char *buf, int size);
 static int bsdlabel_extra(const struct up_part *part, int verbose,
                           char *buf, int size);
-static void bsdlabel_dump(const struct up_map *map, void *stream);
-static void bsdlabel_freemap(struct up_map *map, void *priv);
+static int bsdlabel_dump(const struct up_map *map, int64_t start, const void *data,
+                          int64_t size, int tag, char *buf, int buflen);
 static int bsdlabel_scan(struct up_disk *disk, int64_t start, int64_t size,
                          const uint8_t **ret, int *sectoff, int *byteoff,
                          int *endian);
 static int bsdlabel_read(struct up_disk *disk, int64_t start, int64_t size,
                          const uint8_t **ret, int *off, int *endian);
-static uint16_t bsdlabel_cksum(uint8_t *buf, int size);
+static uint16_t bsdlabel_cksum(struct up_bsd_p *hdr,
+                               const uint8_t *partitions, int size);
 
 void up_bsdlabel_register(void)
 {
     up_map_register(UP_MAP_BSD,
+                    "BSD disklabel",
                     0,
                     bsdlabel_load,
                     bsdlabel_setup,
@@ -175,7 +174,7 @@ void up_bsdlabel_register(void)
                     bsdlabel_index,
                     bsdlabel_extra,
                     bsdlabel_dump,
-                    bsdlabel_freemap,
+                    up_map_freeprivmap_def,
                     up_map_freeprivpart_def);
 }
 
@@ -205,20 +204,11 @@ bsdlabel_load(struct up_disk *disk, const struct up_part *parent, void **priv,
         perror("malloc");
         return -1;
     }
-    label->buf = malloc(disk->upd_sectsize);
-    if(!label->buf)
-    {
-        perror("malloc");
-        free(label);
-        return -1;
-    }
 
     /* populate label struct */
     label->sectoff     = sectoff;
     label->byteoff     = byteoff;
     label->endian      = endian;
-    label->bufsize     = disk->upd_sectsize;
-    memcpy(label->buf, buf, disk->upd_sectsize);
     assert(byteoff + sizeof(label->label) <= disk->upd_sectsize);
     memcpy(&label->label, buf + byteoff, sizeof label->label);
 
@@ -229,24 +219,8 @@ bsdlabel_load(struct up_disk *disk, const struct up_part *parent, void **priv,
     {
         fprintf(stderr, "ignoring truncated BSD disklabel (sector %"
                 PRId64"\n", parent->start);
-        bsdlabel_freemap(NULL, label);
+        free(label);
         return -1;
-    }
-
-    /* verify the checksum */
-    if(bsdlabel_cksum(label->buf + byteoff, size) !=
-       LABEL_LGETINT16(label, checksum))
-    {
-        if(opts->relaxed)
-            fprintf(stderr, "warning: BSD disklabel with bad checksum "
-                    "(sector %"PRId64"\n", parent->start);
-        else
-        {
-            fprintf(stderr, "ignoring BSD disklabel with bad checksum "
-                    "(sector %"PRId64"\n", parent->start);
-            bsdlabel_freemap(NULL, label);
-            return -1;
-        }
     }
 
     *priv = label;
@@ -263,11 +237,30 @@ bsdlabel_setup(struct up_map *map, const struct up_opts *opts)
     const uint8_t              *buf;
     int64_t                     start, size;
 
-    if(0 > up_disk_mark1sect(map->disk, map->start + label->sectoff, map))
+    buf = up_disk_save1sect(map->disk, map->start + label->sectoff, map, 0);
+    if(!buf)
         return -1;
 
-    max = LABEL_LGETINT16(label, maxpart);
-    buf = label->buf + label->byteoff + LABEL_BASE_SIZE;
+    max  = LABEL_LGETINT16(label, maxpart);
+    buf += label->byteoff + LABEL_BASE_SIZE;
+    assert(map->disk->upd_sectsize >=
+           label->byteoff + LABEL_BASE_SIZE + (LABEL_PART_SIZE * max));
+
+    /* verify the checksum */
+    if(bsdlabel_cksum(&label->label, buf, (LABEL_PART_SIZE * max)) !=
+       LABEL_LGETINT16(label, checksum))
+    {
+        if(opts->relaxed)
+            fprintf(stderr, "warning: BSD disklabel with bad checksum "
+                    "(sector %"PRId64")\n", map->start);
+        else
+        {
+            fprintf(stderr, "ignoring BSD disklabel with bad checksum "
+                    "(sector %"PRId64")\n", map->start);
+            return 0;
+        }
+    }
+
     for(ii = 0; max > ii; ii++)
     {
         part = calloc(1, sizeof *part);
@@ -277,8 +270,6 @@ bsdlabel_setup(struct up_map *map, const struct up_opts *opts)
             return -1;
         }
 
-        assert(label->buf + label->bufsize >=
-               buf + (LABEL_PART_SIZE * (ii + 1)));
         memcpy(&part->part, buf + (LABEL_PART_SIZE * ii), LABEL_PART_SIZE);
         part->index   = ii;
         start         = LABEL_PGETINT32(label, part, start);
@@ -292,7 +283,7 @@ bsdlabel_setup(struct up_map *map, const struct up_opts *opts)
         }
     }
 
-    return 0;
+    return 1;
 }
 
 static int
@@ -397,25 +388,14 @@ bsdlabel_extra(const struct up_part *part, int verbose, char *buf, int size)
         return snprintf(buf, size, "%s", up_fstypes[priv->part.type]);
 }
 
-static void
-bsdlabel_dump(const struct up_map *map, void *stream)
+static int
+bsdlabel_dump(const struct up_map *map, int64_t start, const void *data,
+              int64_t size, int tag, char *buf, int buflen)
 {
     struct up_bsd *priv = map->priv;
 
-    fprintf(stream, "Dump of %s disklabel at sector %"PRId64" (0x%"PRIx64") "
-            "offset %d (0x%x):\n", map->disk->upd_name,
-            map->start + priv->sectoff, map->start + priv->sectoff,
-            priv->byteoff, priv->byteoff);
-    up_hexdump(priv->buf, priv->bufsize, map->start + priv->sectoff, stream);
-}
-
-static void
-bsdlabel_freemap(struct up_map *map, void *priv)
-{
-    struct up_bsd *label = priv;
-
-    free(label->buf);
-    free(label);
+    return snprintf(buf, buflen, " offset %d (0x%x)",
+                    priv->byteoff, priv->byteoff);
 }
 
 static int
@@ -497,28 +477,32 @@ bsdlabel_read(struct up_disk *disk, int64_t start, int64_t size,
 }
 
 static uint16_t
-bsdlabel_cksum(uint8_t *buf, int size)
+bsdlabel_cksum(struct up_bsd_p *hdr, const uint8_t *partitions, int size)
 {
-    uint8_t             old[2];
-    uint16_t            sum, tmp;
+    uint16_t            old, sum, tmp;
     int                 off;
 
-    assert(size % 2 == 0);
+    assert(sizeof(*hdr) % 2 == 0 && size % 2 == 0);
 
     /* save existing checksum and zero out checksum area in buffer */
-    memcpy(old, buf + LABEL_OFF_CKSUM, 2);
-    memset(buf + LABEL_OFF_CKSUM, 0, 2);
+    old = hdr->checksum;
+    hdr->checksum = 0;
 
     /* calculate checksum */
     sum = 0;
+    for(off = 0; sizeof(*hdr) > off; off += 2)
+    {
+        memcpy(&tmp, (uint8_t*)hdr + off, 2);
+        sum ^= tmp;
+    }
     for(off = 0; size > off; off += 2)
     {
-        memcpy(&tmp, buf + off, 2);
+        memcpy(&tmp, partitions + off, 2);
         sum ^= tmp;
     }
 
     /* restore existing checksum to buffer */
-    memcpy(buf + LABEL_OFF_CKSUM, old, 2);
+    hdr->checksum = old;
 
     return sum;
 }

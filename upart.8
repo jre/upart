@@ -1,0 +1,73 @@
+.Dd April 25, 2008
+.Dt UPART 1
+.Os
+.Sh NAME
+.Nm upart
+.Nd a utility for reading partition maps in various formats
+.Sh SYNOPSIS
+.Bk -words
+.Nm upart
+.Op Fl c Ar cylinders
+.Op Fl f
+.Op Fl h Ar heads
+.Op Fl l Ar label
+.Op Fl r
+.Op Fl s Ar sectors
+.Op Fl v
+.Op Fl w Ar file
+.Op Fl z Ar size
+.Ar path
+.Ek
+.Sh DESCRIPTION
+The
+.Nm
+utility can be used to read partition information from a disk. The
+following partition schemes are supported, and may be nested:
+.Pp
+.Bl -tag -width disklabelXXX -compact
+.It Em APM
+Apple partition map. Used on Apple 68k and PowerPC systems.
+.It Em disklabel
+BSD disklabel. Used by several BSD-derived systems on various platforms.
+.It Em GPT
+EFI GUID partition table. Used on EFI-based systems.
+.It Em MBR
+PC-style MBR. Used on several platforms. Extended partitions are supported.
+.It Em VTOC
+Used by Solaris x86.
+.El
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Xo Fl c Ar cylinders
+.Fl h Ar heads Fl s Ar sects
+.Xc
+Specify an alternate geometry for the disk. This is useful if the
+geometry could not be determined automatically, or is incorrect.
+.It Fl f
+Indicate that the disk is not a plain file and not a device, if
+.Nm
+is unable to detect this.
+.It Fl l Ar label
+A text label to save with an image created with
+.Ar w ,
+the default is the full device path. The label will be truncated to
+255 characters if it is longer.
+.It Fl r
+Relax some checks when parsing partition maps. This may be useful to
+extract information out of a corrupted map.
+.It Fl v
+Show more information when printing partition maps.
+.It Fl w Ar file
+Save partition information for the disk to
+.Ar file
+in a special compact image format.
+.It Fl z Ar size
+Specify an alternative sector size in bytes.
+.El
+.Sh AUTHORS
+.An -nosplit
+The
+.Nm
+program was written by
+.An Josh Elsasser Aq josh@elsasser.org .

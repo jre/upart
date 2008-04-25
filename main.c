@@ -172,7 +172,7 @@ usage(const char *argv0, const char *message, ...)
            "  -r        relax some checks when reading maps\n"
            "  -s sects  number of sectors per track (sectors)\n"
            "  -v        print partition maps verbosely\n"
-           "  -l file   write disk and partition info to file\n"
+           "  -w file   write disk and partition info to file\n"
            "  -z size   sector size in bytes\n", name, name);
 }
 

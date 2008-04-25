@@ -243,7 +243,7 @@ getparams_darwin(int fd, struct up_disk *disk, const struct up_opts *opts)
     if(0 == ioctl(fd, DKIOCGETBLOCKCOUNT, &bigsize))
         disk->upd_size = bigsize;
     else
-        fprintf(stderr, "failed to read sector size for %s: %s\n",
+        fprintf(stderr, "failed to read block count for %s: %s\n",
                 disk->upd_path, strerror(errno));
 
     return 0;

@@ -52,17 +52,22 @@ main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    if(opts.serialize && 0 > serialize(disk, &opts))
+    if(opts.serialize)
     {
-        up_disk_close(disk);
-        return EXIT_FAILURE;
+        if(0 > serialize(disk, &opts))
+        {
+            up_disk_close(disk);
+            return EXIT_FAILURE;
+        }
     }
-
-    up_disk_print(disk, stdout, &opts);
-    fputc('\n', stdout);
-    up_map_printall(disk, stdout, opts.verbose);
-    if(opts.verbose)    
-        up_disk_dump(disk, stdout);
+    else
+    {
+        up_disk_print(disk, stdout, &opts);
+        fputc('\n', stdout);
+        up_map_printall(disk, stdout, opts.verbose);
+        if(opts.verbose)
+            up_disk_dump(disk, stdout);
+    }
 
     up_disk_close(disk);
 

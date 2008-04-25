@@ -1,5 +1,6 @@
 AC_INIT
-AC_PREREQ([2.52])
+dnl need 2.60 for AC_PROG_MKDIR_P
+AC_PREREQ([2.60])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([common.mk])
 
@@ -12,6 +13,8 @@ dnl ugh, we should test if _GNU_SOURCE is needed instead of using it everywhere
 AC_DEFINE([_GNU_SOURCE])
 
 AC_PROG_CC
+AC_PROG_INSTALL
+AC_PROG_MKDIR_P
 
 dnl check for crap needed for 64-bit off_t and such
 AC_SYS_LARGEFILE

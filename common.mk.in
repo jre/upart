@@ -4,6 +4,15 @@ CFLAGS       = @CFLAGS@ @CPPFLAGS@ @DEFS@
 DEPFLAGS     = -MM
 LDFLAGS      = @LDFLAGS@
 LIBS         = @LIBS@
+prefix       = @prefix@
+exec_prefix  = @exec_prefix@
+datarootdir  = @datarootdir@
+sbindir      = @sbindir@
+mandir       = @mandir@
+INSTALL      = @INSTALL@
+INSTALL_PROG = @INSTALL_PROGRAM@ -m 755
+INSTALL_DATA = @INSTALL_DATA@
+MKDIR_P      = @MKDIR_P@
 
 ALL_PROGS     = upart
 ALL_SRCS      = ${UPART_SRCS}
@@ -17,6 +26,12 @@ ALL_OBJS      = ${ALL_SRCS:.c=.o}
 .PHONY: all clean
 
 all: ${ALL_PROGS}
+
+install: all
+	${MKDIR_P} ${DESTDIR}${sbindir}
+	${INSTALL_PROG} upart ${DESTDIR}${sbindir}
+	${MKDIR_P} ${DESTDIR}${mandir}/man8
+	${INSTALL_DATA} upart.8 ${DESTDIR}${mandir}/man8
 
 upart: ${UPART_OBJS}
 	${CC} ${CFLAGS} ${LDFLAGS} ${LIBS} -o $@ ${UPART_OBJS}

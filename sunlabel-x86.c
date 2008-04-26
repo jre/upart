@@ -347,7 +347,7 @@ sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
 
     if(calc != UP_LETOH16(sum))
     {
-        fprintf(stderr, "ignoring sun label in sector %"PRId64
+        fprintf(stderr, "ignoring sun x86 label in sector %"PRId64
                 " (offset %d) with bad checksum\n", start, SUNX86_OFF);
     }
 

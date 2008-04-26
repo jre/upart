@@ -37,6 +37,7 @@ enum up_map_type
     UP_MAP_MBR,
     UP_MAP_MBREXT,
     UP_MAP_APM,
+    UP_MAP_SUN_SPARC,
     UP_MAP_SUN_X86,
     /* BSD disklabel should be last because the probing it does can
        cause a disklabel to be detected before it's container partition */

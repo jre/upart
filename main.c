@@ -18,6 +18,7 @@
 #include "map.h"
 #include "mbr.h"
 #include "util.h"
+#include "sunlabel-sparc.h"
 #include "sunlabel-x86.h"
 
 static char *readargs(int argc, char *argv[], struct up_opts *opts);
@@ -36,6 +37,7 @@ main(int argc, char *argv[])
     up_mbr_register();
     up_bsdlabel_register();
     up_apm_register();
+    up_sunlabel_sparc_register();
     up_sunlabel_x86_register();
     up_gpt_register();
 

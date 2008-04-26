@@ -14,10 +14,13 @@
 #include "util.h"
 
 #define SUNX86_OFF              (1)
-#define SUNX86_MAGIC            (0x600DDEEE)
-#define SUNX86_MAGIC_OFF        (12)
+#define SUNX86_MAGIC1           (0x600DDEEE)
+#define SUNX86_MAGIC1_OFF       (12)
 #define SUNX86_VERSION          (1)
 #define SUNX86_VERSION_OFF      (16)
+#define SUNX86_MAGIC2           (0xDABE)
+#define SUNX86_MAGIC2_OFF       (508)
+#define SUNX86_CHECKSUM_OFF     (510)
 #define SUNX86_SIZE             (512)
 /* XXX should use partition count from disk instead of hardcoding this */
 #define SUNX86_MAXPARTITIONS    (16)
@@ -54,8 +57,9 @@ struct up_sunx86_p
     uint16_t                    rpm;
     uint16_t                    writeskip;
     uint16_t                    readskip;
-    uint16_t                    pad4[4];
-    char                        pad5[16];
+    char                        pad4[20];
+    uint16_t                    altmagic;
+    uint16_t                    checksum;
 } __attribute__((packed));
 
 struct up_sunx86
@@ -253,7 +257,7 @@ sun_x86_index(const struct up_part *part, char *buf, int size)
 {
     struct up_sunx86part *priv = part->priv;
 
-    return snprintf(buf, size, "%c", 'a' + priv->index);
+    return snprintf(buf, size, "%d", priv->index);
 }
 
 static int
@@ -293,7 +297,9 @@ sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
              const uint8_t **ret)
 {
     const uint8_t      *buf;
-    uint32_t            magic, vers;
+    uint32_t            magic1, vers;
+    uint16_t            magic2, sum, calc;
+    const uint16_t     *ptr;
 
     if(SUNX86_OFF >= size)
         return 0;
@@ -304,23 +310,47 @@ sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
     if(!buf)
         return -1;
 
-    memcpy(&magic, buf + SUNX86_MAGIC_OFF, sizeof magic);
+    memcpy(&magic1, buf + SUNX86_MAGIC1_OFF, sizeof magic1);
     memcpy(&vers, buf + SUNX86_VERSION_OFF, sizeof vers);
-    if(SUNX86_MAGIC == UP_LETOH32(magic))
-    {
-        if(SUNX86_VERSION != UP_LETOH32(vers))
-            fprintf(stderr, "ignoring sun x86 label in sector %"PRId64" (offset %d) "
-                    "with unknown version: %u\n",
-                    start, SUNX86_OFF, UP_LETOH32(vers));
-        else
-        {
-            *ret = buf;
-            return 1;
-        }
-    }
-    else if(SUNX86_MAGIC == UP_BETOH32(magic))
-        fprintf(stderr, "ignoring sun x86 label in sector %"PRId64" (offset %d) "
-                "with unknown byte order: big endian\n", start, SUNX86_OFF);
+    memcpy(&magic2, buf + SUNX86_MAGIC2_OFF, sizeof magic2);
+    memcpy(&sum, buf + SUNX86_CHECKSUM_OFF, sizeof sum);
 
-    return 0;
+    if(SUNX86_MAGIC1 != UP_LETOH32(magic1))
+    {
+        if(SUNX86_MAGIC1 == UP_BETOH32(magic1))
+            fprintf(stderr, "ignoring sun x86 label in sector %"PRId64" (offset %d) "
+                    "with unknown byte order: big endian\n", start, SUNX86_OFF);
+        return 0;
+    }
+
+    if(SUNX86_VERSION != UP_LETOH32(vers))
+    {
+        fprintf(stderr, "ignoring sun x86 label in sector %"PRId64" (offset %d) "
+                "with unknown version: %u\n",
+                start, SUNX86_OFF, UP_LETOH32(vers));
+        return 0;
+    }
+
+    if(SUNX86_MAGIC2 != UP_LETOH16(magic2))
+    {
+        fprintf(stderr, "ignoring sun x86 label in sector %"PRId64
+                " (offset %d) with bad secondary magic number: 0x%04x\n",
+                start, SUNX86_OFF, UP_LETOH16(magic2));
+        return 0;
+    }
+
+    assert(0 == SUNX86_SIZE % sizeof sum);
+    calc = 0;
+    ptr = (const uint16_t *)buf;
+    while((const uint8_t *)ptr - buf < SUNX86_CHECKSUM_OFF)
+        calc ^= *(ptr++);
+
+    if(calc != UP_LETOH16(sum))
+    {
+        fprintf(stderr, "ignoring sun label in sector %"PRId64
+                " (offset %d) with bad checksum\n", start, SUNX86_OFF);
+    }
+
+    *ret = buf;
+    return 1;
 }

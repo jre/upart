@@ -295,19 +295,17 @@ bsdlabel_info(const struct up_map *map, int verbose, char *buf, int size)
     char                typename[sizeof(priv->label.typename)+1];
     char                packname[sizeof(priv->label.packname)+1];
 
-    if(!verbose)
-        return snprintf(buf, size, "BSD disklabel in sector %"PRId64" of %s:",
-                        map->start, map->disk->upd_name);
+    if(UP_NOISY(verbose, EXTRA))
+    {
+        disktype = LABEL_LGETINT16(priv, disktype);
+        disktypestr = (disktype < sizeof(up_disktypes) /
+                       sizeof(up_disktypes[0]) ? up_disktypes[disktype] : "");
+        memcpy(typename, priv->label.typename, sizeof(priv->label.typename));
+        typename[sizeof(typename)-1] = 0;
+        memcpy(packname, priv->label.packname, sizeof(priv->label.packname));
+        packname[sizeof(packname)-1] = 0;
 
-    disktype = LABEL_LGETINT16(priv, disktype);
-    disktypestr = (disktype < sizeof(up_disktypes) / sizeof(up_disktypes[0]) ?
-                   up_disktypes[disktype] : "");
-    memcpy(typename, priv->label.typename, sizeof(priv->label.typename));
-    typename[sizeof(typename)-1] = 0;
-    memcpy(packname, priv->label.packname, sizeof(priv->label.packname));
-    packname[sizeof(packname)-1] = 0;
-
-    return snprintf(buf, size, "BSD disklabel in sector %"PRId64" of %s:\n"
+        return snprintf(buf, size, "BSD disklabel in sector %"PRId64" of %s:\n"
                     "  type: %s (%u)\n"
                     "  disk: %s\n"
                     "  label: %s\n"
@@ -345,6 +343,12 @@ bsdlabel_info(const struct up_map *map, int verbose, char *buf, int size)
                     LABEL_LGETINT32(priv, trackseek),
                     (UP_ENDIAN_BIG == priv->endian ? "big" : "little"),
                     LABEL_LGETINT16(priv, maxpart));
+    }
+    else if(UP_NOISY(verbose, NORMAL))
+        return snprintf(buf, size, "BSD disklabel in sector %"PRId64" of %s:",
+                        map->start, map->disk->upd_name);
+    else
+        return 0;
 }
 
 static int
@@ -363,12 +367,15 @@ bsdlabel_extra(const struct up_part *part, int verbose, char *buf, int size)
     uint32_t            fsize, bsize;
     uint16_t            cpg;
 
+    if(!UP_NOISY(verbose, NORMAL))
+        return 0;
+
     if(!part)
     {
-        if(!verbose)
-            return snprintf(buf, size, "Type");
-        else
+        if(UP_NOISY(verbose, EXTRA))
             return snprintf(buf, size, "Type    fsize bsize   cpg");
+        else
+            return snprintf(buf, size, "Type");
     }
     label     = part->map->priv;
     priv      = part->priv;
@@ -378,10 +385,12 @@ bsdlabel_extra(const struct up_part *part, int verbose, char *buf, int size)
 
     if(priv->part.type >= sizeof(up_fstypes) / sizeof(up_fstypes[0]))
         return snprintf(buf, size, "%u", priv->part.type);
-    else if(verbose && LABEL_FSTYPE_UNUSED == priv->part.type && part->size)
+    else if(UP_NOISY(verbose, EXTRA) &&
+            LABEL_FSTYPE_UNUSED == priv->part.type && part->size)
         return snprintf(buf, size, "%-7s %5u %5u",
                         up_fstypes[priv->part.type], fsize, bsize);
-    else if(verbose && LABEL_FSTYPE_42BSD == priv->part.type)
+    else if(UP_NOISY(verbose, EXTRA) &&
+            LABEL_FSTYPE_42BSD == priv->part.type)
         return snprintf(buf, size, "%-7s %5u %5u %5u",
                         up_fstypes[priv->part.type], fsize, bsize, cpg);
     else

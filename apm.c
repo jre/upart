@@ -199,6 +199,8 @@ apm_setup(struct up_map *map, const struct up_opts *opts)
 static int
 apm_info(const struct up_map *map, int verbose, char *buf, int size)
 {
+    if(!UP_NOISY(verbose, NORMAL))
+        return 0;
     /* XXX display driver info here like pdisk does? */
     return snprintf(buf, size, "Apple partition map in sector %"PRId64
                     " of %s:", map->start, map->disk->upd_name);
@@ -221,13 +223,16 @@ apm_extra(const struct up_part *part, int verbose, char *buf, int size)
     uint32_t            flags, slice;
     int                 res;
 
+    if(!UP_NOISY(verbose, NORMAL))
+        return 0;
+
     if(!part)
     {
-        if(!verbose)
-            return snprintf(buf, size, "%-24s %s", "Type", "Name");
-        else
+        if(UP_NOISY(verbose, EXTRA))
             return snprintf(buf, size, "%-24s %-24s %-10s %s",
                             "Type", "Name", "Status", "A/UX boot data");
+        else
+            return snprintf(buf, size, "%-24s %s", "Type", "Name");
     }
 
     priv = part->priv;
@@ -237,40 +242,41 @@ apm_extra(const struct up_part *part, int verbose, char *buf, int size)
     memcpy(name, raw->name, sizeof raw->name);
     name[sizeof(name)-1] = '\0';
 
-    if(!verbose)
-        res = snprintf(buf, size, "%-24s %s", type, name);
-    else
+    if(UP_NOISY(verbose, EXTRA))
+    {
         res = snprintf(buf, size, "%-24s %-24s 0x%08x",
                        type, name, UP_BETOH32(raw->status));
-
-    if(BZB_MAGIC == UP_BETOH32(raw->bzbmagic))
-    {
-        flags = UP_BETOH32(raw->bzbflags);
-        slice = BZB_FLAG_SLICE(flags);
-        strlcat(buf, " ", size);
-        if(slice)
-            res = up_scatprintf(buf, size, "slice %d, ", slice);
-        if(0 > res || res >= size)
-            return res;
-        if(raw->bzbcluster)
-            res = up_scatprintf(buf, size, "cluster %d, ", raw->bzbcluster);
-        if(0 > res || res >= size)
-            return res;
-        if(BZB_FLAG_ROOT & flags)
-            strlcat(buf, "root, ", size);
-        if(BZB_FLAG_USR & flags)
-            strlcat(buf, "usr, ", size);
-        if(BZB_FLAG_CRIT & flags)
-            strlcat(buf, "crit, ", size);
-        if(sizeof(bzb_types) / sizeof(bzb_types[0]) > raw->bzbtype &&
-           NULL != bzb_types[raw->bzbtype])
-            strlcat(buf, bzb_types[raw->bzbtype], size);
-        res = strlen(buf);
-        if(2 <= res && ',' == buf[res-2] && ' ' == buf[res-1])
-            buf[res -= 2] = '\0';
+        /* XXX this is broken */
+        if(BZB_MAGIC == UP_BETOH32(raw->bzbmagic))
+        {
+            flags = UP_BETOH32(raw->bzbflags);
+            slice = BZB_FLAG_SLICE(flags);
+            strlcat(buf, " ", size);
+            if(slice)
+                res = up_scatprintf(buf, size, "slice %d, ", slice);
+            if(0 > res || res >= size)
+                return res;
+            if(raw->bzbcluster)
+                res = up_scatprintf(buf, size, "cluster %d, ", raw->bzbcluster);
+            if(0 > res || res >= size)
+                return res;
+            if(BZB_FLAG_ROOT & flags)
+                strlcat(buf, "root, ", size);
+            if(BZB_FLAG_USR & flags)
+                strlcat(buf, "usr, ", size);
+            if(BZB_FLAG_CRIT & flags)
+                strlcat(buf, "crit, ", size);
+            if(sizeof(bzb_types) / sizeof(bzb_types[0]) > raw->bzbtype &&
+               NULL != bzb_types[raw->bzbtype])
+                strlcat(buf, bzb_types[raw->bzbtype], size);
+            res = strlen(buf);
+            if(2 <= res && ',' == buf[res-2] && ' ' == buf[res-1])
+                buf[res -= 2] = '\0';
+        }
+        return res;
     }
-
-    return res;
+    else
+        return snprintf(buf, size, "%-24s %s", type, name);
 }
 
 static void

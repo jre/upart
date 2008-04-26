@@ -217,6 +217,12 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 size_t strlcat(char *dst, const char *src, size_t siz);
 #endif
 
+#define UP_VERBOSITY_QUIET      -1
+#define UP_VERBOSITY_NORMAL     0
+#define UP_VERBOSITY_EXTRA      1
+#define UP_VERBOSITY_SPAM       2
+#define UP_NOISY(got, need) (UP_VERBOSITY_ ## need <= (got))
+
 struct up_opts
 {
     int64_t             cyls;
@@ -225,7 +231,7 @@ struct up_opts
     int64_t             sectsize;
     const char         *serialize;
     const char         *label;
-    unsigned int        verbose       : 1;
+    int                 verbosity;
     unsigned int        plainfile     : 1;
     unsigned int        relaxed       : 1;
 };

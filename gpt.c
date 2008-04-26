@@ -214,13 +214,8 @@ gpt_getinfo(const struct up_map *map, int verbose, char *buf, int size)
 {
     const struct up_gpt *gpt = map->priv;
 
-    if(!verbose)
-        return snprintf(buf, size, "EFI GPT partition table in sectors %"PRId64
-                        " and %"PRId64" of %s:",
-                        GPT_PRIOFF(map->start, map->size),
-                        GPT_SECOFF(map->start, map->size), map->disk->upd_name);
-
-    return snprintf(buf, size, "EFI GPT partition table in sectors %"PRId64" "
+    if(UP_NOISY(verbose, EXTRA))
+        return snprintf(buf, size, "EFI GPT partition table in sectors %"PRId64" "
                     "and %"PRId64" of %s:\n"
                     "  size:                 %u\n"
                     "  primary gpt sector:   %"PRIu64"\n"
@@ -243,6 +238,13 @@ gpt_getinfo(const struct up_map *map, int verbose, char *buf, int size)
                     UP_LETOH64(gpt->gpt.partsect),
                     UP_LETOH32(gpt->gpt.maxpart),
                     UP_LETOH32(gpt->gpt.partsize));
+    else if(UP_NOISY(verbose, NORMAL))
+        return snprintf(buf, size, "EFI GPT partition table in sectors %"PRId64
+                        " and %"PRId64" of %s:",
+                        GPT_PRIOFF(map->start, map->size),
+                        GPT_SECOFF(map->start, map->size), map->disk->upd_name);
+    else
+        return 0;
 }
 
 static int
@@ -259,9 +261,12 @@ gpt_getextra(const struct up_part *part, int verbose, char *buf, int size)
     const struct up_gptpart    *priv;
     const char                 *label;
 
+    if(!UP_NOISY(verbose, NORMAL))
+        return 0;
+
     if(!part)
     {
-        if(verbose)
+        if(UP_NOISY(verbose, EXTRA))
             return snprintf(buf, size, "%-36s Type", "GUID");
         else
             return snprintf(buf, size, "Type");
@@ -270,7 +275,7 @@ gpt_getextra(const struct up_part *part, int verbose, char *buf, int size)
     priv = part->priv;
     label = gpt_typename(&priv->part.type);
 
-    if(verbose)
+    if(UP_NOISY(verbose, EXTRA))
         return snprintf(buf, size, GPT_GUID_FMT " " GPT_GUID_FMT " %s",
                         GPT_GUID_FMT_ARGS(&priv->part.guid),
                         GPT_GUID_FMT_ARGS(&priv->part.type),

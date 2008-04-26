@@ -62,10 +62,9 @@ main(int argc, char *argv[])
     }
     else
     {
-        up_disk_print(disk, stdout, &opts);
-        fputc('\n', stdout);
-        up_map_printall(disk, stdout, opts.verbose);
-        if(opts.verbose)
+        up_disk_print(disk, stdout, opts.verbosity);
+        up_map_printall(disk, stdout, opts.verbosity);
+        if(UP_NOISY(opts.verbosity, SPAM))
             up_disk_dump(disk, stdout);
     }
 
@@ -80,7 +79,7 @@ readargs(int argc, char *argv[], struct up_opts *opts)
     int opt;
 
     memset(opts, 0, sizeof *opts);
-    while(0 < (opt = getopt(argc, argv, "c:fh:l:rs:vw:z:")))
+    while(0 < (opt = getopt(argc, argv, "c:fh:l:qrs:vw:z:")))
     {
         switch(opt)
         {
@@ -106,6 +105,9 @@ readargs(int argc, char *argv[], struct up_opts *opts)
             case 'l':
                 opts->label = optarg;
                 break;
+            case 'q':
+                opts->verbosity--;
+                break;
             case 'r':
                 opts->relaxed = 1;
                 break;
@@ -118,7 +120,7 @@ readargs(int argc, char *argv[], struct up_opts *opts)
                 }
                 break;
             case 'v':
-                opts->verbose = 1;
+                opts->verbosity++;
                 break;
             case 'w':
                 opts->serialize = optarg;
@@ -168,17 +170,17 @@ usage(const char *argv0, const char *message, ...)
         fputc('\n', stdout);
     }
 
-    printf("usage: %s [options] device-path\n"
-           "       %s [options] -f file-path\n"
+    printf("usage: %s [options] path\n"
            "  -c cyls   total number of cylinders (cylinders)\n"
            "  -f        path is a plain file and not a device\n"
            "  -h heads  number of tracks per cylinder (heads)\n"
            "  -l label  label to use with -w option\n"
+           "  -q        lower verbosity level when printing maps\n"
            "  -r        relax some checks when reading maps\n"
            "  -s sects  number of sectors per track (sectors)\n"
-           "  -v        print partition maps verbosely\n"
+           "  -v        raise verbosity level when printing maps\n"
            "  -w file   write disk and partition info to file\n"
-           "  -z size   sector size in bytes\n", name, name);
+           "  -z size   sector size in bytes\n", name);
 }
 
 static int

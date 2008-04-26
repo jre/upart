@@ -227,6 +227,8 @@ mbrext_setup(struct up_map *map, const struct up_opts *opts)
 static int
 mbr_getinfo(const struct up_map *map, int verbose, char *buf, int size)
 {
+    if(!UP_NOISY(verbose, NORMAL))
+        return 0;
     return snprintf(buf, size, "MBR partition table in sector %"PRId64" of %s:",
                     map->start, map->disk->upd_name);
 }
@@ -247,9 +249,12 @@ mbr_getextra(const struct up_part *part, int verbose, char *buf, int size)
     char                active;
     int                 firstcyl, firstsect, lastcyl, lastsect;
 
+    if(!UP_NOISY(verbose, NORMAL))
+        return 0;
+
     if(!part)
     {
-        if(verbose)
+        if(UP_NOISY(verbose, EXTRA))
             return snprintf(buf, size, "A    C   H  S    C   H  S Type");
         else
             return snprintf(buf, size, "A Type");
@@ -263,7 +268,7 @@ mbr_getextra(const struct up_part *part, int verbose, char *buf, int size)
     lastcyl   = MBR_GETCYL(priv->part.lastsectcyl);
     lastsect  = MBR_GETSECT(priv->part.lastsectcyl);
 
-    if(verbose)
+    if(UP_NOISY(verbose, EXTRA))
         return snprintf(buf, size, "%c %4u/%3u/%2u-%4u/%3u/%2u %s (0x%02x)",
                         active, firstcyl, priv->part.firsthead, firstsect,
                         lastcyl, priv->part.lasthead, lastsect, label,

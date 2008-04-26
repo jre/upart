@@ -333,8 +333,9 @@ up_map_print(const struct up_map *map, void *_stream, int verbose, int recurse)
 {
     FILE                       *stream = _stream;
     struct up_map_funcs        *funcs;
-    char                        buf[512], idx[6], flag;
+    char                        buf[512], idx[5], flag;
     const struct up_part       *ii;
+    int                         len;
 
     CHECKTYPE(map->type);
 
@@ -343,33 +344,40 @@ up_map_print(const struct up_map *map, void *_stream, int verbose, int recurse)
     /* print info line */
     if(funcs->getinfo)
     {
-        buf[0] = 0;
-        funcs->getinfo(map, verbose, buf, sizeof buf);
-        map_indent(map->depth, stream);
-        fputs(buf, stream);
-        putc('\n', stream);
+        len = funcs->getinfo(map, verbose, buf, sizeof buf);
+        if(len)
+        {
+            map_indent(map->depth, stream);
+            fputs(buf, stream);
+            putc('\n', stream);
+        }
     }
 
     /* print the header line */
     if(!(UP_TYPE_NOPRINTHDR & funcs->flags))
     {
-        buf[0] = 0;
-        funcs->getextra(NULL, verbose, buf, sizeof buf);
-        map_indent(map->depth, stream);
-        fputs("                 Start            Size", stream);
-        if(buf[0])
+        /* extra */
+        len = funcs->getextra(NULL, verbose, buf, sizeof buf);
+
+        /* print */
+        if(UP_NOISY(verbose, NORMAL) || len)
+            map_indent(map->depth, stream);
+        if(UP_NOISY(verbose, NORMAL))
+            fputs("                 Start            Size", stream);
+        if(len)
         {
             putc(' ', stream);
             fputs(buf, stream);
         }
-        putc('\n', stream);
+        if(UP_NOISY(verbose, NORMAL) || len)
+            putc('\n', stream);
     }
 
     /* print partitions */
     for(ii = up_map_first(map); ii; ii = up_map_next(ii))
     {
         /* skip empty partitions unless verbose */
-        if(UP_PART_EMPTY & ii->flags && !verbose)
+        if(UP_PART_EMPTY & ii->flags && !UP_NOISY(verbose, EXTRA))
             continue;
 
         /* flags */
@@ -379,17 +387,26 @@ up_map_print(const struct up_map *map, void *_stream, int verbose, int recurse)
             flag = ' ';
 
         /* index */
-        funcs->getindex(ii, idx, sizeof idx - 2);
-        idx[sizeof idx - 2] = 0;
-        strncpy(strchr(idx, 0), ":", 2);
+        idx[0] = 0;
+        funcs->getindex(ii, idx, sizeof idx - 1);
+        strlcat(idx, ":", sizeof idx);
 
         /* extra */
-        buf[0] = 0;
-        funcs->getextra(ii, verbose, buf, sizeof buf);
+        len = funcs->getextra(ii, verbose, buf, sizeof buf);
 
-        map_indent(map->depth, stream);
-        fprintf(stream, "%-4s %c %15"PRId64" %15"PRId64" %s\n",
-                idx, flag, ii->start, ii->size, buf);
+        /* print */
+        if(UP_NOISY(verbose, NORMAL) || len)
+            map_indent(map->depth, stream);
+        if(UP_NOISY(verbose, NORMAL))
+            fprintf(stream, "%-4s %c %15"PRId64" %15"PRId64,
+                    idx, flag, ii->start, ii->size);
+        if(len)
+        {
+            putc(' ', stream);
+            fputs(buf, stream);
+        }
+        if(UP_NOISY(verbose, NORMAL) || len)
+            putc('\n', stream);
 
         /* recurse */
         map_printcontainer(ii, stream, verbose);

@@ -400,26 +400,26 @@ fixparams_checkone(struct up_disk *disk)
 }
 
 void
-up_disk_print(const struct up_disk *disk, void *_stream,
-              const struct up_opts *opt)
+up_disk_print(const struct up_disk *disk, void *_stream, int verbose)
 {
     FILE *              stream = _stream;
     const char *        unit;
     float               size;
 
     size = up_fmtsize(disk->upd_size * disk->upd_sectsize, &unit);
-    fprintf(stream, "%s: %.*f%s (%"PRId64" sectors of %d bytes)\n",
+    if(UP_NOISY(verbose, NORMAL))
+        fprintf(stream, "%s: %.*f%s (%"PRId64" sectors of %d bytes)\n\n",
             disk->upd_name, UP_BESTDECIMAL(size), size, unit,
             disk->upd_size, disk->upd_sectsize);
-    if(opt->verbose)
-    fprintf(stream,
+    if(UP_NOISY(verbose, EXTRA))
+        fprintf(stream,
             "    device path:         %s\n"
             "    sector size:         %d\n"
             "    total sectors:       %"PRId64"\n"
             "    total cylinders:     %d (cylinders)\n"
             "    tracks per cylinder: %d (heads)\n"
             "    sectors per track:   %d (sectors)\n"
-            "\n", disk->upd_path, disk->upd_sectsize, disk->upd_size,
+            "\n\n", disk->upd_path, disk->upd_sectsize, disk->upd_size,
             (int)disk->upd_cyls, (int)disk->upd_heads, (int)disk->upd_sects);
 }
 

@@ -7,13 +7,11 @@
 .Sh SYNOPSIS
 .Bk -words
 .Nm upart
+.Op Fl fqrv
 .Op Fl c Ar cylinders
-.Op Fl f
 .Op Fl h Ar heads
 .Op Fl l Ar label
-.Op Fl r
 .Op Fl s Ar sectors
-.Op Fl v
 .Op Fl w Ar file
 .Op Fl z Ar size
 .Ar path
@@ -27,7 +25,7 @@ following partition schemes are supported, and may be nested:
 .Bl -tag -width disklabelXXX -compact
 .It Em APM
 Apple partition map. Used on Apple 68k and PowerPC systems.
-.It Em disklabel
+.It Em Disklabel
 BSD disklabel. Used by several BSD-derived systems on various platforms.
 .It Em GPT
 EFI GUID partition table. Used on EFI-based systems.
@@ -53,11 +51,17 @@ A text label to save with an image created with
 .Ar w ,
 the default is the full device path. The label will be truncated to
 255 characters if it is longer.
+.It Fl q
+Show less information when printing partition maps. Multiple
+.Fl q
+options decreases the verbosity level further.
 .It Fl r
 Relax some checks when parsing partition maps. This may be useful to
 extract information out of a corrupted map.
 .It Fl v
-Show more information when printing partition maps.
+Show more information when printing partition maps. Multiple
+.Fl v
+options decreases the verbosity level further.
 .It Fl w Ar file
 Save partition information for the disk to
 .Ar file

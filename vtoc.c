@@ -204,14 +204,11 @@ vtoc_info(const struct up_map *map, int verbose, char *buf, int size)
     const struct up_vtoc_p     *vtoc = &priv->vtoc;
     char                        name[sizeof(vtoc->name)+1];
 
-    if(!verbose)
-        return snprintf(buf, size, "VTOC in sector %"PRId64" of %s:",
-                        map->start, map->disk->upd_name);
-
-    memcpy(name, vtoc->name, sizeof(vtoc->name));
-    name[sizeof(name)-1] = 0;
-
-    return snprintf(buf, size, "VTOC in sector %"PRId64" (offset %d) of %s:\n"
+    if(UP_NOISY(verbose, EXTRA))
+    {
+        memcpy(name, vtoc->name, sizeof(vtoc->name));
+        name[sizeof(name)-1] = 0;
+        return snprintf(buf, size, "VTOC in sector %"PRId64" (offset %d) of %s:\n"
                     "  name: %s\n"
                     "  bytes/sector: %u\n"
                     "  partition count: %u\n"
@@ -243,6 +240,12 @@ vtoc_info(const struct up_map *map, int verbose, char *buf, int size)
                     UP_LETOH16(vtoc->rpm),
                     UP_LETOH16(vtoc->writeskip),
                     UP_LETOH16(vtoc->readskip));
+    }
+    else if(UP_NOISY(verbose, NORMAL))
+        return snprintf(buf, size, "VTOC in sector %"PRId64" of %s:",
+                        map->start, map->disk->upd_name);
+    else
+        return 0;
 }
 
 static int
@@ -260,10 +263,12 @@ vtoc_extra(const struct up_part *part, int verbose, char *buf, int size)
     uint16_t                    type, flags;
     char                        flagstr[5];
 
+    if(!UP_NOISY(verbose, NORMAL))
+        return 0;
+
     if(!part)
-    {
         return snprintf(buf, size, "Flags Type");
-    }
+
     priv  = part->priv;
     type  = UP_LETOH16(priv->part.type);
     flags = UP_LETOH16(priv->part.flags);

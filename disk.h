@@ -78,8 +78,7 @@ void up_disk_sectsiter(const struct up_disk *disk,
 void up_disk_close(struct up_disk *disk);
 
 /* Print disk info to STREAM. */
-void up_disk_print(const struct up_disk *disk, void *_stream,
-                  const struct up_opts *opt);
+void up_disk_print(const struct up_disk *disk, void *_stream, int verbose);
 
 /* Print hexdump of sectors with partition information to STREAM. */
 void up_disk_dump(const struct up_disk *disk, void *_stream);

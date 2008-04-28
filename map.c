@@ -120,6 +120,7 @@ up_map_load(struct up_disk *disk, struct up_part *parent,
 #ifdef MAP_PROBE_DEBUG
                 fprintf(stderr, "setup failed\n");
 #endif
+                map->parent = NULL;
                 up_map_free(map);
                 return res;
             }

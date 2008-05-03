@@ -116,8 +116,6 @@ static char *up_disktypes[] =
     "RAID"
 };
 
-#define LABEL_FSTYPE_UNUSED     (0)
-#define LABEL_FSTYPE_42BSD      (7)
 /* XXX these too */
 static char *up_fstypes[] =
 {
@@ -295,6 +293,8 @@ bsdlabel_info(const struct up_map *map, int verbose, char *buf, int size)
     char                typename[sizeof(priv->label.typename)+1];
     char                packname[sizeof(priv->label.packname)+1];
 
+    /* XXX show sector offset here */
+
     if(UP_NOISY(verbose, EXTRA))
     {
         disktype = LABEL_LGETINT16(priv, disktype);
@@ -366,6 +366,7 @@ bsdlabel_extra(const struct up_part *part, int verbose, char *buf, int size)
     struct up_bsdpart  *priv;
     uint32_t            fsize, bsize;
     uint16_t            cpg;
+    const char         *typestr;
 
     if(!UP_NOISY(verbose, NORMAL))
         return 0;
@@ -382,19 +383,19 @@ bsdlabel_extra(const struct up_part *part, int verbose, char *buf, int size)
     fsize     = LABEL_PGETINT32(label, priv, fragsize);
     bsize     = fsize * priv->part.fragperblock;
     cpg       = LABEL_PGETINT16(label, priv, cylpergroup);
+    typestr   = up_bsdlabel_fstype(priv->part.type);
 
-    if(priv->part.type >= sizeof(up_fstypes) / sizeof(up_fstypes[0]))
+    if(NULL == typestr)
         return snprintf(buf, size, "%u", priv->part.type);
     else if(UP_NOISY(verbose, EXTRA) &&
-            LABEL_FSTYPE_UNUSED == priv->part.type && part->size)
-        return snprintf(buf, size, "%-7s %5u %5u",
-                        up_fstypes[priv->part.type], fsize, bsize);
+            UP_BSDLABEL_FSTYPE_UNUSED == priv->part.type && part->size)
+        return snprintf(buf, size, "%-7s %5u %5u", typestr, fsize, bsize);
     else if(UP_NOISY(verbose, EXTRA) &&
-            LABEL_FSTYPE_42BSD == priv->part.type)
+            UP_BSDLABEL_FSTYPE_42BSD == priv->part.type)
         return snprintf(buf, size, "%-7s %5u %5u %5u",
-                        up_fstypes[priv->part.type], fsize, bsize, cpg);
+                        typestr, fsize, bsize, cpg);
     else
-        return snprintf(buf, size, "%s", up_fstypes[priv->part.type]);
+        return snprintf(buf, size, "%s", typestr);
 }
 
 static int
@@ -514,4 +515,13 @@ bsdlabel_cksum(struct up_bsd_p *hdr, const uint8_t *partitions, int size)
     hdr->checksum = old;
 
     return sum;
+}
+
+const char *
+up_bsdlabel_fstype(int type)
+{
+    if(0 <= type && type < sizeof(up_fstypes) / sizeof(up_fstypes[0]))
+        return up_fstypes[type];
+    else
+        return NULL;
 }

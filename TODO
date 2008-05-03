@@ -1,21 +1,12 @@
 test with different sector sizes
-mbr read
-  extended partition
-  more complete partition id string table
-disklabel read
-  open, net, free, dfly
-  solaris?
-  big and little endian
-portability to bsds, osx, linux, solaris
-portability to amd64, sparc64, powerpc
+disklabel
+  more testing with labels from other BSDs
+  add disktype/fstype strings from other BSDs
 apple map
-gpt
-zfs?
-other solaris maps?
+  fix bzb
 filesystem tasting
-manpage
-cyl, head, sect command-line override
+better overall description in manpage
 regression tests
-  byteswapping
-  components of partition table reading
-  output of entire program
+  automated tests to check -vv stdout, stderr, and exit status of dumps
+option to change displayed offset/size units
+interactive restore mode for dumps

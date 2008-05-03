@@ -31,6 +31,11 @@
 #define LABEL_BASE_SIZE         (0x94)
 #define LABEL_PART_SIZE         (0x10)
 
+#define OBSD_FB_BSIZE(fb)       ((fb) ? 1 << (((fb) >> 3) + 12) : 0)
+#define OBSD_FB_FRAG(fb)        ((fb) ? 1 << (((fb) & 7) - 1) : 0)
+#define OBSD_FB_FSIZE(fb) \
+    (OBSD_FB_FRAG(fb) ? OBSD_FB_BSIZE(fb) / OBSD_FB_FRAG(fb) : 0)
+
 #define LABEL_LGETINT16(labl, fld) \
     (UP_ETOH16((labl)->label.fld, (labl)->endian))
 #define LABEL_LGETINT32(labl, fld) \
@@ -149,6 +154,8 @@ static int bsdlabel_setup(struct up_map *map, const struct up_opts *opts);
 static int bsdlabel_info(const struct up_map *map, int verbose,
                          char *buf, int size);
 static int bsdlabel_index(const struct up_part *part, char *buf, int size);
+static int bsdlabel_extrahdr(const struct up_map *map, int verbose,
+                             char *buf, int size);
 static int bsdlabel_extra(const struct up_part *part, int verbose,
                           char *buf, int size);
 static int bsdlabel_dump(const struct up_map *map, int64_t start, const void *data,
@@ -170,7 +177,7 @@ void up_bsdlabel_register(void)
                     bsdlabel_setup,
                     bsdlabel_info,
                     bsdlabel_index,
-                    NULL,
+                    bsdlabel_extrahdr,
                     bsdlabel_extra,
                     bsdlabel_dump,
                     up_map_freeprivmap_def,
@@ -361,42 +368,28 @@ bsdlabel_index(const struct up_part *part, char *buf, int size)
 }
 
 static int
+bsdlabel_extrahdr(const struct up_map *map, int verbose, char *buf, int size)
+{
+    const char *hdr = UP_BSDLABEL_FMT_HDR(verbose);
+
+    if(hdr)
+        return snprintf(buf, size, "%s", hdr);
+    else
+        return 0;
+}
+
+static int
 bsdlabel_extra(const struct up_part *part, int verbose, char *buf, int size)
 {
-    struct up_bsd      *label;
-    struct up_bsdpart  *priv;
-    uint32_t            fsize, bsize;
-    uint16_t            cpg;
-    const char         *typestr;
+    struct up_bsd      *label = part->map->priv;;
+    struct up_bsdpart  *priv = part->priv;
 
-    if(!UP_NOISY(verbose, NORMAL))
-        return 0;
-
-    if(!part)
-    {
-        if(UP_NOISY(verbose, EXTRA))
-            return snprintf(buf, size, "Type    fsize bsize   cpg");
-        else
-            return snprintf(buf, size, "Type");
-    }
-    label     = part->map->priv;
-    priv      = part->priv;
-    fsize     = LABEL_PGETINT32(label, priv, fragsize);
-    bsize     = fsize * priv->part.fragperblock;
-    cpg       = LABEL_PGETINT16(label, priv, cylpergroup);
-    typestr   = up_bsdlabel_fstype(priv->part.type);
-
-    if(NULL == typestr)
-        return snprintf(buf, size, "%u", priv->part.type);
-    else if(UP_NOISY(verbose, EXTRA) &&
-            UP_BSDLABEL_FSTYPE_UNUSED == priv->part.type && part->size)
-        return snprintf(buf, size, "%-7s %5u %5u", typestr, fsize, bsize);
-    else if(UP_NOISY(verbose, EXTRA) &&
-            UP_BSDLABEL_FSTYPE_42BSD == priv->part.type)
-        return snprintf(buf, size, "%-7s %5u %5u %5u",
-                        typestr, fsize, bsize, cpg);
-    else
-        return snprintf(buf, size, "%s", typestr);
+    return up_bsdlabel_fmt(part, verbose, buf, size,
+                           priv->part.type,
+                           LABEL_PGETINT32(label, priv, fragsize),
+                           priv->part.fragperblock,
+                           LABEL_PGETINT16(label, priv, cylpergroup),
+                           0);
 }
 
 static int
@@ -525,4 +518,35 @@ up_bsdlabel_fstype(int type)
         return up_fstypes[type];
     else
         return NULL;
+}
+
+int
+up_bsdlabel_fmt(const struct up_part *part, int verbose, char *buf, int size,
+                int type, uint32_t fsize, int frags, int cpg, int v1)
+{
+    uint32_t    bsize;
+    const char *typestr;
+
+    if(!UP_NOISY(verbose, NORMAL))
+        return 0;
+
+    typestr = up_bsdlabel_fstype(type);
+    if(v1)
+    {
+        fsize = OBSD_FB_FSIZE(frags);
+        bsize = OBSD_FB_BSIZE(frags);
+    }
+    else
+        bsize = fsize * frags;
+
+    if(NULL == typestr)
+        return snprintf(buf, size, "%u", type);
+    else if(UP_NOISY(verbose, EXTRA) &&
+            UP_BSDLABEL_FSTYPE_UNUSED == type && part->size)
+        return snprintf(buf, size, "%-7s %5u %5u", typestr, fsize, bsize);
+    else if(UP_NOISY(verbose, EXTRA) && UP_BSDLABEL_FSTYPE_42BSD == type)
+        return snprintf(buf, size, "%-7s %5u %5u %5u",
+                        typestr, fsize, bsize, cpg);
+    else
+        return snprintf(buf, size, "%s", typestr);
 }

@@ -27,6 +27,7 @@ struct up_map_funcs
     int (*setup)(struct up_map *, const struct up_opts *);
     int (*getinfo)(const struct up_map *, int, char *, int);
     int (*getindex)(const struct up_part *, char *, int);
+    int (*getextrahdr)(const struct up_map *, int, char *, int);
     int (*getextra)(const struct up_part *, int, char *, int);
     int (*getdump)(const struct up_map *, int64_t, const void *, int64_t,
                    int, char *, int);
@@ -53,6 +54,7 @@ up_map_register(enum up_map_type type, const char *label, int flags,
                 int (*setup)(struct up_map *, const struct up_opts *),
                 int (*getinfo)(const struct up_map *, int, char *, int),
                 int (*getindex)(const struct up_part *, char *, int),
+                int (*getextrahdr)(const struct up_map *, int, char *, int),
                 int (*getextra)(const struct up_part *, int, char *, int),
                 int (*getdumpextra)(const struct up_map *, int64_t, const void *,
                                 int64_t, int, char *, int),
@@ -72,6 +74,7 @@ up_map_register(enum up_map_type type, const char *label, int flags,
     funcs->setup              = setup;
     funcs->getinfo            = getinfo;
     funcs->getindex           = getindex;
+    funcs->getextrahdr        = getextrahdr;
     funcs->getextra           = getextra;
     funcs->getdump            = getdumpextra;
     funcs->freeprivmap        = freeprivmap;
@@ -358,7 +361,11 @@ up_map_print(const struct up_map *map, void *_stream, int verbose, int recurse)
     if(!(UP_TYPE_NOPRINTHDR & funcs->flags))
     {
         /* extra */
-        len = funcs->getextra(NULL, verbose, buf, sizeof buf);
+        len = 0;
+        if(funcs->getextrahdr)
+            len = funcs->getextrahdr(map, verbose, buf, sizeof buf);
+        else if(funcs->getextra)
+            len = funcs->getextra(NULL, verbose, buf, sizeof buf);
 
         /* print */
         if(UP_NOISY(verbose, NORMAL) || len)
@@ -393,7 +400,9 @@ up_map_print(const struct up_map *map, void *_stream, int verbose, int recurse)
         strlcat(idx, ":", sizeof idx);
 
         /* extra */
-        len = funcs->getextra(ii, verbose, buf, sizeof buf);
+        len = 0;
+        if(funcs->getextra)
+            len = funcs->getextra(ii, verbose, buf, sizeof buf);
 
         /* print */
         if(UP_NOISY(verbose, NORMAL) || len)

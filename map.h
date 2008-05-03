@@ -68,6 +68,8 @@ void up_map_register(enum up_map_type type, const char *label, int flags,
                      int (*getinfo)(const struct up_map *, int, char *, int),
                      /* copy part index into string */
                      int (*getindex)(const struct up_part *, char *, int),
+                     /* copy header for extra verbose info into string */
+                     int (*getextrahdr)(const struct up_map *, int, char *, int),
                      /* copy extra verbose info into string */
                      int (*getextra)(const struct up_part *, int, char *, int),
                      /* copy extra information for sector dump into string */

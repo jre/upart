@@ -114,6 +114,7 @@ void up_apm_register(void)
                     apm_setup,
                     apm_info,
                     apm_index,
+                    NULL,
                     apm_extra,
                     NULL,
                     up_map_freeprivmap_def,

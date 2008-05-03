@@ -117,6 +117,7 @@ void up_sunlabel_x86_register(void)
                     sun_x86_setup,
                     sun_x86_info,
                     sun_x86_index,
+                    NULL,
                     sun_x86_extra,
                     NULL,
                     up_map_freeprivmap_def,

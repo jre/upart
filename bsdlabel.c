@@ -170,6 +170,7 @@ void up_bsdlabel_register(void)
                     bsdlabel_setup,
                     bsdlabel_info,
                     bsdlabel_index,
+                    NULL,
                     bsdlabel_extra,
                     bsdlabel_dump,
                     up_map_freeprivmap_def,

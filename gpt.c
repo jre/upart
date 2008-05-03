@@ -105,6 +105,7 @@ up_gpt_register(void)
                     gpt_setup,
                     gpt_getinfo,
                     gpt_getindex,
+                    NULL,
                     gpt_getextra,
                     NULL,
                     up_map_freeprivmap_def,

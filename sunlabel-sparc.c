@@ -94,6 +94,7 @@ void up_sunlabel_sparc_register(void)
                     sparc_setup,
                     sparc_info,
                     sparc_index,
+                    NULL,
                     sparc_extra,
                     NULL,
                     up_map_freeprivmap_def,

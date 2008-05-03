@@ -1,7 +1,10 @@
 test with different sector sizes
 disklabel
+  openbsd v1 labels
   more testing with labels from other BSDs
   add disktype/fstype strings from other BSDs
+sun sparc label
+  test vtoc
 apple map
   fix bzb
 filesystem tasting

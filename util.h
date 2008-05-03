@@ -193,7 +193,7 @@ int up_getendian(void);
   If STREAM is NULL then stderr will be used.
   DISPOFF is added to offsets when displayed.
 */
-void up_hexdump(const void *buf, size_t size, size_t dispoff, void *stream);
+void up_hexdump(const void *buf, size_t size, uint64_t dispoff, void *stream);
 
 /* Format NUM as a human readable size. UNITS should point to a const
    char * to store the unit label in. Use the UP_BESTDECIMAL() macro

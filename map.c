@@ -457,7 +457,8 @@ up_map_dumpsect(const struct up_map *map, void *_stream, int64_t start,
     fprintf(stream, "\n\nDump of %s %s at sector %"PRId64" (0x%"PRIx64")%s:\n",
             map->disk->upd_name, st_types[map->type].label, start, start, buf);
 
-    up_hexdump(data, map->disk->upd_sectsize * size, start, stream);
+    up_hexdump(data, map->disk->upd_sectsize * size,
+               map->disk->upd_sectsize * start, stream);
 }
 
 const struct up_part *

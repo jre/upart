@@ -41,7 +41,7 @@ up_getendian(void)
 }
 
 void
-up_hexdump(const void *_buf, size_t size, size_t dispoff, void *_stream)
+up_hexdump(const void *_buf, size_t size, uint64_t dispoff, void *_stream)
 {
     static const char   hex[] = "0123456789abcdef";
     const char *        buf = _buf;
@@ -57,7 +57,7 @@ up_hexdump(const void *_buf, size_t size, size_t dispoff, void *_stream)
     for(ii = 0; size > ii; ii++)
     {
         if(!(ii % 0x10))
-            fprintf(stream, "%08zx ", ii + dispoff);
+            fprintf(stream, "%012"PRIx64" ", ii + dispoff);
         putc(' ', stream);
         putc(hex[((unsigned char)(buf[ii]) & 0xf0) >> 4], stream);
         putc(hex[(unsigned char)(buf[ii]) & 0x0f], stream);
@@ -100,7 +100,7 @@ up_hexdump(const void *_buf, size_t size, size_t dispoff, void *_stream)
         putc('\n', stream);
     }
 
-    fprintf(stream, "%08zx\n", size + dispoff);
+    fprintf(stream, "%012"PRIx64"\n", size + dispoff);
 }
 
 float

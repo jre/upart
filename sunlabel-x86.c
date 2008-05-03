@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "sunlabel-shared.h"
 #include "sunlabel-x86.h"
 #include "disk.h"
 #include "map.h"
@@ -73,36 +74,14 @@ struct up_sunx86part
     int                         index;
 };
 
-#define PFLAG_UNMNT        (0x01)
-#define PFLAG_UNMNT_CHRS   ("mu")
-#define PFLAG_RONLY        (0x10)
-#define PFLAG_RONLY_CHRS   ("wr")
-#define PFLAG_KNOWN        (PFLAG_UNMNT | PFLAG_RONLY)
-#define PFLAG_GETCHR(var, flag) \
-    ((PFLAG_##flag##_CHRS)[(PFLAG_##flag & (var) ? 1 : 0)])
-
-static const char *up_parttypes[] =
-{
-    "unassigned",
-    "boot",
-    "root",
-    "swap",
-    "usr",
-    "backup",
-    "stand",
-    "var",
-    "home",
-    "altsctr",
-    "cache",
-    "reserved",
-};
-
 static int sun_x86_load(struct up_disk *disk, const struct up_part *parent,
                         void **priv, const struct up_opts *opts);
 static int sun_x86_setup(struct up_map *map, const struct up_opts *opts);
 static int sun_x86_info(const struct up_map *map, int verbose,
                         char *buf, int size);
 static int sun_x86_index(const struct up_part *part, char *buf, int size);
+static int sun_x86_extrahdr(const struct up_map *map, int verbose,
+                            char *buf, int size);
 static int sun_x86_extra(const struct up_part *part, int verbose,
                          char *buf, int size);
 static int sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
@@ -117,7 +96,7 @@ void up_sunlabel_x86_register(void)
                     sun_x86_setup,
                     sun_x86_info,
                     sun_x86_index,
-                    NULL,
+                    sun_x86_extrahdr,
                     sun_x86_extra,
                     NULL,
                     up_map_freeprivmap_def,
@@ -262,35 +241,25 @@ sun_x86_index(const struct up_part *part, char *buf, int size)
 }
 
 static int
+sun_x86_extrahdr(const struct up_map *map, int verbose, char *buf, int size)
+{
+    if(UP_NOISY(verbose, NORMAL))
+        return snprintf(buf, size, UP_SUNLABEL_FMT_HDR);
+    else
+        return 0;
+}
+
+static int
 sun_x86_extra(const struct up_part *part, int verbose, char *buf, int size)
 {
-    const struct up_sunx86part *priv;
-    uint16_t                    type, flags;
-    char                        flagstr[5];
+    const struct up_sunx86part *priv = part->priv;
 
-    if(!UP_NOISY(verbose, NORMAL))
+    if(UP_NOISY(verbose, NORMAL))
+        return up_sunlabel_fmt(buf, size,
+                               UP_LETOH16(priv->part.type),
+                               UP_LETOH16(priv->part.flags));
+    else
         return 0;
-
-    if(!part)
-        return snprintf(buf, size, "Flags Type");
-
-    priv  = part->priv;
-    type  = UP_LETOH16(priv->part.type);
-    flags = UP_LETOH16(priv->part.flags);
-
-    if(~PFLAG_KNOWN & flags)
-        snprintf(flagstr, sizeof flagstr, "%04x", flags);
-    else
-    {
-        flagstr[0] = PFLAG_GETCHR(flags, RONLY);
-        flagstr[1] = PFLAG_GETCHR(flags, UNMNT);
-        flagstr[2] = '\0';
-    }
-
-    if(sizeof(up_parttypes) / sizeof(up_parttypes[0]) > type)
-        return snprintf(buf, size, "%-5s %s", flagstr, up_parttypes[type]);
-    else
-        return snprintf(buf, size, "%-5s %u", flagstr, type);
 }
 
 static int

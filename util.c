@@ -57,7 +57,7 @@ up_hexdump(const void *_buf, size_t size, uint64_t dispoff, void *_stream)
     for(ii = 0; size > ii; ii++)
     {
         if(!(ii % 0x10))
-            fprintf(stream, "%012"PRIx64" ", ii + dispoff);
+            fprintf(stream, "%012"PRIx64" ", (uint64_t)ii + dispoff);
         putc(' ', stream);
         putc(hex[((unsigned char)(buf[ii]) & 0xf0) >> 4], stream);
         putc(hex[(unsigned char)(buf[ii]) & 0x0f], stream);
@@ -100,7 +100,7 @@ up_hexdump(const void *_buf, size_t size, uint64_t dispoff, void *_stream)
         putc('\n', stream);
     }
 
-    fprintf(stream, "%012"PRIx64"\n", size + dispoff);
+    fprintf(stream, "%012"PRIx64"\n", (uint64_t)size + dispoff);
 }
 
 float

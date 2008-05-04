@@ -114,13 +114,13 @@ up_img_save(const struct up_disk *disk, void *_stream,
 
     /* allocate the data buffer */
     datalen = disk->upd_sectsused_count *
-        (disk->upd_sectsize + IMG_HDR_LEN);
+        (disk->upd_sectsize + sizeof(struct up_imgsect_p));
     if(0 == disk->upd_sectsused_count)
         data = NULL;
     else
     {
         data = up_malloc(disk->upd_sectsused_count,
-                         disk->upd_sectsize + IMG_HDR_LEN);
+                         disk->upd_sectsize + sizeof(struct up_imgsect_p));
         if(!data)
         {
             perror("malloc");
@@ -130,6 +130,9 @@ up_img_save(const struct up_disk *disk, void *_stream,
         /* write sectors with sector headers into data buffer */
         ptr = data;
         up_disk_sectsiter(disk, img_save_iter, &ptr);
+        /* datalen can be too big since we assume one header per
+           sector when calculating it, but there may be groups of
+           multiple sectors */
         assert(ptr - data <= datalen);
         datalen = ptr - data;
     }

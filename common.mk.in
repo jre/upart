@@ -48,3 +48,6 @@ cleaner: clean
 
 cleanest: cleaner
 	rm -f configure
+
+test tests regress regression: ${ALL_PROGS}
+	cd regression-tests && sh ./test.sh

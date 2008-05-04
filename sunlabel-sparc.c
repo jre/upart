@@ -434,7 +434,5 @@ sparc_check_obsd(const struct up_sparcobsd_p *obsd)
     for(ptr = &obsd->magic; ptr < end; ptr++)
         sum += UP_BETOH32(*ptr);
 
-    fprintf(stderr, "sparc obsd %08x %x\n", UP_BETOH32(obsd->magic), res);
-
     return (sum == UP_BETOH32(obsd->checksum) ? res : 0);
 }

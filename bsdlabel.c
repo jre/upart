@@ -381,7 +381,7 @@ bsdlabel_extrahdr(const struct up_map *map, int verbose, char *buf, int size)
 static int
 bsdlabel_extra(const struct up_part *part, int verbose, char *buf, int size)
 {
-    struct up_bsd      *label = part->map->priv;;
+    struct up_bsd      *label = part->map->priv;
     struct up_bsdpart  *priv = part->priv;
 
     return up_bsdlabel_fmt(part, verbose, buf, size,

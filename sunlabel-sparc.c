@@ -22,9 +22,11 @@
 #define SPARC_SIZE              (512)
 #define SPARC_EXT_SIZE          (292)
 
-#define SPARC_EXT_VTOC          (0x01)
-#define SPARC_EXT_OBSD          (0x02)
-#define SPARC_EXT_OBSD_TYPES    (0x06)
+#define SPARC_EXTFL_VTOC        (0x01)
+#define SPARC_EXTFL_OBSD        (0x02)
+#define SPARC_EXTFL_OBSD_TYPES  (0x06)
+#define SPARC_ISEXT(ext, flag) \
+    ((SPARC_EXTFL_##flag & (ext)) == SPARC_EXTFL_##flag)
 
 #define VTOC_VERSION            (1)
 #define VTOC_MAGIC              (0x600DDEEE)
@@ -193,7 +195,7 @@ sparc_setup(struct up_map *map, const struct up_opts *opts)
 
     cylsize = (uint64_t)UP_BETOH16(packed->heads) *
               (uint64_t)UP_BETOH16(packed->sects);
-    max = (SPARC_EXT_OBSD & priv->ext ? OBSD_MAXPART : SPARC_MAXPART);
+    max = (SPARC_ISEXT(priv->ext, OBSD) ? OBSD_MAXPART : SPARC_MAXPART);
 
     for(ii = 0; max > ii; ii++)
     {
@@ -231,11 +233,11 @@ sparc_info(const struct up_map *map, int verbose, char *buf, int size)
     char                        name[sizeof(vtoc->name)+1];
     const char                  *extstr;
 
-    if(SPARC_EXT_VTOC & priv->ext)
+    if(SPARC_ISEXT(priv->ext, VTOC))
         extstr = " (Sun VTOC)";
-    else if(SPARC_EXT_OBSD_TYPES & priv->ext)
+    else if(SPARC_ISEXT(priv->ext, OBSD_TYPES))
         extstr = " (OpenBSD extensions)";
-    else if(SPARC_EXT_OBSD & priv->ext)
+    else if(SPARC_ISEXT(priv->ext, OBSD))
         extstr = " (OpenBSD partitions)";
     else
         extstr = "";
@@ -263,7 +265,7 @@ sparc_info(const struct up_map *map, int verbose, char *buf, int size)
                         UP_BETOH16(sparc->sects));
         if(0 > res1 || res1 >= size)
             return res1;
-        if(SPARC_EXT_VTOC & priv->ext)
+        if(SPARC_ISEXT(priv->ext, VTOC))
         {
             vtoc = &sparc->ext.vtoc;
             memcpy(name, vtoc->name, sizeof vtoc->name);
@@ -298,7 +300,7 @@ sparc_index(const struct up_part *part, char *buf, int size)
     struct up_sparc            *label = part->map->priv;
     struct up_sparcpart        *priv = part->priv;
 
-    if(SPARC_EXT_OBSD & label->ext)
+    if(SPARC_ISEXT(label->ext, OBSD))
         return snprintf(buf, size, "%c", 'a' + priv->index);
     else
         return snprintf(buf, size, "%d", priv->index);
@@ -313,9 +315,9 @@ sparc_extrahdr(const struct up_map *map, int verbose, char *buf, int size)
     if(!UP_NOISY(verbose, NORMAL))
         return 0;
 
-    if(SPARC_EXT_VTOC & priv->ext)
+    if(SPARC_ISEXT(priv->ext, VTOC))
         hdr = UP_SUNLABEL_FMT_HDR;
-    else if(SPARC_EXT_OBSD_TYPES & priv->ext)
+    else if(SPARC_ISEXT(priv->ext, OBSD_TYPES))
         hdr = UP_BSDLABEL_FMT_HDR(verbose);
     else
         hdr = NULL;
@@ -337,11 +339,11 @@ sparc_extra(const struct up_part *part, int verbose, char *buf, int size)
     if(!UP_NOISY(verbose, NORMAL))
         return 0;
 
-    if(SPARC_EXT_VTOC & label->ext && UP_NOISY(verbose, NORMAL))
+    if(SPARC_ISEXT(label->ext, VTOC) && UP_NOISY(verbose, NORMAL))
         return up_sunlabel_fmt(buf, size,
                                UP_BETOH16(vtoc->parts[priv->index].tag),
                                UP_BETOH16(vtoc->parts[priv->index].flag));
-    else if(SPARC_EXT_OBSD_TYPES & label->ext)
+    else if(SPARC_ISEXT(label->ext, OBSD_TYPES))
         return up_bsdlabel_fmt(part, verbose, buf, size,
                                obsd->types[priv->index],
                                0,
@@ -403,7 +405,7 @@ sparc_check_vtoc(const struct up_sparcvtoc_p *vtoc)
 {
     if(VTOC_VERSION == UP_BETOH32(vtoc->version) &&
        VTOC_MAGIC   == UP_BETOH32(vtoc->magic))
-        return SPARC_EXT_VTOC;
+        return SPARC_EXTFL_VTOC;
     else
         return 0;
 }
@@ -417,12 +419,12 @@ sparc_check_obsd(const struct up_sparcobsd_p *obsd)
 
     if(OBSD_OLD_MAGIC == UP_BETOH32(obsd->magic))
     {
-        res = SPARC_EXT_OBSD;
+        res = SPARC_EXTFL_OBSD;
         end = (const uint32_t *)&obsd->types;
     }
     else if(OBSD_NEW_MAGIC == UP_BETOH32(obsd->magic))
     {
-        res = SPARC_EXT_OBSD_TYPES;
+        res = SPARC_EXTFL_OBSD_TYPES;
         end = (const uint32_t *)&obsd->pad;
     }
     else
@@ -431,6 +433,8 @@ sparc_check_obsd(const struct up_sparcobsd_p *obsd)
     sum = 0;
     for(ptr = &obsd->magic; ptr < end; ptr++)
         sum += UP_BETOH32(*ptr);
+
+    fprintf(stderr, "sparc obsd %08x %x\n", UP_BETOH32(obsd->magic), res);
 
     return (sum == UP_BETOH32(obsd->checksum) ? res : 0);
 }

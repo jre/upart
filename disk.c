@@ -408,7 +408,7 @@ up_disk_print(const struct up_disk *disk, void *_stream, int verbose)
 
     size = up_fmtsize(disk->upd_size * disk->upd_sectsize, &unit);
     if(UP_NOISY(verbose, NORMAL))
-        fprintf(stream, "%s: %.*f%s (%"PRId64" sectors of %d bytes)\n\n",
+        fprintf(stream, "%s: %.*f%s (%"PRId64" sectors of %d bytes)\n",
             disk->upd_name, UP_BESTDECIMAL(size), size, unit,
             disk->upd_size, disk->upd_sectsize);
     if(UP_NOISY(verbose, EXTRA))
@@ -419,8 +419,10 @@ up_disk_print(const struct up_disk *disk, void *_stream, int verbose)
             "    total cylinders:     %d (cylinders)\n"
             "    tracks per cylinder: %d (heads)\n"
             "    sectors per track:   %d (sectors)\n"
-            "\n\n", disk->upd_path, disk->upd_sectsize, disk->upd_size,
+            "\n", disk->upd_path, disk->upd_sectsize, disk->upd_size,
             (int)disk->upd_cyls, (int)disk->upd_heads, (int)disk->upd_sects);
+    if(UP_NOISY(verbose, NORMAL))
+        fputc('\n', stream);
 }
 
 void

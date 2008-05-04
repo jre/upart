@@ -16,11 +16,37 @@
 #include "util.h"
 
 /* #define IMG_DEBUG */
+//#define BIGMAJOR
+//#define SMALLMAJOR
+//#define HDRJUNK
+//#define PREJUNK
+//#define POSTJUNK
+
+#ifdef HDRJUNK
+#define HDRJUNKLEN              37
+#endif
+#ifdef PREJUNK
+#define PREJUNKLEN              1125
+#endif
+#ifdef POSTJUNK
+#define POSTJUNKLEN             5563
+#endif
 
 #define IMG_MAGIC               UINT64_C(0x5550415254eaf2e5)
+#ifdef BIGMAJOR
+#define IMG_MAJOR               0xffff
+#elif defined(SMALLMAJOR)
+#define IMG_MAJOR               0
+#else
 #define IMG_MAJOR               1
+#endif
+#ifdef HDRJUNK
+#define IMG_MINOR               0xffff
+#define IMG_HDR_LEN             (328 + HDRJUNKLEN)
+#else
 #define IMG_MINOR               0
 #define IMG_HDR_LEN             328
+#endif
 #define IMG_SECT_LEN            16
 
 struct up_imghdr_p
@@ -40,6 +66,9 @@ struct up_imghdr_p
     uint64_t            heads;
     uint64_t            sects;
     char                label[256];
+#ifdef HDRJUNK
+    char                junk[HDRJUNKLEN];
+#endif
 } __attribute__((packed));
 
 struct up_imgsect_p
@@ -83,6 +112,9 @@ up_img_save(const struct up_disk *disk, void *_stream,
     struct up_imghdr_p          hdr;
     uint8_t                    *data, *ptr;
     size_t                      datalen;
+#if defined(PREJUNK) || defined(POSTJUNK)
+    uint8_t *junkbuf;
+#endif
 
     assert(IMG_HDR_LEN == sizeof(struct up_imghdr_p));
     assert(IMG_SECT_LEN == sizeof(struct up_imgsect_p));
@@ -119,7 +151,11 @@ up_img_save(const struct up_disk *disk, void *_stream,
     hdr.minor     = UP_HTOBE16(IMG_MINOR);
     hdr.hdrlen    = UP_HTOBE32(IMG_HDR_LEN);
     hdr.hdrcrc    = 0;
+#ifdef PREJUNK
+    hdr.datastart = UP_HTOBE32(IMG_HDR_LEN + PREJUNKLEN);
+#else
     hdr.datastart = UP_HTOBE32(IMG_HDR_LEN);
+#endif
     hdr.datasize  = UP_HTOBE32(datalen);
     hdr.datacrc   = UP_HTOBE32(up_crc32(data, datalen, 0));
     hdr.sectsize  = UP_HTOBE32(disk->upd_sectsize);
@@ -129,6 +165,9 @@ up_img_save(const struct up_disk *disk, void *_stream,
     hdr.heads     = UP_HTOBE64(disk->upd_heads);
     hdr.sects     = UP_HTOBE64(disk->upd_sects);
     strlcpy(hdr.label, label, sizeof hdr.label);
+#ifdef HDRJUNK
+    arc4random_buf(hdr.junk, sizeof hdr.junk);
+#endif
     /* this must go last, for reasons which should be obvious */
     hdr.hdrcrc    = UP_HTOBE32(up_crc32(&hdr, IMG_HDR_LEN, 0));
 
@@ -140,6 +179,25 @@ up_img_save(const struct up_disk *disk, void *_stream,
         free(data);
         return -1;
     }
+
+#ifdef PREJUNK
+    junkbuf = malloc(PREJUNKLEN);
+    if(!junkbuf)
+    {
+        perror("malloc");
+        return -1;
+    }
+    arc4random_buf(junkbuf, PREJUNKLEN);
+    if(PREJUNKLEN != fwrite(junkbuf, 1, PREJUNKLEN, stream))
+    {
+        fprintf(stderr, "error writing to %s: %s\n",
+                file, strerror(errno));
+        free(junkbuf);
+        free(data);
+        return -1;
+    }
+    free(junkbuf);
+#endif
 
     /* write the data buffer */
     if(0 < datalen)
@@ -154,6 +212,25 @@ up_img_save(const struct up_disk *disk, void *_stream,
     }
 
     free(data);
+
+#ifdef POSTJUNK
+    junkbuf = malloc(POSTJUNKLEN);
+    if(!junkbuf)
+    {
+        perror("malloc");
+        return -1;
+    }
+    arc4random_buf(junkbuf, POSTJUNKLEN);
+    if(POSTJUNKLEN != fwrite(junkbuf, 1, POSTJUNKLEN, stream))
+    {
+        fprintf(stderr, "error writing to %s: %s\n",
+                file, strerror(errno));
+        free(junkbuf);
+        return -1;
+    }
+    free(junkbuf);
+#endif
+
     return 0;
 }
 

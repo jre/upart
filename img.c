@@ -16,11 +16,6 @@
 #include "util.h"
 
 /* #define IMG_DEBUG */
-#define OLDHDR
-
-#ifdef OLDHDR
-#define IMG_MAGIC_OLD           UINT64_C(0x7570617274eaf2e5)
-#endif
 
 #define IMG_MAGIC               UINT64_C(0x5550415254eaf2e5)
 #define IMG_MAJOR               1
@@ -46,26 +41,6 @@ struct up_imghdr_p
     uint64_t            sects;
     char                label[256];
 } __attribute__((packed));
-
-#ifdef OLDHDR
-struct up_imghdr_old_p
-{
-    uint64_t            magic;
-    uint16_t            major;
-    uint16_t            minor;
-    uint32_t            hdrlen;
-    uint32_t            hdrcrc;
-    uint32_t            datastart;
-    uint32_t            datasize;
-    uint32_t            datacrc;
-    uint32_t            sectsize;
-    uint64_t            size;
-    uint64_t            cyls;
-    uint64_t            heads;
-    uint64_t            sects;
-    char                label[256];
-} __attribute__((packed));
-#endif
 
 struct up_imgsect_p
 {
@@ -182,132 +157,6 @@ up_img_save(const struct up_disk *disk, void *_stream,
     return 0;
 }
 
-#ifdef OLDHDR
-static uint32_t
-img_checkcrc_old(struct up_imghdr_old_p *hdr, int fd, const char *name)
-{
-    uint32_t    old, crc;
-
-    /* get the crc of the main header first */
-    old         = hdr->hdrcrc;
-    hdr->hdrcrc = 0;
-    crc         = up_crc32(hdr, sizeof *hdr, 0);
-    hdr->hdrcrc = old;
-
-    /* if there's extra header data, read it in and get it's crc too */
-    assert(UP_BETOH32(hdr->hdrlen) == sizeof *hdr);
-
-    return crc;
-}
-
-int
-up_img_load_old(int fd, const char *name, struct up_imghdr_p *new)
-{
-    struct up_imghdr_old_p  hdr;
-    ssize_t             res;
-
-    /* try to read header and check magic */
-    memset(&hdr, 0, sizeof hdr);
-    res = pread(fd, &hdr, sizeof hdr, 0);
-    if(0 > res)
-    {
-        fprintf(stderr, "failed to read from %s: %s\n",
-                name, strerror(errno));
-        return -1;
-    }
-    if(IMG_MAGIC_OLD != UP_BETOH64(hdr.magic))
-        return 0;
-    if(res != sizeof hdr)
-    {
-        fprintf(stderr, "truncated old-style upart image file\n");
-        return -1;
-    }
-
-#ifdef IMG_DEBUG
-    fprintf(stderr, "old-style upart image file %s:\n"
-            "magic           %016"PRIx64"\n"
-            "major           %u\n"
-            "minor           %u\n"
-            "header size     %u\n"
-            "header crc      0x%08x\n"
-            "data offset     %u\n"
-            "data size       %u\n"
-            "data crc        0x%08x\n"
-            "sector size     %u\n"
-            "sector count    %"PRId64"\n"
-            "cyls            %"PRId64"\n"
-            "heads           %"PRId64"\n"
-            "sects           %"PRId64"\n"
-            "label           %s\n"
-            "\n",
-            name,
-            UP_BETOH64(hdr.magic),
-            UP_BETOH16(hdr.major),
-            UP_BETOH16(hdr.minor),
-            UP_BETOH32(hdr.hdrlen),
-            UP_BETOH32(hdr.hdrcrc),
-            UP_BETOH32(hdr.datastart),
-            UP_BETOH32(hdr.datasize),
-            UP_BETOH32(hdr.datacrc),
-            UP_BETOH32(hdr.sectsize),
-            UP_BETOH64(hdr.size),
-            UP_BETOH64(hdr.cyls),
-            UP_BETOH64(hdr.heads),
-            UP_BETOH64(hdr.sects),
-            hdr.label);
-#endif /* IMG_DEBUG */
-
-    /* check major version */
-    if(IMG_MAJOR != UP_BETOH16(hdr.major))
-    {
-        fprintf(stderr, "unknown major version in old-style upart image file: %u\n",
-                UP_BETOH16(hdr.major));
-        return -1;
-    }
-
-    /* validate header crc */
-    if(UP_BETOH32(hdr.hdrlen) < sizeof hdr)
-    {
-        fprintf(stderr, "corrupt old-style upart image header: header length is too small\n");
-        return -1;
-    }
-    if(UP_BETOH32(hdr.hdrcrc) != img_checkcrc_old(&hdr, fd, name))
-    {
-        fprintf(stderr, "corrupt old-style upart image header: "
-                "header crc check failed\n");
-        return -1;
-    }
-
-    if(UP_BETOH32(hdr.hdrlen) != sizeof hdr)
-    {
-        fprintf(stderr, "can't convert old-style upart image with extra header data\n");
-        return -1;
-    }
-
-    memset(new, 0, sizeof *new);
-    new->magic = UP_HTOBE64(IMG_MAGIC);
-    new->major = hdr.major;
-    new->minor = hdr.minor;
-    new->hdrlen = UP_HTOBE32(IMG_HDR_LEN);
-    new->hdrcrc = 0;
-    new->datastart = hdr.datastart;
-    new->datasize = hdr.datasize;
-    new->datacrc = hdr.datacrc;
-    new->sectsize = hdr.sectsize;
-    new->pad = 0;
-    new->size = hdr.size;
-    new->cyls = hdr.cyls;
-    new->heads = hdr.heads;
-    new->sects = hdr.sects;
-    memcpy(new->label, hdr.label, sizeof new->label);
-    new->hdrcrc = UP_HTOBE32(up_crc32(new, IMG_HDR_LEN, 0));
-
-    fprintf(stderr, "warning: converting from old-style upart image\n");
-
-    return IMG_HDR_LEN;
-}
-#endif /* OLDHDR */
-
 int
 up_img_load(int fd, const char *name, const struct up_opts *opts,
             struct up_img **ret)
@@ -323,14 +172,6 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
     assert(IMG_HDR_LEN == sizeof(struct up_imghdr_p));
     assert(IMG_SECT_LEN == sizeof(struct up_imgsect_p));
 
-#ifdef OLDHDR
-    res = up_img_load_old(fd, name, &hdr);
-    if(0 > res)
-        return res;
-    if(0 == res)
-    {
-#endif
-
     /* try to read header and check magic */
     memset(&hdr, 0, sizeof hdr);
     res = pread(fd, &hdr, IMG_HDR_LEN, 0);
@@ -340,11 +181,6 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
                 name, strerror(errno));
         return -1;
     }
-
-#ifdef OLDHDR
-    }
-#endif
-
     if(IMG_MAGIC != UP_BETOH64(hdr.magic))
         return 0;
     if(res != IMG_HDR_LEN)

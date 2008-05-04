@@ -226,8 +226,9 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
     /* check version */
     if(IMG_MAJOR != UP_BETOH16(hdr.major))
     {
-        fprintf(stderr, "error: upart image version %d.x is too new\n",
-                UP_BETOH16(hdr.major));
+        fprintf(stderr, "error: upart image version %d.x is too %s\n",
+                UP_BETOH16(hdr.major), (IMG_MAJOR < UP_BETOH16(hdr.major) ?
+                                        "new" : "old"));
         return -1;
     }
     if(IMG_MINOR < UP_BETOH16(hdr.minor))

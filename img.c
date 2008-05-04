@@ -223,18 +223,26 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
             hdr.label);
 #endif /* IMG_DEBUG */
 
-    /* check major version */
+    /* check version */
     if(IMG_MAJOR != UP_BETOH16(hdr.major))
     {
-        fprintf(stderr, "unknown major version in upart image file: %u\n",
+        fprintf(stderr, "error: upart image version %d.x is too new\n",
                 UP_BETOH16(hdr.major));
         return -1;
     }
+    if(IMG_MINOR < UP_BETOH16(hdr.minor))
+        fprintf(stderr, "warning: treating version %d.%d upart image as "
+                "%d.%d\n", UP_BETOH16(hdr.major), UP_BETOH16(hdr.minor),
+                IMG_MAJOR, IMG_MINOR);
 
     /* validate header crc */
-    if(UP_BETOH32(hdr.hdrlen) < IMG_HDR_LEN)
+    if(UP_BETOH32(hdr.hdrlen) < IMG_HDR_LEN ||
+       (UP_BETOH32(hdr.hdrlen) != IMG_HDR_LEN &&
+        IMG_MINOR == UP_BETOH16(hdr.minor)))
     {
-        fprintf(stderr, "corrupt upart image header: header length is too small\n");
+        fprintf(stderr, "corrupt upart image header: invalid version %d.%d "
+                "header length: %d\n", UP_BETOH16(hdr.major),
+                UP_BETOH16(hdr.minor), UP_BETOH32(hdr.hdrlen));
         return -1;
     }
     if(UP_BETOH32(hdr.hdrcrc) != img_checkcrc(&hdr, fd, name))
@@ -399,7 +407,7 @@ img_checkcrc(struct up_imghdr_p *hdr, int fd, const char *name)
             /* XXX real error value would be nice */
             return ~0;
         }
-        res = pread(fd, extra, len, 0);
+        res = pread(fd, extra, len, IMG_HDR_LEN);
         if(len != res)
         {
             fprintf(stderr, "failed to read from %s: %s\n",

@@ -1,5 +1,17 @@
 #!/bin/sh
 
+if [ -n "$UPART_TEST_CLEAN" ]
+then
+    cleanfiles=
+    for ii in *.img
+    do
+        cleanfiles="$cleanfiles test-${ii%.img}.out test-${ii%.img}.err"
+    done
+    echo "rm -f$cleanfiles"
+    rm -f $cleanfiles
+    exit
+fi
+
 upart="../upart -vv"
 diff="diff -u"
 

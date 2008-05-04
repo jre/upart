@@ -7,7 +7,7 @@
 .Sh SYNOPSIS
 .Bk -words
 .Nm upart
-.Op Fl fqrv
+.Op Fl fqrvV
 .Op Fl c Ar cylinders
 .Op Fl h Ar heads
 .Op Fl l Ar label
@@ -62,6 +62,10 @@ extract information out of a corrupted map.
 Show more information when printing partition maps. Multiple
 .Fl v
 options decreases the verbosity level further.
+.It Fl V
+Display the version of
+.Nm
+and exit.
 .It Fl w Ar file
 Save partition information for the disk to
 .Ar file

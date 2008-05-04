@@ -1,4 +1,4 @@
-AC_INIT
+AC_INIT([upart], [0.0.0])
 dnl need 2.60 for AC_PROG_MKDIR_P
 AC_PREREQ([2.60])
 AC_CONFIG_HEADERS([config.h])

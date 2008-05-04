@@ -81,17 +81,14 @@ readargs(int argc, char *argv[], struct up_opts *opts)
     int opt;
 
     memset(opts, 0, sizeof *opts);
-    while(0 < (opt = getopt(argc, argv, "c:fh:l:qrs:vw:z:")))
+    while(0 < (opt = getopt(argc, argv, "c:fh:l:qrs:vVw:z:")))
     {
         switch(opt)
         {
             case 'c':
                 opts->cyls = strtol(optarg, NULL, 0);
                 if(0 >= opts->cyls)
-                {
                     usage(argv[0], "illegal cylinder count: %s", optarg);
-                    return NULL;
-                }
                 break;
             case 'f':
                 opts->plainfile = 1;
@@ -99,10 +96,7 @@ readargs(int argc, char *argv[], struct up_opts *opts)
             case 'h':
                 opts->heads = strtol(optarg, NULL, 0);
                 if(0 >= opts->heads)
-                {
                     usage(argv[0], "illegal tracks per cylinder (head) count: %s", optarg);
-                    return NULL;
-                }
                 break;
             case 'l':
                 opts->label = optarg;
@@ -116,13 +110,14 @@ readargs(int argc, char *argv[], struct up_opts *opts)
             case 's':
                 opts->sects = strtol(optarg, NULL, 0);
                 if(0 >= opts->sects)
-                {
                     usage(argv[0], "illegal sectors per track count (sectors): %s", optarg);
-                    return NULL;
-                }
                 break;
             case 'v':
                 opts->verbosity++;
+                break;
+            case 'V':
+                printf("%s version %s\n", PACKAGE_NAME, PACKAGE_VERSION);
+                exit(EXIT_SUCCESS);
                 break;
             case 'w':
                 opts->serialize = optarg;
@@ -130,29 +125,21 @@ readargs(int argc, char *argv[], struct up_opts *opts)
             case 'z':
                 opts->sectsize = strtol(optarg, NULL, 0);
                 if(0 >= opts->sectsize)
-                {
                     usage(argv[0], "illegal sector size: %s", optarg);
-                    return NULL;
-                }
                 break;
             default:
                 usage(argv[0], NULL);
-                return NULL;
+                break;
         }
     }
 
     if(opts->label && !opts->serialize)
-    {
         usage(argv[0], "-w is required for -l");
-        return NULL;
-    }
     if(optind + 1 == argc)
         return argv[optind];
     else
-    {
         usage(argv[0], NULL);
-        return NULL;
-    }
+    return NULL;
 }
 
 static void
@@ -181,8 +168,11 @@ usage(const char *argv0, const char *message, ...)
            "  -r        relax some checks when reading maps\n"
            "  -s sects  number of sectors per track (sectors)\n"
            "  -v        raise verbosity level when printing maps\n"
+           "  -V        display the version of %s and exit\n"
            "  -w file   write disk and partition info to file\n"
-           "  -z size   sector size in bytes\n", name);
+           "  -z size   sector size in bytes\n", name, PACKAGE_NAME);
+
+    exit(EXIT_FAILURE);
 }
 
 static int

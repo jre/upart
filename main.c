@@ -22,7 +22,7 @@
 #include "sunlabel-x86.h"
 
 static char *readargs(int argc, char *argv[], struct up_opts *opts);
-static void usage(const char *argv0, const char *fmt, ...);
+static void usage(const char *fmt, ...);
 static int serialize(const struct up_disk *disk, const struct up_opts *opts);
 
 int
@@ -32,7 +32,7 @@ main(int argc, char *argv[])
     char                       *name;
     struct up_disk             *disk;
 
-    if(0 > up_getendian())
+    if(0 > up_savename(argv[0]) || 0 > up_getendian())
         return EXIT_FAILURE;
     up_mbr_register();
     up_bsdlabel_register();
@@ -88,7 +88,7 @@ readargs(int argc, char *argv[], struct up_opts *opts)
             case 'c':
                 opts->cyls = strtol(optarg, NULL, 0);
                 if(0 >= opts->cyls)
-                    usage(argv[0], "illegal cylinder count: %s", optarg);
+                    usage("illegal cylinder count: %s", optarg);
                 break;
             case 'f':
                 opts->plainfile = 1;
@@ -96,7 +96,7 @@ readargs(int argc, char *argv[], struct up_opts *opts)
             case 'h':
                 opts->heads = strtol(optarg, NULL, 0);
                 if(0 >= opts->heads)
-                    usage(argv[0], "illegal tracks per cylinder (head) count: %s", optarg);
+                    usage("illegal tracks per cylinder (head) count: %s", optarg);
                 break;
             case 'l':
                 opts->label = optarg;
@@ -110,7 +110,7 @@ readargs(int argc, char *argv[], struct up_opts *opts)
             case 's':
                 opts->sects = strtol(optarg, NULL, 0);
                 if(0 >= opts->sects)
-                    usage(argv[0], "illegal sectors per track count (sectors): %s", optarg);
+                    usage("illegal sectors per track count (sectors): %s", optarg);
                 break;
             case 'v':
                 opts->verbosity++;
@@ -125,31 +125,27 @@ readargs(int argc, char *argv[], struct up_opts *opts)
             case 'z':
                 opts->sectsize = strtol(optarg, NULL, 0);
                 if(0 >= opts->sectsize)
-                    usage(argv[0], "illegal sector size: %s", optarg);
+                    usage("illegal sector size: %s", optarg);
                 break;
             default:
-                usage(argv[0], NULL);
+                usage(NULL);
                 break;
         }
     }
 
     if(opts->label && !opts->serialize)
-        usage(argv[0], "-w is required for -l");
+        usage("-w is required for -l");
     if(optind + 1 == argc)
         return argv[optind];
     else
-        usage(argv[0], NULL);
+        usage(NULL);
     return NULL;
 }
 
 static void
-usage(const char *argv0, const char *message, ...)
+usage(const char *message, ...)
 {
-    const char *name;
     va_list ap;
-
-    if(!(name = strrchr(argv0, '/')) || !*(++name))
-        name = argv0;
 
     if(message)
     {
@@ -170,7 +166,7 @@ usage(const char *argv0, const char *message, ...)
            "  -v        raise verbosity level when printing maps\n"
            "  -V        display the version of %s and exit\n"
            "  -w file   write disk and partition info to file\n"
-           "  -z size   sector size in bytes\n", name, PACKAGE_NAME);
+           "  -z size   sector size in bytes\n", up_getname(), PACKAGE_NAME);
 
     exit(EXIT_FAILURE);
 }
@@ -189,7 +185,7 @@ serialize(const struct up_disk *disk, const struct up_opts *opts)
     }
 
     if(0 > up_img_save(disk, out, (opts->label ? opts->label : disk->upd_path),
-                       opts->serialize))
+                       opts->serialize, opts))
     {
         fclose(out);
         return -1;

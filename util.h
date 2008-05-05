@@ -207,6 +207,24 @@ int up_scatprintf(char *str, size_t size, const char *format, ...);
 /* Like calloc(), except doesn't zero the memory */
 void *up_malloc(size_t nmemb, size_t size);
 
+/* save and retrieve the program name */
+int up_savename(const char *argv0);
+const char *up_getname(void);
+
+void up_err(const char *fmt, ...) __attribute__((format (printf, 1, 2)));
+void up_warn(const char *fmt, ...) __attribute__((format (printf, 1, 2)));
+#define UP_MSG_FWARN            (1 << 0)
+#define UP_MSG_FERR             (1 << 1)
+#define UP_MSG_FBARE            (1 << 2)
+void up_msg(unsigned int flags, const char *fmt, ...)
+    __attribute__((format (printf, 2, 3)));
+
+#define UP_VERBOSITY_QUIET      -1
+#define UP_VERBOSITY_NORMAL     0
+#define UP_VERBOSITY_EXTRA      1
+#define UP_VERBOSITY_SPAM       2
+#define UP_NOISY(got, need) (UP_VERBOSITY_ ## need <= (got))
+
 /* see strlcpy(3) manpage */
 #ifndef HAVE_STRLCPY
 size_t strlcpy(char *dst, const char *src, size_t siz);
@@ -216,12 +234,6 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #ifndef HAVE_STRLCAT
 size_t strlcat(char *dst, const char *src, size_t siz);
 #endif
-
-#define UP_VERBOSITY_QUIET      -1
-#define UP_VERBOSITY_NORMAL     0
-#define UP_VERBOSITY_EXTRA      1
-#define UP_VERBOSITY_SPAM       2
-#define UP_NOISY(got, need) (UP_VERBOSITY_ ## need <= (got))
 
 struct up_opts
 {

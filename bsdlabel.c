@@ -162,9 +162,10 @@ static int bsdlabel_dump(const struct up_map *map, int64_t start, const void *da
                           int64_t size, int tag, char *buf, int buflen);
 static int bsdlabel_scan(struct up_disk *disk, int64_t start, int64_t size,
                          const uint8_t **ret, int *sectoff, int *byteoff,
-                         int *endian);
+                         int *endian, const struct up_opts *opts);
 static int bsdlabel_read(struct up_disk *disk, int64_t start, int64_t size,
-                         const uint8_t **ret, int *off, int *endian);
+                         const uint8_t **ret, int *off, int *endian,
+                         const struct up_opts *opts);
 static uint16_t bsdlabel_cksum(struct up_bsd_p *hdr,
                                const uint8_t *partitions, int size);
 
@@ -198,7 +199,7 @@ bsdlabel_load(struct up_disk *disk, const struct up_part *parent, void **priv,
 
     /* search for disklabel */
     res = bsdlabel_scan(disk, parent->start, parent->size,
-                        &buf, &sectoff, &byteoff, &endian);
+                        &buf, &sectoff, &byteoff, &endian, opts);
     if(0 >= res)
         return res;
     assert(disk->upd_sectsize - LABEL_BASE_SIZE >= byteoff);
@@ -223,8 +224,9 @@ bsdlabel_load(struct up_disk *disk, const struct up_part *parent, void **priv,
                               LABEL_LGETINT16(label, maxpart));
     if(byteoff + size > disk->upd_sectsize)
     {
-        fprintf(stderr, "ignoring truncated BSD disklabel (sector %"
-                PRId64"\n", parent->start);
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("ignoring truncated BSD disklabel in sector %"PRId64
+                   " (offset %d)", parent->start, label->sectoff);
         free(label);
         return -1;
     }
@@ -243,7 +245,8 @@ bsdlabel_setup(struct up_map *map, const struct up_opts *opts)
     const uint8_t              *buf;
     int64_t                     start, size;
 
-    buf = up_disk_save1sect(map->disk, map->start + label->sectoff, map, 0);
+    buf = up_disk_save1sect(map->disk, map->start + label->sectoff, map, 0,
+                            opts->verbosity);
     if(!buf)
         return -1;
 
@@ -256,15 +259,17 @@ bsdlabel_setup(struct up_map *map, const struct up_opts *opts)
     if(bsdlabel_cksum(&label->label, buf, (LABEL_PART_SIZE * max)) !=
        LABEL_LGETINT16(label, checksum))
     {
-        if(opts->relaxed)
-            fprintf(stderr, "warning: BSD disklabel with bad checksum "
-                    "(sector %"PRId64")\n", map->start);
-        else
-        {
-            fprintf(stderr, "ignoring BSD disklabel with bad checksum "
-                    "(sector %"PRId64")\n", map->start);
+        if(UP_NOISY(opts->verbosity, QUIET))
+#ifdef XXXFMT
+            up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
+                   "BSD disklabel with bad checksum in sector %"PRId64
+                   " (offset %d)", map->start, label->sectoff);
+#else
+            up_err("ignoring BSD disklabel with bad checksum (sector %"PRId64
+                   ")", map->start);
+#endif
+        if(!opts->relaxed)
             return 0;
-        }
     }
 
     for(ii = 0; max > ii; ii++)
@@ -301,8 +306,6 @@ bsdlabel_info(const struct up_map *map, int verbose, char *buf, int size)
     char                typename[sizeof(priv->label.typename)+1];
     char                packname[sizeof(priv->label.packname)+1];
 
-    /* XXX show sector offset here */
-
     if(UP_NOISY(verbose, EXTRA))
     {
         disktype = LABEL_LGETINT16(priv, disktype);
@@ -313,7 +316,12 @@ bsdlabel_info(const struct up_map *map, int verbose, char *buf, int size)
         memcpy(packname, priv->label.packname, sizeof(priv->label.packname));
         packname[sizeof(packname)-1] = 0;
 
-        return snprintf(buf, size, "BSD disklabel in sector %"PRId64" of %s:\n"
+        return snprintf(buf, size, "BSD disklabel in sector %"PRId64
+#ifdef XXXFMT
+                        " (offset %d) of %s:\n"
+#else
+                        " of %s:\n"
+#endif
                     "  type: %s (%u)\n"
                     "  disk: %s\n"
                     "  label: %s\n"
@@ -332,7 +340,11 @@ bsdlabel_info(const struct up_map *map, int verbose, char *buf, int size)
                     "  track-to-track seek: %u\n"
                     "  byte order: %s endian\n"
                     "  partition count: %u\n",
+#ifdef XXXFMT
+                    map->start, priv->sectoff, map->disk->upd_name,
+#else
                     map->start, map->disk->upd_name,
+#endif
                     disktypestr, disktype,
                     typename,
                     packname,
@@ -353,8 +365,9 @@ bsdlabel_info(const struct up_map *map, int verbose, char *buf, int size)
                     LABEL_LGETINT16(priv, maxpart));
     }
     else if(UP_NOISY(verbose, NORMAL))
-        return snprintf(buf, size, "BSD disklabel in sector %"PRId64" of %s:",
-                        map->start, map->disk->upd_name);
+        return snprintf(buf, size, "BSD disklabel in sector %"PRId64
+                        " (offset %d) of %s:",
+                        map->start, priv->sectoff, map->disk->upd_name);
     else
         return 0;
 }
@@ -404,7 +417,8 @@ bsdlabel_dump(const struct up_map *map, int64_t start, const void *data,
 
 static int
 bsdlabel_scan(struct up_disk *disk, int64_t start, int64_t size,
-             const uint8_t **ret, int *sectoff, int *byteoff, int *endian)
+              const uint8_t **ret, int *sectoff, int *byteoff, int *endian,
+              const struct up_opts *opts)
 {
     int                 ii, off;
     const uint8_t      *buf;
@@ -416,7 +430,8 @@ bsdlabel_scan(struct up_disk *disk, int64_t start, int64_t size,
 
     for(ii = 0; LABEL_PROBE_SECTS > ii; ii++)
     {
-        switch(bsdlabel_read(disk, start + ii, size - ii, &buf, &off, endian))
+        switch(bsdlabel_read(disk, start + ii, size - ii,
+                             &buf, &off, endian, opts))
         {
             case -1:
                 return -1;
@@ -438,7 +453,8 @@ bsdlabel_scan(struct up_disk *disk, int64_t start, int64_t size,
 
 static int
 bsdlabel_read(struct up_disk *disk, int64_t start, int64_t size,
-              const uint8_t **ret, int *off, int *endian)
+              const uint8_t **ret, int *off, int *endian,
+              const struct up_opts *opts)
 {
     int                 ii;
     const uint8_t *     buf;
@@ -453,7 +469,7 @@ bsdlabel_read(struct up_disk *disk, int64_t start, int64_t size,
 
     if(up_disk_check1sect(disk, start))
         return 0;
-    buf = up_disk_getsect(disk, start);
+    buf = up_disk_getsect(disk, start, opts->verbosity);
     if(!buf)
         return -1;
 

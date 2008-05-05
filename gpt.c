@@ -13,6 +13,9 @@
 #include "map.h"
 #include "util.h"
 
+/* XXX this code needs more intelligent handling of a bad
+   primary/secondady GPT, and more consistency checking between the two */
+
 #define GPT_SIZE                0x5c
 #define GPT_PRIOFF(st, sz)      ((st) + UINT64_C(1))
 #define GPT_PRISIZE(st, sz)     ((sz) - UINT64_C(1))
@@ -89,9 +92,9 @@ static int gpt_getindex(const struct up_part *part, char *buf, int size);
 static int gpt_getextra(const struct up_part *part, int verbose,
                         char *buf, int size);
 static int gpt_findhdr(struct up_disk *disk, int64_t start, int64_t size,
-                       struct up_gpt_p *gpt);
+                       struct up_gpt_p *gpt, const struct up_opts *opts);
 static int gpt_readhdr(struct up_disk *disk, int64_t start, int64_t size,
-                       const struct up_gpt_p **gpt);
+                       const struct up_gpt_p **gpt, const struct up_opts *opts);
 static int gpt_checkcrc(struct up_gpt_p *gpt);
 static const char *gpt_typename(const struct up_guid_p *guid);
 
@@ -126,16 +129,17 @@ gpt_load(struct up_disk *disk, const struct up_part *parent, void **priv,
 
     /* try to load either the primary or secondary gpt headers, and
        check the magic and crc */
-    res = gpt_findhdr(disk, parent->start, parent->size, &pk);
+    res = gpt_findhdr(disk, parent->start, parent->size, &pk, opts);
     if(0 >= res)
         return res;
 
     /* check revision */
     if(GPT_REVISION != UP_LETOH32(pk.revision))
     {
-        fprintf(stderr, "ignoring gpt with unknown revision %u.%u\n",
-                (UP_LETOH32(pk.revision) >> 16) & 0xffff,
-                UP_LETOH32(pk.revision) & 0xffff);
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("gpt with unknown revision: %u.%u",
+                   (UP_LETOH32(pk.revision) >> 16) & 0xffff,
+                   UP_LETOH32(pk.revision) & 0xffff);
         return 0;
     }
 
@@ -170,9 +174,10 @@ gpt_setup(struct up_map *map, const struct up_opts *opts)
 
     /* save sectors from primary and secondary maps */
     data1 = up_disk_savesectrange(map->disk, GPT_PRIOFF(map->start, map->size),
-                                  1 + partsects, map, 0);
+                                  1 + partsects, map, 0, opts->verbosity);
     data2 = up_disk_savesectrange(map->disk, GPT_SECOFF(map->start, map->size)
-                                  - partsects, 1 + partsects, map, 0);
+                                  - partsects, 1 + partsects, map, 0,
+                                  opts->verbosity);
     if(!data1 || !data2)
         return -1;
 
@@ -180,7 +185,8 @@ gpt_setup(struct up_map *map, const struct up_opts *opts)
     if(UP_LETOH32(gpt->partcrc) !=
        (up_crc32(data1 + map->disk->upd_sectsize,  partbytes, ~0) ^ ~0))
     {
-        fprintf(stderr, "bad gpt partition crc\n");
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("bad gpt partition crc");
         return 0;
     }
 
@@ -293,7 +299,7 @@ gpt_getextra(const struct up_part *part, int verbose, char *buf, int size)
 
 static int
 gpt_findhdr(struct up_disk *disk, int64_t start, int64_t size,
-            struct up_gpt_p *gpt)
+            struct up_gpt_p *gpt, const struct up_opts *opts)
 {
     const struct up_gpt_p  *buf;
     int                     res, badcrc;
@@ -301,7 +307,7 @@ gpt_findhdr(struct up_disk *disk, int64_t start, int64_t size,
     badcrc = 0;
 
     res = gpt_readhdr(disk, GPT_PRIOFF(start, size),
-                      GPT_PRISIZE(start, size), &buf);
+                      GPT_PRISIZE(start, size), &buf, opts);
     if(0 >= res)
         return res;
     if(GPT_MAGIC == UP_LETOH64(buf->magic))
@@ -309,13 +315,14 @@ gpt_findhdr(struct up_disk *disk, int64_t start, int64_t size,
         *gpt = *buf;
         if(gpt_checkcrc(gpt))
             return 1;
-        fprintf(stderr, "bad crc on primary gpt in sector %"PRId64"\n",
-                GPT_PRIOFF(start, size));
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_warn("bad crc on primary gpt in sector %"PRId64,
+                    GPT_PRIOFF(start, size));
         badcrc = 1;
     }
 
     res = gpt_readhdr(disk, GPT_SECOFF(start, size),
-                      GPT_SECSIZE(start, size), &buf);
+                      GPT_SECSIZE(start, size), &buf, opts);
     if(0 >= res)
         return res;
     if(GPT_MAGIC == UP_LETOH64(buf->magic))
@@ -323,8 +330,9 @@ gpt_findhdr(struct up_disk *disk, int64_t start, int64_t size,
         *gpt = *buf;
         if(gpt_checkcrc(gpt))
             return 1;
-        fprintf(stderr, "bad crc on secondary gpt in sector %"PRId64"\n",
-                GPT_SECOFF(start, size));
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("bad crc on secondary gpt in sector %"PRId64,
+                   GPT_SECOFF(start, size));
         badcrc = 1;
     }
 
@@ -333,7 +341,7 @@ gpt_findhdr(struct up_disk *disk, int64_t start, int64_t size,
 
 static int
 gpt_readhdr(struct up_disk *disk, int64_t start, int64_t size,
-            const struct up_gpt_p **gpt)
+            const struct up_gpt_p **gpt, const struct up_opts *opts)
 {
     const void *buf;
 
@@ -344,7 +352,7 @@ gpt_readhdr(struct up_disk *disk, int64_t start, int64_t size,
 
     if(up_disk_check1sect(disk, start))
         return 0;
-    buf = up_disk_getsect(disk, start);
+    buf = up_disk_getsect(disk, start, opts->verbosity);
     if(!buf)
         return -1;
     *gpt = buf;

@@ -13,6 +13,8 @@
 
 #include "util.h"
 
+static void up_vmsg(unsigned int flags, const char *fmt, va_list ap);
+
 int up_endian = 0;
 
 int
@@ -35,6 +37,7 @@ up_getendian(void)
     }
     else
     {
+        /* XXX should call this after parsing args so verbosity is known */
         fprintf(stderr, "failed to determine machine byte order\n");
         return -1;
     }
@@ -149,6 +152,85 @@ up_malloc(size_t nmemb, size_t size)
     }
     else
         return malloc(nmemb * size);
+}
+
+static char *up_savedname = NULL;
+
+int
+up_savename(const char *argv0)
+{
+    const char *name;
+    char       *new;
+
+    if(!(name = strrchr(argv0, '/')) || !*(++name))
+        name = argv0;
+
+    new = strdup(name);
+    if(!new)
+    {
+        perror("malloc");
+        return -1;
+    }
+
+    free(up_savedname);
+    up_savedname = new;
+
+    return 0;
+}
+
+const char *
+up_getname(void)
+{
+    return up_savedname;
+}
+
+void
+up_err(const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    up_vmsg(UP_MSG_FERR, fmt, ap);
+    va_end(ap);
+}
+
+void
+up_warn(const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    up_vmsg(UP_MSG_FWARN, fmt, ap);
+    va_end(ap);
+}
+
+void
+up_msg(unsigned int flags, const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    up_vmsg(flags, fmt, ap);
+    va_end(ap);
+}
+
+static void
+up_vmsg(unsigned int flags, const char *fmt, va_list ap)
+{
+#ifdef XXXFMT
+    if(!(flags & UP_MSG_FBARE))
+    {
+        if(flags & UP_MSG_FWARN)
+            fprintf(stderr, "%s: warning: ", up_getname());
+        else if(flags & UP_MSG_FWARN)
+            fprintf(stderr, "%s: error: ", up_getname());
+        else
+            fprintf(stderr, "%s: ", up_getname());
+    }
+#endif
+    vfprintf(stderr, fmt, ap);
+    if(!(flags & UP_MSG_FBARE))
+        putc('\n', stderr);
 }
 
 #ifndef HAVE_STRLCPY

@@ -39,8 +39,9 @@ up_disk_open(const char *name, struct up_opts *opts)
     fd = up_os_opendisk(name, &path, opts);
     if(0 > fd)
     {
-        fprintf(stderr, "failed to open %s for reading: %s\n",
-                (path ? path : name), strerror(errno));
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("failed to open %s for reading: %s",
+                   (path ? path : name), strerror(errno));
         return NULL;
     }
 
@@ -111,8 +112,9 @@ up_disk_open(const char *name, struct up_opts *opts)
     /* try to fill in missing drive paramaters */
     if(0 > fixparams(disk, opts))
     {
-        fprintf(stderr, "failed to determine disk parameters for %s\n",
-                disk->upd_path);
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("failed to determine disk parameters for %s",
+                   disk->upd_path);
         goto fail;
     }
 
@@ -125,7 +127,7 @@ up_disk_open(const char *name, struct up_opts *opts)
 
 int64_t
 up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
-             void *buf, size_t bufsize)
+             void *buf, size_t bufsize, int verbose)
 {
     ssize_t res;
 
@@ -144,15 +146,16 @@ up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     /* if there's an image then read from it instead */
     if(disk->upd_img)
-        return up_img_read(disk->upd_img, start, size, buf);
+        return up_img_read(disk->upd_img, start, size, buf, verbose);
 
     /* otherwise try to read from the disk */
     res = pread(disk->upd_fd, buf, size * disk->upd_sectsize,
                 start * disk->upd_sectsize);
     if(0 > res)
     {
-        fprintf(stderr, "failed to read %s sector %"PRIu64": %s\n",
-                disk->upd_path, start, strerror(errno));
+        if(UP_NOISY(verbose, QUIET))
+            up_err("failed to read %s sector %"PRIu64": %s",
+                   disk->upd_path, start, strerror(errno));
         return -1;
     }
 
@@ -160,7 +163,7 @@ up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
 }
 
 const void *
-up_disk_getsect(struct up_disk *disk, int64_t sect)
+up_disk_getsect(struct up_disk *disk, int64_t sect, int vrb)
 {
     if(!disk->upd_buf)
     {
@@ -172,7 +175,7 @@ up_disk_getsect(struct up_disk *disk, int64_t sect)
         }
     }
 
-    if(1 > up_disk_read(disk, sect, 1, disk->upd_buf, disk->upd_sectsize))
+    if(1 > up_disk_read(disk, sect, 1, disk->upd_buf, disk->upd_sectsize, vrb))
         return NULL;
     else
         return disk->upd_buf;
@@ -211,14 +214,14 @@ up_disk_checksectrange(struct up_disk *disk, int64_t start, int64_t size)
 
 const void *
 up_disk_save1sect(struct up_disk *disk, int64_t sect,
-                  const struct up_map *ref, int tag)
+                  const struct up_map *ref, int tag, int verbose)
 {
-    return up_disk_savesectrange(disk, sect, 1, ref, tag);
+    return up_disk_savesectrange(disk, sect, 1, ref, tag, verbose);
 }
 
 const void *
 up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t size,
-                      const struct up_map *ref, int tag)
+                      const struct up_map *ref, int tag, int verbose)
 {
     struct up_disk_sectnode *new;
 
@@ -245,7 +248,7 @@ up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t size,
 
     /* try to read the sectors from disk */
     if(size != up_disk_read(disk, first, size, new->data,
-                            size * disk->upd_sectsize))
+                            size * disk->upd_sectsize, verbose))
     {
         free(new->data);
         free(new);

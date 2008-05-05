@@ -85,7 +85,7 @@ static int sun_x86_extrahdr(const struct up_map *map, int verbose,
 static int sun_x86_extra(const struct up_part *part, int verbose,
                          char *buf, int size);
 static int sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
-                        const uint8_t **ret);
+                        const uint8_t **ret, const struct up_opts *opts);
 
 void up_sunlabel_x86_register(void)
 {
@@ -118,7 +118,7 @@ sun_x86_load(struct up_disk *disk, const struct up_part *parent, void **priv,
         return 0;
 
     /* read map and check magic */
-    res = sun_x86_read(disk, parent->start, parent->size, &buf);
+    res = sun_x86_read(disk, parent->start, parent->size, &buf, opts);
     if(0 >= res)
         return res;
 
@@ -145,14 +145,17 @@ sun_x86_setup(struct up_map *map, const struct up_opts *opts)
     struct up_sunx86part       *part;
     int64_t                     start, size;
 
-    if(!up_disk_save1sect(map->disk, map->start + SUNX86_OFF, map, 0))
+    if(!up_disk_save1sect(map->disk, map->start + SUNX86_OFF, map, 0,
+                          opts->verbosity))
         return -1;
 
     max = UP_LETOH16(packed->partcount);
+    /* this probably isn't worth checking for */
     if(SUNX86_MAXPARTITIONS < max)
     {
-        fprintf(stderr, "warning: ignoring sun x86 partitions beyond %d\n",
-                SUNX86_MAXPARTITIONS);
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_warn("clamping partition count in sun x86 label from %d "
+                    "down to %d", max, SUNX86_MAXPARTITIONS);
         max = SUNX86_MAXPARTITIONS;
     }
 
@@ -264,7 +267,7 @@ sun_x86_extra(const struct up_part *part, int verbose, char *buf, int size)
 
 static int
 sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
-             const uint8_t **ret)
+             const uint8_t **ret, const struct up_opts *opts)
 {
     const uint8_t      *buf;
     uint32_t            magic1, vers;
@@ -276,7 +279,7 @@ sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
 
     if(up_disk_check1sect(disk, start + SUNX86_OFF))
         return 0;
-    buf = up_disk_getsect(disk, start + SUNX86_OFF);
+    buf = up_disk_getsect(disk, start + SUNX86_OFF, opts->verbosity);
     if(!buf)
         return -1;
 
@@ -287,24 +290,27 @@ sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
 
     if(SUNX86_MAGIC1 != UP_LETOH32(magic1))
     {
-        if(SUNX86_MAGIC1 == UP_BETOH32(magic1))
-            fprintf(stderr, "ignoring sun x86 label in sector %"PRId64" (offset %d) "
-                    "with unknown byte order: big endian\n", start, SUNX86_OFF);
+        if(SUNX86_MAGIC1 == UP_BETOH32(magic1) &&
+           UP_NOISY(opts->verbosity, QUIET))
+            up_err("sun x86 label in sector %"PRId64" (offset %d) "
+                   "with unknown byte order: big endian", start, SUNX86_OFF);
         return 0;
     }
 
     if(SUNX86_VERSION != UP_LETOH32(vers))
     {
-        fprintf(stderr, "ignoring sun x86 label in sector %"PRId64" (offset %d) "
-                "with unknown version: %u\n",
-                start, SUNX86_OFF, UP_LETOH32(vers));
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("sun x86 label in sector %"PRId64" (offset %d) "
+                   "with unknown version: %u",
+                   start, SUNX86_OFF, UP_LETOH32(vers));
         return 0;
     }
 
     if(SUNX86_MAGIC2 != UP_LETOH16(magic2))
     {
-        fprintf(stderr, "ignoring sun x86 label in sector %"PRId64
-                " (offset %d) with bad secondary magic number: 0x%04x\n",
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("sun x86 label in sector %"PRId64
+                   " (offset %d) with bad secondary magic number: 0x%04x",
                 start, SUNX86_OFF, UP_LETOH16(magic2));
         return 0;
     }
@@ -317,8 +323,10 @@ sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
 
     if(calc != UP_LETOH16(sum))
     {
-        fprintf(stderr, "ignoring sun x86 label in sector %"PRId64
-                " (offset %d) with bad checksum\n", start, SUNX86_OFF);
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("sun x86 label in sector %"PRId64" (offset %d) "
+                   "with bad checksum", start, SUNX86_OFF);
+        return 0;
     }
 
     *ret = buf;

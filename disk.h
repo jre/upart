@@ -45,11 +45,11 @@ struct up_disk *up_disk_open(const char *path, struct up_opts *opts);
 /* Read from disk into buffer. Note that START, SIZE, and the return
    value are in sectors but bufsize is in bytes. */
 int64_t up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
-                     void *buf, size_t bufsize);
+                     void *buf, size_t bufsize, int verbose);
 
 /* Read a single sector. The returned pointer is valid until function
    is called again. */
-const void *up_disk_getsect(struct up_disk *disk, int64_t sect);
+const void *up_disk_getsect(struct up_disk *disk, int64_t sect, int verbose);
 
 /* return true if a sector is marked as used, false otherwise */
 int up_disk_check1sect(struct up_disk *disk, int64_t sect);
@@ -59,11 +59,11 @@ int up_disk_checksectrange(struct up_disk *disk, int64_t first, int64_t size);
 
 /* mark a sector as used and return 0, return -1 if already used */
 const void *up_disk_save1sect(struct up_disk *disk, int64_t sect,
-                              const struct up_map *ref, int tag);
+                              const struct up_map *ref, int tag, int verbose);
 
 /* mark range of sectors as used and return 0, return -1 if already used */
 const void *up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t size,
-                                  const struct up_map *ref, int tag);
+                                  const struct up_map *ref, int tag, int verbose);
 
 /* mark all sectors associated with REF unused */
 void up_disk_sectsunref(struct up_disk *disk, const void *ref);

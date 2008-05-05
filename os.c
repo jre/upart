@@ -129,9 +129,9 @@ getparams_disklabel(int fd, struct up_disk *disk, const struct up_opts *opts)
     if(0 > ioctl(fd, DIOCGDINFO, &dl))
 #endif
     {
-        if(errno)
-            fprintf(stderr, "failed to read disklabel for %s: %s\n",
-                    disk->upd_path, strerror(errno));
+        if(errno && UP_NOISY(opts->verbosity, QUIET))
+            up_err("failed to read disklabel for %s: %s",
+                   disk->upd_path, strerror(errno));
         return -1;
     }
 
@@ -161,26 +161,26 @@ getparams_freebsd(int fd, struct up_disk *disk, const struct up_opts *opts)
 
     if(0 == ioctl(fd, DIOCGSECTORSIZE, &ival))
         disk->upd_sectsize = ival;
-    else
-        fprintf(stderr, "failed to read disk size for %s: %s\n",
+    else if(UP_NOISY(opts->verbosity, QUIET))
+        up_warn("failed to read disk size for %s: %s",
                 disk->upd_path, strerror(errno));
 
     if(0 < disk->upd_sectsize && 0 == ioctl(fd, DIOCGMEDIASIZE, &oval))
         disk->upd_size = oval / disk->upd_sectsize;
-    else
-        fprintf(stderr, "failed to read sector size for %s: %s\n",
+    else if(UP_NOISY(opts->verbosity, QUIET))
+        up_warn("failed to read sector size for %s: %s",
                 disk->upd_path, strerror(errno));
 
     if(0 == ioctl(fd, DIOCGFWSECTORS, &ival))
         disk->upd_sects = ival;
-    else
-        fprintf(stderr, "failed to read sectors per track for %s: %s\n",
+    else if(UP_NOISY(opts->verbosity, QUIET))
+        up_warn("failed to read sectors per track for %s: %s",
                 disk->upd_path, strerror(errno));
 
     if(0 == ioctl(fd, DIOCGFWHEADS, &ival))
         disk->upd_heads = ival;
-    else
-        fprintf(stderr, "failed to read heads (tracks per cylinder) for %s: %s\n",
+    else if(UP_NOISY(opts->verbosity, QUIET))
+        up_warn("failed to read heads (tracks per cylinder) for %s: %s",
                 disk->upd_path, strerror(errno));
 
     return 0;
@@ -216,7 +216,8 @@ getparams_linux(int fd, struct up_disk *disk, const struct up_opts *opts)
         disk->upd_size = smallsize;
     else
     {
-        fprintf(stderr, "failed to read disk size for %s: %s\n",
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("failed to read disk size for %s: %s",
                 disk->upd_path, strerror(errno));
         return -1;
     }
@@ -237,13 +238,13 @@ getparams_darwin(int fd, struct up_disk *disk, const struct up_opts *opts)
 
     if(0 == ioctl(fd, DKIOCGETBLOCKSIZE, &smallsize))
         disk->upd_sectsize = smallsize;
-    else
-        fprintf(stderr, "failed to read sector size for %s: %s\n",
+    else if(UP_NOISY(opts->verbosity, QUIET))
+        up_warn("failed to read sector size for %s: %s",
                 disk->upd_path, strerror(errno));
     if(0 == ioctl(fd, DKIOCGETBLOCKCOUNT, &bigsize))
         disk->upd_size = bigsize;
-    else
-        fprintf(stderr, "failed to read block count for %s: %s\n",
+    else if(UP_NOISY(opts->verbosity, QUIET))
+        up_warn("failed to read block count for %s: %s",
                 disk->upd_path, strerror(errno));
 
     return 0;

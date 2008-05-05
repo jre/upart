@@ -165,7 +165,8 @@ apm_setup(struct up_map *map, const struct up_opts *opts)
     int64_t                     start, size;
     const uint8_t              *data;
 
-    data = up_disk_savesectrange(map->disk, apm->firstsect, apm->sectcount, map, 0);
+    data = up_disk_savesectrange(map->disk, apm->firstsect, apm->sectcount,
+                                 map, 0, opts->verbosity);
     if(!data)
         return -1;
     apm->tmpbuf = data;
@@ -303,15 +304,15 @@ apm_find(struct up_disk *disk, int64_t start, int64_t size,
     {
         if(up_disk_check1sect(disk, start + off + APM_OFFSET))
             return 0;
-        buf = up_disk_getsect(disk, start + off + APM_OFFSET);
+        buf = up_disk_getsect(disk, start + off + APM_OFFSET, opts->verbosity);
         if(!buf)
             return -1;
         if(APM_MAGIC != UP_BETOH16(buf->sig))
         {
-            if(off)
-                fprintf(stderr, "could not find %s partition in sectors %"
-                        PRId64" to %"PRId64"\n", APM_MAP_PART_TYPE,
-                        start + APM_OFFSET, start + off + APM_OFFSET);
+            if(off && UP_NOISY(opts->verbosity, QUIET))
+                up_err("could not find %s partition in sectors %"
+                       PRId64" to %"PRId64, APM_MAP_PART_TYPE,
+                       start + APM_OFFSET, start + off + APM_OFFSET);
             return 0;
         }
         else if(0 == strcmp(APM_MAP_PART_TYPE, buf->type))
@@ -321,10 +322,12 @@ apm_find(struct up_disk *disk, int64_t start, int64_t size,
             if(start + APM_OFFSET != pstart || off > blocks ||
                blocks > psize || pstart + psize > start + size)
             {
-                fprintf(stderr, "invalid apple partition map in sector "
-                        "%"PRId64"+%d, %s partition in sector %"PRId64"\n",
-                        start, APM_OFFSET, APM_MAP_PART_TYPE,
-                        start + off + APM_OFFSET);
+                if(UP_NOISY(opts->verbosity, QUIET))
+                    up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
+                           "invalid apple partition map in sector %"PRId64
+                           "+%d, %s partition in sector %"
+                           PRId64, start, APM_OFFSET, APM_MAP_PART_TYPE,
+                           start + off + APM_OFFSET);
                 if(!opts->relaxed)
                     return 0;
             }

@@ -123,7 +123,7 @@ static int sparc_extrahdr(const struct up_map *map, int verbose,
 static int sparc_extra(const struct up_part *part, int verbose,
                        char *buf, int size);
 static int sparc_read(struct up_disk *disk, int64_t start, int64_t size,
-                      const uint8_t **ret);
+                      const uint8_t **ret, const struct up_opts *opts);
 static unsigned int sparc_check_vtoc(const struct up_sparcvtoc_p *vtoc);
 static unsigned int sparc_check_obsd(const struct up_sparcobsd_p *obsd);
 
@@ -161,7 +161,7 @@ sparc_load(struct up_disk *disk, const struct up_part *parent, void **priv,
         return 0;
 
     /* read map and check magic */
-    res = sparc_read(disk, parent->start, parent->size, &buf);
+    res = sparc_read(disk, parent->start, parent->size, &buf, opts);
     if(0 >= res)
         return res;
 
@@ -190,7 +190,7 @@ sparc_setup(struct up_map *map, const struct up_opts *opts)
     struct up_sparcpart        *part;
     int64_t                     cylsize, start, size;
 
-    if(!up_disk_save1sect(map->disk, map->start, map, 0))
+    if(!up_disk_save1sect(map->disk, map->start, map, 0, opts->verbosity))
         return -1;
 
     cylsize = (uint64_t)UP_BETOH16(packed->heads) *
@@ -356,7 +356,7 @@ sparc_extra(const struct up_part *part, int verbose, char *buf, int size)
 
 static int
 sparc_read(struct up_disk *disk, int64_t start, int64_t size,
-           const uint8_t **ret)
+           const uint8_t **ret, const struct up_opts *opts)
 {
     const uint8_t      *buf;
     uint16_t            magic, sum, calc;
@@ -367,7 +367,7 @@ sparc_read(struct up_disk *disk, int64_t start, int64_t size,
 
     if(up_disk_check1sect(disk, start))
         return 0;
-    buf = up_disk_getsect(disk, start);
+    buf = up_disk_getsect(disk, start, opts->verbosity);
     if(!buf)
         return -1;
 
@@ -376,10 +376,11 @@ sparc_read(struct up_disk *disk, int64_t start, int64_t size,
 
     if(SPARC_MAGIC != UP_BETOH16(magic))
     {
-        if(SPARC_MAGIC == UP_LETOH16(magic))
+        if(SPARC_MAGIC == UP_LETOH16(magic) &&
+           UP_NOISY(opts->verbosity, QUIET))
             /* this is kind of silly but hey, why not? */
-            fprintf(stderr, "ignoring sun sparc label in sector %"PRId64" "
-                    "with unknown byte order: little endian\n", start);
+            up_err("sun sparc label in sector %"PRId64" with unknown "
+                   "byte order: little endian", start);
         return 0;
     }
 
@@ -391,8 +392,9 @@ sparc_read(struct up_disk *disk, int64_t start, int64_t size,
 
     if(calc != sum)
     {
-        fprintf(stderr, "ignoring sun sparc label in sector %"PRId64
-                " with bad checksum\n", start);
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("sun sparc label in sector %"PRId64" with bad checksum",
+                   start);
         return 0;
     }
 

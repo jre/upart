@@ -54,7 +54,8 @@ struct up_img
     uint8_t            *data;
 };
 
-static uint32_t img_checkcrc(struct up_imghdr_p *hdr, int fd, const char *name);
+static uint32_t img_checkcrc(struct up_imghdr_p *hdr, int fd,
+                             const char *name, int verbose);
 
 static void
 img_save_iter(const struct up_disk *disk, const struct up_disk_sectnode *node,
@@ -76,8 +77,8 @@ img_save_iter(const struct up_disk *disk, const struct up_disk_sectnode *node,
 }
 
 int
-up_img_save(const struct up_disk *disk, void *_stream,
-            const char *label, const char *file)
+up_img_save(const struct up_disk *disk, void *_stream, const char *label,
+            const char *file, const struct up_opts *opts)
 {
     FILE                       *stream = _stream;
     struct up_imghdr_p          hdr;
@@ -135,8 +136,8 @@ up_img_save(const struct up_disk *disk, void *_stream,
     /* write the header */
     if(1 != fwrite(&hdr, IMG_HDR_LEN, 1, stream))
     {
-        fprintf(stderr, "error writing to %s: %s\n",
-                file, strerror(errno));
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("error writing to %s: %s", file, strerror(errno));
         free(data);
         return -1;
     }
@@ -146,8 +147,8 @@ up_img_save(const struct up_disk *disk, void *_stream,
     {
         if(datalen != fwrite(data, 1, datalen, stream))
         {
-            fprintf(stderr, "error writing to %s: %s\n",
-                    file, strerror(errno));
+            if(UP_NOISY(opts->verbosity, QUIET))
+                up_err("error writing to %s: %s", file, strerror(errno));
             free(data);
             return -1;
         }
@@ -177,15 +178,16 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
     res = pread(fd, &hdr, IMG_HDR_LEN, 0);
     if(0 > res)
     {
-        fprintf(stderr, "failed to read from %s: %s\n",
-                name, strerror(errno));
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("failed to read from %s: %s", name, strerror(errno));
         return -1;
     }
     if(IMG_MAGIC != UP_BETOH64(hdr.magic))
         return 0;
     if(res != IMG_HDR_LEN)
     {
-        fprintf(stderr, "truncated upart image file\n");
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("truncated upart image file");
         return -1;
     }
 
@@ -226,14 +228,22 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
     /* check version */
     if(IMG_MAJOR != UP_BETOH16(hdr.major))
     {
-        fprintf(stderr, "error: upart image version %d.x is too %s\n",
-                UP_BETOH16(hdr.major), (IMG_MAJOR < UP_BETOH16(hdr.major) ?
-                                        "new" : "old"));
+        if(UP_NOISY(opts->verbosity, QUIET))
+#ifdef XXXFMT
+            up_err("upart image version %d.x is too %s", UP_BETOH16(hdr.major),
+#else
+            up_err("error: upart image version %d.x is too %s", UP_BETOH16(hdr.major),
+#endif
+                   (IMG_MAJOR < UP_BETOH16(hdr.major) ? "new" : "old"));
         return -1;
     }
-    if(IMG_MINOR < UP_BETOH16(hdr.minor))
-        fprintf(stderr, "warning: treating version %d.%d upart image as "
-                "%d.%d\n", UP_BETOH16(hdr.major), UP_BETOH16(hdr.minor),
+    if(IMG_MINOR < UP_BETOH16(hdr.minor) && UP_NOISY(opts->verbosity, QUIET))
+#ifdef XXXFMT
+        up_warn("treating version %d.%d upart image as %d.%d",
+#else
+        up_warn("warning: treating version %d.%d upart image as %d.%d",
+#endif
+                UP_BETOH16(hdr.major), UP_BETOH16(hdr.minor),
                 IMG_MAJOR, IMG_MINOR);
 
     /* validate header crc */
@@ -241,15 +251,16 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
        (UP_BETOH32(hdr.hdrlen) != IMG_HDR_LEN &&
         IMG_MINOR == UP_BETOH16(hdr.minor)))
     {
-        fprintf(stderr, "corrupt upart image header: invalid version %d.%d "
-                "header length: %d\n", UP_BETOH16(hdr.major),
-                UP_BETOH16(hdr.minor), UP_BETOH32(hdr.hdrlen));
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("corrupt upart image header: invalid version %d.%d "
+                   "header length: %d", UP_BETOH16(hdr.major),
+                   UP_BETOH16(hdr.minor), UP_BETOH32(hdr.hdrlen));
         return -1;
     }
-    if(UP_BETOH32(hdr.hdrcrc) != img_checkcrc(&hdr, fd, name))
+    if(UP_BETOH32(hdr.hdrcrc) != img_checkcrc(&hdr, fd, name, opts->verbosity))
     {
-        fprintf(stderr, "corrupt upart image header: "
-                "header crc check failed\n");
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("corrupt upart image header: header crc check failed");
         return -1;
     }
 
@@ -263,8 +274,9 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
     res = pread(fd, data, UP_BETOH32(hdr.datasize), UP_BETOH32(hdr.datastart));
     if(UP_BETOH32(hdr.datasize) != res)
     {
-        fprintf(stderr, "failed to read from %s: %s\n",
-                name, (0 > res ? strerror(errno) : "short read count"));
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("failed to read from %s: %s",
+                   name, (0 > res ? strerror(errno) : "short read count"));
         free(data);
         return -1;
     }
@@ -272,7 +284,8 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
     /* validate the data crc */
     if(UP_BETOH32(hdr.datacrc) != up_crc32(data, UP_BETOH32(hdr.datasize), 0))
     {
-        fprintf(stderr, "corrupt upart image: data crc check failed\n");
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("corrupt upart image: data crc check failed");
         free(data);
         return -1;
     }
@@ -315,7 +328,8 @@ up_img_getlabel(struct up_img *img, size_t *len)
 }
 
 int64_t
-up_img_read(struct up_img *img, int64_t start, int64_t sects, void *buf)
+up_img_read(struct up_img *img, int64_t start, int64_t sects, void *buf,
+            int verbose)
 {
     size_t              imgoff, sectsize;
     struct up_imgsect_p sect;
@@ -337,9 +351,11 @@ up_img_read(struct up_img *img, int64_t start, int64_t sects, void *buf)
         fprintf(stderr, "found %"PRId64" sectors at offset %"PRId64"\n",
                 sect.size, sect.off);
 #endif
+        /* XXX should sanity-check data when image is first read */
         if(UP_BETOH32(img->hdr.datasize) - imgoff < sect.size * sectsize)
         {
-            fprintf(stderr, "error: truncated image file data\n");
+            if(UP_NOISY(verbose, QUIET))
+                up_err("truncated image file data");
             return -1;
         }
         if(start >= sect.off && start < sect.off + sect.size)
@@ -356,7 +372,7 @@ up_img_read(struct up_img *img, int64_t start, int64_t sects, void *buf)
                 start += sect.size;
                 sects -= sect.size;
                 buf   += sect.size * sectsize;
-                return sect.size + up_img_read(img, start, sects, buf);
+                return sect.size + up_img_read(img, start, sects, buf, verbose);
             }
             else
             {
@@ -385,7 +401,7 @@ up_img_free(struct up_img *img)
 }
 
 static uint32_t
-img_checkcrc(struct up_imghdr_p *hdr, int fd, const char *name)
+img_checkcrc(struct up_imghdr_p *hdr, int fd, const char *name, int verbose)
 {
     uint32_t    old, crc;
     void       *extra;
@@ -411,8 +427,9 @@ img_checkcrc(struct up_imghdr_p *hdr, int fd, const char *name)
         res = pread(fd, extra, len, IMG_HDR_LEN);
         if(len != res)
         {
-            fprintf(stderr, "failed to read from %s: %s\n",
-                    name, (0 > res ? strerror(errno) : "short read count"));
+            if(UP_NOISY(verbose, QUIET))
+                up_err("failed to read from %s: %s",
+                       name, (0 > res ? strerror(errno) : "short read count"));
             /* XXX real error value would be nice */
             return -1;
         }

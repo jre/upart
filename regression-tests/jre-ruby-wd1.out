@@ -13,7 +13,7 @@ MBR partition table in sector 0 of jre-ruby-wd1.img:
 1:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
 2:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
 3:                  63       625142385 *    0/  1/ 1-1023/ 15/63 OpenBSD (0xa6)
- BSD disklabel in sector 63 of jre-ruby-wd1.img:
+ BSD disklabel in sector 63 (offset 1) of jre-ruby-wd1.img:
   type: ESDI (5)
   disk: ESDI/IDE disk
   label: WDC WD3200KS-00P

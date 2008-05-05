@@ -1,1 +1,1 @@
-ignoring BSD disklabel with bad checksum (sector 73701832)
+upart: BSD disklabel with bad checksum in sector 73701832 (offset 0)

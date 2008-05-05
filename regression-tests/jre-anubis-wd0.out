@@ -10,7 +10,7 @@ jre-anubis-wd0.img: 74.5GB (156301488 sectors of 512 bytes)
 MBR partition table in sector 0 of jre-anubis-wd0.img:
                  Start            Size A    C   H  S    C   H  S Type
 0:                  63        78156162 *    0/  1/ 1-1023/ 14/63 OpenBSD (0xa6)
- BSD disklabel in sector 63 of jre-anubis-wd0.img:
+ BSD disklabel in sector 63 (offset 1) of jre-anubis-wd0.img:
   type: ESDI (5)
   disk: ESDI/IDE disk
   label: TOSHIBA MK8032GA
@@ -48,7 +48,7 @@ MBR partition table in sector 0 of jre-anubis-wd0.img:
  o:   X       117226368        19270944 4.2BSD      0     0    16
  p:   X       136761408        18538947 ext2fs
 1:            78156225        19535040   1023/255/63-1023/ 14/63 FreeBSD or DragonFly (0xa5)
- BSD disklabel in sector 78156225 of jre-anubis-wd0.img:
+ BSD disklabel in sector 78156225 (offset 1) of jre-anubis-wd0.img:
   type: ESDI (5)
   disk: ad0s2
   label: 
@@ -78,7 +78,7 @@ MBR partition table in sector 0 of jre-anubis-wd0.img:
  g:   X               0               0 unused
  h:   X               0               0 unused
 2:            97691265        19534095    659/ 15/ 1- 582/ 15/63 FreeBSD or DragonFly (0xa5)
- BSD disklabel in sector 97691265 of jre-anubis-wd0.img:
+ BSD disklabel in sector 97691265 (offset 1) of jre-anubis-wd0.img:
   type: unknown (0)
   disk: amnesiac
   label: fictitious
@@ -117,7 +117,7 @@ MBR partition table in sector 0 of jre-anubis-wd0.img:
  p:   X               0               0 unused
 3:           117226305        39070080   1023/255/63-1023/ 14/63 DOS Extended (0x05)
  4:           117226368        19534977   1023/254/63-1023/254/63 NetBSD (0xa9)
-  BSD disklabel in sector 117226368 of jre-anubis-wd0.img:
+  BSD disklabel in sector 117226368 (offset 1) of jre-anubis-wd0.img:
   type: unknown (0)
   disk: TOSHIBA MK8032G
   label: 

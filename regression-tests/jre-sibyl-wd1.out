@@ -10,7 +10,7 @@ jre-sibyl-wd1.img: 37.3GB (78165360 sectors of 512 bytes)
 MBR partition table in sector 0 of jre-sibyl-wd1.img:
                  Start            Size A    C   H  S    C   H  S Type
 0:                  63         9770985      0/  1/ 1- 608/ 55/63 OpenBSD (0xa6)
- BSD disklabel in sector 63 of jre-sibyl-wd1.img:
+ BSD disklabel in sector 63 (offset 1) of jre-sibyl-wd1.img:
   type: ESDI (5)
   disk: ESDI/IDE disk
   label: small old misc
@@ -48,7 +48,7 @@ MBR partition table in sector 0 of jre-sibyl-wd1.img:
  o:   X               0               0 unused
  p:   X               0               0 unused
 1:             9771048        14342328 * 1023/255/63-1023/255/63 FreeBSD or DragonFly (0xa5)
- BSD disklabel in sector 9771048 of jre-sibyl-wd1.img:
+ BSD disklabel in sector 9771048 (offset 1) of jre-sibyl-wd1.img:
   type: unknown (0)
   disk: amnesiac
   label: fictitious
@@ -86,7 +86,7 @@ MBR partition table in sector 0 of jre-sibyl-wd1.img:
  o:   X               0               0 unused
  p:   X               0               0 unused
 2:            24113565        14956515   1023/255/63-1023/254/63 FreeBSD or DragonFly (0xa5)
- BSD disklabel in sector 24113565 of jre-sibyl-wd1.img:
+ BSD disklabel in sector 24113565 (offset 1) of jre-sibyl-wd1.img:
   type: ESDI (5)
   disk: ad3s3
   label: 
@@ -119,7 +119,7 @@ MBR partition table in sector 0 of jre-sibyl-wd1.img:
  4:            39083247         9770481   1023/255/63-1023/255/63 BeOS (0xeb)
  5:            48853791         9770481   1023/ 17/ 1-1023/255/63 Syllable (0x2a)
  6:            58624335        19541025   1023/239/63-1023/239/63 NTFS or HPFS (0x07)
- BSD disklabel in sector 39083184 of jre-sibyl-wd1.img:
+ BSD disklabel in sector 39083184 (offset 1) of jre-sibyl-wd1.img:
   type: unknown (0)
   disk: amnesiac
   label: 

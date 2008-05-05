@@ -51,8 +51,7 @@ up_hexdump(const void *_buf, size_t size, uint64_t dispoff, void *_stream)
     FILE *              stream = _stream;
     size_t              ii, jj;
 
-    if(NULL == stream)
-        stream = stderr;
+    assert(stream);
 
     if(!size)
         return;

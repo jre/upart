@@ -186,8 +186,10 @@ gpt_setup(struct up_map *map, const struct up_opts *opts)
        (up_crc32(data1 + map->disk->upd_sectsize,  partbytes, ~0) ^ ~0))
     {
         if(UP_NOISY(opts->verbosity, QUIET))
-            up_err("bad gpt partition crc");
-        return 0;
+            up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
+                   "bad gpt partition crc");
+        if(!opts->relaxed)
+            return 0;
     }
 
     /* walk through the partition buffer and add all partitions found */

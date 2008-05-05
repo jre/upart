@@ -393,9 +393,11 @@ sparc_read(struct up_disk *disk, int64_t start, int64_t size,
     if(calc != sum)
     {
         if(UP_NOISY(opts->verbosity, QUIET))
-            up_err("sun sparc label in sector %"PRId64" with bad checksum",
+            up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
+                   "sun sparc label in sector %"PRId64" with bad checksum",
                    start);
-        return 0;
+        if(!opts->relaxed)
+            return 0;
     }
 
     *ret = buf;

@@ -324,9 +324,11 @@ sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
     if(calc != UP_LETOH16(sum))
     {
         if(UP_NOISY(opts->verbosity, QUIET))
-            up_err("sun x86 label in sector %"PRId64" (offset %d) "
+            up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
+                   "sun x86 label in sector %"PRId64" (offset %d) "
                    "with bad checksum", start, SUNX86_OFF);
-        return 0;
+        if(!opts->relaxed)
+            return 0;
     }
 
     *ret = buf;

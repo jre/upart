@@ -1,27 +1,30 @@
+make output less unreadable
 test with different sector sizes
 disklabel
   openbsd v1 labels
   more testing with labels from other BSDs
-  add disktype/fstype strings from other BSDs
+  some way to tell which BSD wrote a label?
 sun sparc label
   test vtoc
 apple map
   fix bzb
 filesystem tasting
 better overall description in manpage
-regression tests
-  automated tests to check -vv stdout, stderr, and exit status of dumps
 option to change displayed offset/size units
 interactive restore mode for dumps
 use PACKAGE_NAME instead of "upart" everywhere
 tests:
   add images with just one map format, to make failures easier to diagnose
     make these run before the jre-* images with multiple maps
+    disklabel from net/free/dragonfly plus both big and little endian openbsd
+    weird extended mbr configurations, both valid and invalid ones
   add tests that fail all the various checks when reading an image
     header too small/big
     bad header/body crc
   relaxed checks for some images
     add tests to trigger all relaxable checks
   there should be a test for every single error message, except i/o or resource
+  run tests for a specific set of images instead of all of them
 document image format
 move more sun common code and defines into shared header?
+other extended mbr ID?

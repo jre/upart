@@ -42,8 +42,10 @@ upart: ${UPART_OBJS}
 .c.o:
 	${CC} ${CFLAGS} -c -o $@ $<
 
-clean:
+clean: clean-tests
 	rm -f .depend ${ALL_PROGS} ${ALL_OBJS}
+
+clean-tests:
 	cd ${REGRESS_DIR} && env UPART_TEST_CLEAN=y ${REGRESS_CMD}
 
 cleaner: clean

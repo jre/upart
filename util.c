@@ -217,7 +217,6 @@ up_msg(unsigned int flags, const char *fmt, ...)
 static void
 up_vmsg(unsigned int flags, const char *fmt, va_list ap)
 {
-#ifdef XXXFMT
     if(!(flags & UP_MSG_FBARE))
     {
         if(flags & UP_MSG_FWARN)
@@ -227,7 +226,6 @@ up_vmsg(unsigned int flags, const char *fmt, va_list ap)
         else
             fprintf(stderr, "%s: ", up_getname());
     }
-#endif
     vfprintf(stderr, fmt, ap);
     if(!(flags & UP_MSG_FBARE))
         putc('\n', stderr);

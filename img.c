@@ -229,20 +229,12 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
     if(IMG_MAJOR != UP_BETOH16(hdr.major))
     {
         if(UP_NOISY(opts->verbosity, QUIET))
-#ifdef XXXFMT
             up_err("upart image version %d.x is too %s", UP_BETOH16(hdr.major),
-#else
-            up_err("error: upart image version %d.x is too %s", UP_BETOH16(hdr.major),
-#endif
                    (IMG_MAJOR < UP_BETOH16(hdr.major) ? "new" : "old"));
         return -1;
     }
     if(IMG_MINOR < UP_BETOH16(hdr.minor) && UP_NOISY(opts->verbosity, QUIET))
-#ifdef XXXFMT
         up_warn("treating version %d.%d upart image as %d.%d",
-#else
-        up_warn("warning: treating version %d.%d upart image as %d.%d",
-#endif
                 UP_BETOH16(hdr.major), UP_BETOH16(hdr.minor),
                 IMG_MAJOR, IMG_MINOR);
 

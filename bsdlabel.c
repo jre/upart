@@ -260,14 +260,9 @@ bsdlabel_setup(struct up_map *map, const struct up_opts *opts)
        LABEL_LGETINT16(label, checksum))
     {
         if(UP_NOISY(opts->verbosity, QUIET))
-#ifdef XXXFMT
             up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
                    "BSD disklabel with bad checksum in sector %"PRId64
                    " (offset %d)", map->start, label->sectoff);
-#else
-            up_err("ignoring BSD disklabel with bad checksum (sector %"PRId64
-                   ")", map->start);
-#endif
         if(!opts->relaxed)
             return 0;
     }
@@ -317,11 +312,7 @@ bsdlabel_info(const struct up_map *map, int verbose, char *buf, int size)
         packname[sizeof(packname)-1] = 0;
 
         return snprintf(buf, size, "BSD disklabel in sector %"PRId64
-#ifdef XXXFMT
                         " (offset %d) of %s:\n"
-#else
-                        " of %s:\n"
-#endif
                     "  type: %s (%u)\n"
                     "  disk: %s\n"
                     "  label: %s\n"
@@ -340,11 +331,7 @@ bsdlabel_info(const struct up_map *map, int verbose, char *buf, int size)
                     "  track-to-track seek: %u\n"
                     "  byte order: %s endian\n"
                     "  partition count: %u\n",
-#ifdef XXXFMT
                     map->start, priv->sectoff, map->disk->upd_name,
-#else
-                    map->start, map->disk->upd_name,
-#endif
                     disktypestr, disktype,
                     typename,
                     packname,

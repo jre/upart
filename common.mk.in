@@ -54,3 +54,6 @@ cleanest: cleaner
 
 test tests regress regression: ${ALL_PROGS}
 	cd ${REGRESS_DIR} && ${REGRESS_CMD}
+
+regen-tests:
+	cd ${REGRESS_DIR} && env UPART_TEST_REGEN=y ${REGRESS_CMD}

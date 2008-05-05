@@ -19,6 +19,24 @@ failcount=0
 totalcount=0
 faillist=
 
+if [ -n "$UPART_TEST_REGEN" ]
+then
+    for ii in *.img
+    do
+        test="${ii%.img}"
+        testoutfile="$test.out"
+        testerrfile="$test.err"
+        testexitfile="$test.exit"
+        rm -f "$testoutfile" "$testerrfile" "$testexitfile"
+        $upart "$ii" > "$testoutfile" 2> "$testerrfile"
+        exit=$?
+        test -s "$testoutfile" || rm -f "$testoutfile"
+        test -s "$testerrfile" || rm -f "$testerrfile"
+        test 0 = $exit || echo $exit > "$testexitfile"
+    done
+    exit
+fi
+
 echo "running tests..."
 
 for ii in *.img

@@ -4,7 +4,6 @@
 
 #include <sys/types.h>
 #include <assert.h>
-#include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -12,6 +11,16 @@
 #include <string.h>
 
 #include "util.h"
+
+#ifdef XXXfmt
+#define UP_ISPRINT(chr) \
+    (0x60 & (int)(chr) && \
+     !(0x80 & (int)(chr)))
+#else
+#define UP_ISPRINT(chr) \
+    (0x60 & (int)(chr) && \
+     (0x7f & ((int)(chr) + 1)))
+#endif
 
 static void up_vmsg(unsigned int flags, const char *fmt, va_list ap);
 
@@ -47,7 +56,7 @@ void
 up_hexdump(const void *_buf, size_t size, uint64_t dispoff, void *_stream)
 {
     static const char   hex[] = "0123456789abcdef";
-    const char *        buf = _buf;
+    const uint8_t      *buf = _buf;
     FILE *              stream = _stream;
     size_t              ii, jj;
 
@@ -61,8 +70,8 @@ up_hexdump(const void *_buf, size_t size, uint64_t dispoff, void *_stream)
         if(!(ii % 0x10))
             fprintf(stream, "%012"PRIx64" ", (uint64_t)ii + dispoff);
         putc(' ', stream);
-        putc(hex[((unsigned char)(buf[ii]) & 0xf0) >> 4], stream);
-        putc(hex[(unsigned char)(buf[ii]) & 0x0f], stream);
+        putc(hex[(buf[ii] >> 4) & 0xf], stream);
+        putc(hex[buf[ii] & 0xf], stream);
         if(!((ii + 1) % 0x8))
             putc(' ', stream);
         if(!((ii + 1) % 0x10))
@@ -71,9 +80,7 @@ up_hexdump(const void *_buf, size_t size, uint64_t dispoff, void *_stream)
             putc('|', stream);
             for(jj = ii - 0xf; ii >= jj; jj++)
             {
-                /* for hexdump -C compatible output, use this instead */
-                /* if('\xff' == (int)(buf[jj]) || isprint(buf[jj])) */
-                if(isprint((int)buf[jj]))
+                if(UP_ISPRINT(buf[jj]))
                     putc(buf[jj], stream);
                 else
                     putc('.', stream);
@@ -91,9 +98,7 @@ up_hexdump(const void *_buf, size_t size, uint64_t dispoff, void *_stream)
         putc('|', stream);
         for(jj = ii - jj; ii > jj; jj++)
         {
-            /* for hexdump -C compatible output, use this instead */
-            /* if('\xff' == (int)(buf[jj]) || isprint(buf[jj])) */
-            if(isprint((int)buf[jj]))
+            if(UP_ISPRINT(buf[jj]))
                 putc(buf[jj], stream);
             else
                 putc('.', stream);

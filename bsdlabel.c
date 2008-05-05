@@ -101,7 +101,6 @@ struct up_bsdpart
     int                 index;
 };
 
-/* XXX check these against other BSDs */
 static char *up_disktypes[] =
 {
     "unknown",
@@ -116,12 +115,16 @@ static char *up_disktypes[] =
     "type 9",
     "floppy",
     "ccd",
-    "vnd",
-    "ATAPI",
-    "RAID"
+    "vnd/vinum",
+    "ATAPI/DOC2K",
+    "RAID/RAID",
+    "ld",
+    "jfs"
+    "cgd",
+    "vinum",
+    "flash"
 };
 
-/* XXX these too */
 static char *up_fstypes[] =
 {
     "unused",
@@ -138,14 +141,20 @@ static char *up_fstypes[] =
     "HPFS",
     "ISO9660",
     "boot",
-    "ADOS",
-    "HFS",
-    "ADFS",
+    "ADOS/vinum",
+    "HFS/raid",
+    "ADFS/Filecore",
     "ext2fs",
-    "ccd",
+    "ccd/NTFS",
     "RAID",
-    "NTFS",
+    "NTFS/ccd",
+    "UDF/jfs",
+    "Apple UFS",
+    "vinum",
     "UDF",
+    "SysVBFS",
+    "EFS",
+    "ZFS"
 };
 
 static int bsdlabel_load(struct up_disk *disk, const struct up_part *parent,

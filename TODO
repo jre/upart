@@ -15,6 +15,8 @@ option to change displayed offset/size units
 interactive restore mode for dumps
 use PACKAGE_NAME instead of "upart" everywhere
 tests:
+  add images with just one map format, to make failures easier to diagnose
+    make these run before the jre-* images with multiple maps
   add tests that fail all the various checks when reading an image
     header too small/big
     bad header/body crc

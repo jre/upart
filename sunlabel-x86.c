@@ -321,7 +321,7 @@ sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
     while((const uint8_t *)ptr - buf < SUNX86_CHECKSUM_OFF)
         calc ^= *(ptr++);
 
-    if(calc != UP_LETOH16(sum))
+    if(calc != sum)
     {
         if(UP_NOISY(opts->verbosity, QUIET))
             up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),

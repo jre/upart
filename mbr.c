@@ -176,7 +176,6 @@ mbr_setup(struct up_map *map, const struct up_opts *opts)
     return 1;
 }
 
-/* XXX need a way to detect loops */
 static int
 mbrext_setup(struct up_map *map, const struct up_opts *opts)
 {
@@ -193,7 +192,7 @@ mbrext_setup(struct up_map *map, const struct up_opts *opts)
     max       = map->size;
     index     = MBR_PART_COUNT + parent->extcount;
 
-    do
+    for(;;)
     {
         /* load extended mbr */
         assert(absoff >= map->start && absoff + max <= map->start + map->size);
@@ -201,25 +200,38 @@ mbrext_setup(struct up_map *map, const struct up_opts *opts)
         if(!buf)
             return -1;
         if(MBR_MAGIC != UP_LETOH16(buf->magic))
+            /* XXX should warn here, maybe allow relaxed check */
             return 0;
         if(0 > mbr_addpart(map, &buf->part[MBR_EXTPART], index, absoff, buf))
             return -1;
+
+        if(MBR_ID_UNUSED == buf->part[MBR_EXTNEXT].type)
+            break;
+        else if(MBR_ID_EXT != buf->part[MBR_EXTNEXT].type)
+            /* XXX should warn here */
+            break;
+
         index++;
 
-        max    = buf->part[MBR_EXTNEXT].size;
-        reloff = buf->part[MBR_EXTNEXT].start;
+        max    = UP_LETOH32(buf->part[MBR_EXTNEXT].size);
+        reloff = UP_LETOH32(buf->part[MBR_EXTNEXT].start);
         absoff = reloff + map->start;
+#if 0 /* XXX why fix up bad partitions instead of ignoring them? */
         if(reloff + max > map->size)
             max = map->size - reloff;
         if(0 > max)
             max = 0;
-    } while(MBR_ID_EXT == buf->part[MBR_EXTNEXT].type &&
-            reloff + max <= map->size && 0 < max);
+#endif
 
-    /* XXX should give better diagnostic here */
-    if(MBR_ID_EXT == buf->part[MBR_EXTNEXT].type &&
-       UP_NOISY(opts->verbosity, QUIET))
-        up_warn("skipping logical MBR partition #%d: out of range", index);
+        if(0 > reloff || 0 >= max || reloff + max > map->size)
+        {
+            if(UP_NOISY(opts->verbosity, QUIET))
+                up_warn("logical MBR partition %d out of range: "
+                        "offset %"PRId64"+%"PRId64" size %"PRId64,
+                        index, map->start, reloff, max);
+            break;
+        }
+    }
 
     parent->extcount = index - MBR_PART_COUNT;
 

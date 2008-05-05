@@ -13,3 +13,13 @@ regression tests
   automated tests to check -vv stdout, stderr, and exit status of dumps
 option to change displayed offset/size units
 interactive restore mode for dumps
+use PACKAGE_NAME instead of "upart" everywhere
+tests:
+  add tests that fail all the various checks when reading an image
+    header too small/big
+    bad header/body crc
+  relaxed checks for some images
+    add tests to trigger all relaxable checks
+  there should be a test for every single error message, except i/o or resource
+document image format
+move more sun common code and defines into shared header?

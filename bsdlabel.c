@@ -257,7 +257,7 @@ bsdlabel_setup(struct up_map *map, const struct up_opts *opts)
 
     /* verify the checksum */
     if(bsdlabel_cksum(&label->label, buf, (LABEL_PART_SIZE * max)) !=
-       LABEL_LGETINT16(label, checksum))
+       label->label.checksum)
     {
         if(UP_NOISY(opts->verbosity, QUIET))
             up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),

@@ -12,15 +12,11 @@
 
 #include "util.h"
 
-#ifdef XXXfmt
+/* Consider everything above 0x19 and belot 0x7f printable */
 #define UP_ISPRINT(chr) \
     (0x60 & (int)(chr) && \
+     (0x7f & ((int)(chr) + 1)) && \
      !(0x80 & (int)(chr)))
-#else
-#define UP_ISPRINT(chr) \
-    (0x60 & (int)(chr) && \
-     (0x7f & ((int)(chr) + 1)))
-#endif
 
 static void up_vmsg(unsigned int flags, const char *fmt, va_list ap);
 

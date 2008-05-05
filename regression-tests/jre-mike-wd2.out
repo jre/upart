@@ -49,7 +49,7 @@ Apple partition map in sector 0 of jre-mike-wd2.img:
  f:            75801600        20972448 4.2BSD      0     0     1
  g:            96774048        23329152 4.2BSD      0     0     1
  h:   X               0               0 unused
- i:   X           39368        73662464 HFS
+ i:   X           39368        73662464 HFS/raid
  j:   X               0               0 unused
  k:   X               0               0 unused
  l:   X               0               0 unused

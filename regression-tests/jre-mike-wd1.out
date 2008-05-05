@@ -59,13 +59,13 @@ Apple partition map in sector 0 of jre-mike-wd1.img:
  f:           142126992        10486224 4.2BSD      0     0    16
  g:           152613216         8910272 4.2BSD      0     0    16
  h:   X               0               0 unused
- i:   X           42784         2097152 HFS
- j:   X         2139936         2097152 HFS
- k:   X         4237088        10485760 HFS
- l:   X        14722848        20971520 HFS
- m:   X        35694368        41943040 HFS
- n:   X        77637408        20971520 HFS
- o:   X       161523488        72918160 HFS
+ i:   X           42784         2097152 HFS/raid
+ j:   X         2139936         2097152 HFS/raid
+ k:   X         4237088        10485760 HFS/raid
+ l:   X        14722848        20971520 HFS/raid
+ m:   X        35694368        41943040 HFS/raid
+ n:   X        77637408        20971520 HFS/raid
+ o:   X       161523488        72918160 HFS/raid
  p:   X               0               0 unused
 22:          161523488        72918160 Apple_HFS                Chicago                  0x4000037f
 

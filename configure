@@ -1246,6 +1246,11 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-largefile     omit support for large files
 
+Optional Packages:
+  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
+  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-readline         use readline for interactive mode
+
 Some influential environment variables:
   CC          C compiler command
   CFLAGS      C compiler flags
@@ -1696,6 +1701,17 @@ if test -z "$CFLAGS"
 then
     CFLAGS="-g -Wall -Werror -O"
 fi
+
+readline_enabled=yes
+readline_prefix=
+
+# Check whether --with-readline was given.
+if test "${with_readline+set}" = set; then
+  withval=$with_readline;
+else
+  with_readline=check
+fi
+
 
 cat >>confdefs.h <<\_ACEOF
 #define _GNU_SOURCE 1
@@ -4714,6 +4730,201 @@ _ACEOF
 fi
 done
 
+
+if test xno != x"$with_readline"
+then
+    { echo "$as_me:$LINENO: checking for library containing tgetent" >&5
+echo $ECHO_N "checking for library containing tgetent... $ECHO_C" >&6; }
+if test "${ac_cv_search_tgetent+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char tgetent ();
+int
+main ()
+{
+return tgetent ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' termcap tinfo curses ncurses; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext &&
+       $as_test_x conftest$ac_exeext; then
+  ac_cv_search_tgetent=$ac_res
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext
+  if test "${ac_cv_search_tgetent+set}" = set; then
+  break
+fi
+done
+if test "${ac_cv_search_tgetent+set}" = set; then
+  :
+else
+  ac_cv_search_tgetent=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ echo "$as_me:$LINENO: result: $ac_cv_search_tgetent" >&5
+echo "${ECHO_T}$ac_cv_search_tgetent" >&6; }
+ac_res=$ac_cv_search_tgetent
+if test "$ac_res" != no; then
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+    if test xno = x"$ac_cv_search_tgetent"
+    then
+        if test xcheck != x"$with_readline"
+        then
+            { { echo "$as_me:$LINENO: error: failed to find termcap library, needed by readline" >&5
+echo "$as_me: error: failed to find termcap library, needed by readline" >&2;}
+   { (exit 1); exit 1; }; }
+        fi
+    else
+        { echo "$as_me:$LINENO: checking for library containing readline" >&5
+echo $ECHO_N "checking for library containing readline... $ECHO_C" >&6; }
+if test "${ac_cv_search_readline+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char readline ();
+int
+main ()
+{
+return readline ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' readline; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext &&
+       $as_test_x conftest$ac_exeext; then
+  ac_cv_search_readline=$ac_res
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext
+  if test "${ac_cv_search_readline+set}" = set; then
+  break
+fi
+done
+if test "${ac_cv_search_readline+set}" = set; then
+  :
+else
+  ac_cv_search_readline=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ echo "$as_me:$LINENO: result: $ac_cv_search_readline" >&5
+echo "${ECHO_T}$ac_cv_search_readline" >&6; }
+ac_res=$ac_cv_search_readline
+if test "$ac_res" != no; then
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+        if test xno = x"$ac_cv_search_readline"
+        then
+            if test xcheck != x"$with_readline"
+            then
+                { { echo "$as_me:$LINENO: error: failed to find readline" >&5
+echo "$as_me: error: failed to find readline" >&2;}
+   { (exit 1); exit 1; }; }
+            fi
+            # XXX should probably remove termcap lib here
+        else
+            cat >>confdefs.h <<\_ACEOF
+#define HAVE_READLINE 1
+_ACEOF
+
+        fi
+    fi
+fi
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure

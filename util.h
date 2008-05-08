@@ -246,6 +246,7 @@ struct up_opts
     int                 verbosity;
     unsigned int        plainfile     : 1;
     unsigned int        relaxed       : 1;
+    unsigned int        interactive   : 1;
 };
 
 #endif /* HDR_UPART_UTIL */

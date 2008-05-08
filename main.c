@@ -15,6 +15,7 @@
 #include "disk.h"
 #include "gpt.h"
 #include "img.h"
+#include "interactive.h"
 #include "map.h"
 #include "mbr.h"
 #include "util.h"
@@ -44,6 +45,12 @@ main(int argc, char *argv[])
     name = readargs(argc, argv, &opts);
     if(NULL == name)
         return EXIT_FAILURE;
+
+    if(opts.interactive)
+    {
+        interactive_loop(&opts);
+        return EXIT_FAILURE;
+    }
 
     disk = up_disk_open(name, &opts);
     if(!disk)
@@ -81,7 +88,7 @@ readargs(int argc, char *argv[], struct up_opts *opts)
     int opt;
 
     memset(opts, 0, sizeof *opts);
-    while(0 < (opt = getopt(argc, argv, "c:fh:l:qrs:vVw:z:")))
+    while(0 < (opt = getopt(argc, argv, "c:fh:il:qrs:vVw:z:")))
     {
         switch(opt)
         {
@@ -97,6 +104,9 @@ readargs(int argc, char *argv[], struct up_opts *opts)
                 opts->heads = strtol(optarg, NULL, 0);
                 if(0 >= opts->heads)
                     usage("illegal tracks per cylinder (head) count: %s", optarg);
+                break;
+            case 'i':
+                opts->interactive = 1;
                 break;
             case 'l':
                 opts->label = optarg;

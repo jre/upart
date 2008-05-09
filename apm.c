@@ -132,7 +132,7 @@ apm_load(struct up_disk *disk, const struct up_part *parent, void **priv,
     assert(APM_ENTRY_SIZE == sizeof(struct up_apm_p));
     *priv = NULL;
 
-    if(disk->upd_sectsize > APM_ENTRY_SIZE)
+    if(UP_DISK_1SECT(disk) > APM_ENTRY_SIZE)
         return 0;
 
     /* find partitions */
@@ -147,7 +147,7 @@ apm_load(struct up_disk *disk, const struct up_part *parent, void **priv,
         perror("malloc");
         return -1;
     }
-    apm->size = disk->upd_sectsize * size;
+    apm->size = UP_DISK_1SECT(disk) * size;
     apm->firstsect = start;
     apm->sectcount = size;
 
@@ -171,7 +171,7 @@ apm_setup(struct up_map *map, const struct up_opts *opts)
         return -1;
     apm->tmpbuf = data;
 
-    for(ii = 0; apm->size / map->disk->upd_sectsize > ii; ii++)
+    for(ii = 0; apm->size / UP_DISK_1SECT(map->disk) > ii; ii++)
     {
         part = calloc(1, sizeof *part);
         if(!part)
@@ -179,7 +179,7 @@ apm_setup(struct up_map *map, const struct up_opts *opts)
             perror("malloc");
             return -1;
         }
-        memcpy(&part->part, data + ii * map->disk->upd_sectsize,
+        memcpy(&part->part, data + ii * UP_DISK_1SECT(map->disk),
                sizeof part->part);
         part->index   = ii;
         apm_bounds(&part->part, &start, &size);
@@ -205,7 +205,7 @@ apm_info(const struct up_map *map, int verbose, char *buf, int size)
         return 0;
     /* XXX display driver info here like pdisk does? */
     return snprintf(buf, size, "Apple partition map in sector %"PRId64
-                    " of %s:", map->start, map->disk->upd_name);
+                    " of %s:", map->start, UP_DISK_PATH(map->disk));
 }
 
 static int

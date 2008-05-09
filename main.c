@@ -194,7 +194,7 @@ serialize(const struct up_disk *disk, const struct up_opts *opts)
         return -1;
     }
 
-    if(0 > up_img_save(disk, out, (opts->label ? opts->label : disk->upd_path),
+    if(0 > up_img_save(disk, out, (opts->label ? opts->label : UP_DISK_LABEL(disk)),
                        opts->serialize, opts))
     {
         fclose(out);

@@ -67,11 +67,17 @@ up_disk_open(const char *name, struct up_opts *opts)
     }
     RB_INIT(&disk->upd_sectsused);
     disk->upd_sectsused_count = 0;
-    disk->upd_name = strdup(name);
-    if(!disk->upd_name)
+    disk->ud_name = strdup(name);
+    if(!disk->ud_name)
     {
         perror("malloc");
         close(fd);
+        goto fail;
+    }
+    disk->ud_path = strdup(path ? path : disk->ud_name);
+    if(!disk->ud_path)
+    {
+        perror("malloc");
         goto fail;
     }
 
@@ -79,19 +85,6 @@ up_disk_open(const char *name, struct up_opts *opts)
     {
         /* it's not an image, initalize the disk struct normally */
         disk->upd_fd = fd;
-
-        /* copy full device path */
-        if(!path)
-            disk->upd_path = disk->upd_name;
-        else
-        {
-            disk->upd_path = strdup(path);
-            if(!disk->upd_path)
-            {
-                perror("malloc");
-                goto fail;
-            }
-        }
 
         /* try to get drive parameters from OS */
         up_os_getparams(fd, disk, opts);
@@ -102,7 +95,6 @@ up_disk_open(const char *name, struct up_opts *opts)
         close(fd);
         disk->upd_fd = -1;
         disk->upd_img = img;
-        disk->upd_path = disk->upd_name;
 
         /* try to get drive parameters from image */
         if(0 > up_img_getparams(disk, img))
@@ -114,7 +106,7 @@ up_disk_open(const char *name, struct up_opts *opts)
     {
         if(UP_NOISY(opts->verbosity, QUIET))
             up_err("failed to determine disk parameters for %s",
-                   disk->upd_path);
+                   UP_DISK_PATH(disk));
         goto fail;
     }
 
@@ -133,33 +125,33 @@ up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     /* validate and fixup arguments */
     assert(0 < bufsize && 0 < size && 0 <= start);
-    bufsize -= bufsize % disk->upd_sectsize;
-    if(bufsize / disk->upd_sectsize < size)
-        size = bufsize / disk->upd_sectsize;
+    bufsize -= bufsize % UP_DISK_1SECT(disk);
+    if(bufsize / UP_DISK_1SECT(disk) < size)
+        size = bufsize / UP_DISK_1SECT(disk);
     if(0 == bufsize || 0 == size)
         return 0;
-    if(INT64_MAX / disk->upd_sectsize < start)
+    if(INT64_MAX / UP_DISK_1SECT(disk) < start)
     {
         errno = EINVAL;
         return -1;
     }
 
     /* if there's an image then read from it instead */
-    if(disk->upd_img)
+    if(UP_DISK_IS_IMG(disk))
         return up_img_read(disk->upd_img, start, size, buf, verbose);
 
     /* otherwise try to read from the disk */
-    res = pread(disk->upd_fd, buf, size * disk->upd_sectsize,
-                start * disk->upd_sectsize);
+    res = pread(disk->upd_fd, buf, size * UP_DISK_1SECT(disk),
+                start * UP_DISK_1SECT(disk));
     if(0 > res)
     {
         if(UP_NOISY(verbose, QUIET))
             up_err("failed to read %s sector %"PRIu64": %s",
-                   disk->upd_path, start, strerror(errno));
+                   UP_DISK_PATH(disk), start, strerror(errno));
         return -1;
     }
 
-    return res / disk->upd_sectsize;
+    return res / UP_DISK_1SECT(disk);
 }
 
 const void *
@@ -167,7 +159,7 @@ up_disk_getsect(struct up_disk *disk, int64_t sect, int vrb)
 {
     if(!disk->upd_buf)
     {
-        disk->upd_buf = malloc(disk->upd_sectsize);
+        disk->upd_buf = malloc(UP_DISK_1SECT(disk));
         if(!disk->upd_buf)
         {
             perror("malloc");
@@ -175,7 +167,7 @@ up_disk_getsect(struct up_disk *disk, int64_t sect, int vrb)
         }
     }
 
-    if(1 > up_disk_read(disk, sect, 1, disk->upd_buf, disk->upd_sectsize, vrb))
+    if(1 > up_disk_read(disk, sect, 1, disk->upd_buf, UP_DISK_1SECT(disk), vrb))
         return NULL;
     else
         return disk->upd_buf;
@@ -238,7 +230,7 @@ up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t size,
     new->last  = first + size - 1;
     new->ref   = ref;
     new->tag   = tag;
-    new->data  = calloc(size, disk->upd_sectsize);
+    new->data  = calloc(size, UP_DISK_1SECT(disk));
     if(!new->data)
     {
         perror("malloc");
@@ -248,7 +240,7 @@ up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t size,
 
     /* try to read the sectors from disk */
     if(size != up_disk_read(disk, first, size, new->data,
-                            size * disk->upd_sectsize, verbose))
+                            size * UP_DISK_1SECT(disk), verbose))
     {
         free(new->data);
         free(new);
@@ -310,9 +302,8 @@ up_disk_close(struct up_disk *disk)
         close(disk->upd_fd);
     up_img_free(disk->upd_img);
     free(disk->upd_buf);
-    free(disk->upd_name);
-    if(disk->upd_path != disk->upd_name)
-        free(disk->upd_path);
+    free(disk->ud_name);
+    free(disk->ud_path);
     free(disk);
 }
 
@@ -323,32 +314,32 @@ fixparams(struct up_disk *disk, const struct up_opts *opts)
 
     /* command-line options override any other values */
     if(0 < opts->sectsize)
-        disk->upd_sectsize = opts->sectsize;
+        disk->ud_sectsize = opts->sectsize;
     if(0 < opts->cyls)
-        disk->upd_cyls = opts->cyls;
+        disk->ud_cyls = opts->cyls;
     if(0 < opts->heads)
-        disk->upd_heads = opts->heads;
+        disk->ud_heads = opts->heads;
     if(0 < opts->sects)
-        disk->upd_sects = opts->sects;
+        disk->ud_sects = opts->sects;
 
     /* sector size defaults to 512 */
-    if(0 >= disk->upd_sectsize)
-        disk->upd_sectsize = 512;
+    if(0 >= disk->ud_sectsize)
+        disk->ud_sectsize = 512;
 
     /* we can get the total size for a plain file */
-    if(0 >= disk->upd_size && !disk->upd_img &&
-       opts->plainfile && 0 == stat(disk->upd_path, &sb))
-        disk->upd_size = sb.st_size / disk->upd_sectsize;
+    if(0 >= disk->ud_size && !UP_DISK_IS_IMG(disk) &&
+       opts->plainfile && 0 == stat(UP_DISK_PATH(disk), &sb))
+        disk->ud_size = sb.st_size / disk->ud_sectsize;
 
     /* is that good enough? */
     if(0 == fixparams_checkone(disk))
         return 0;
 
     /* apparently not, try defaulting heads and sectors to 255 and 63 */
-    if(0 >= disk->upd_heads)
-        disk->upd_heads = 255;
-    if(0 >= disk->upd_sects)
-        disk->upd_sects = 63;
+    if(0 >= disk->ud_heads)
+        disk->ud_heads = 255;
+    if(0 >= disk->ud_sects)
+        disk->ud_sects = 63;
 
     /* ok, is it good enough now? */
     if(0 == fixparams_checkone(disk))
@@ -362,39 +353,39 @@ static int
 fixparams_checkone(struct up_disk *disk)
 {
     /* if we have all 4 then we're good */
-    if(0 <  disk->upd_cyls  && 0 <  disk->upd_heads &&
-       0 <  disk->upd_sects && 0 <  disk->upd_size )
+    if(0 <  disk->ud_cyls  && 0 <  disk->ud_heads &&
+       0 <  disk->ud_sects && 0 <  disk->ud_size )
         return 0;
 
     /* guess cyls from other three */
-    if(0 >= disk->upd_cyls  && 0 <  disk->upd_heads &&
-       0 <  disk->upd_sects && 0 <  disk->upd_size )
+    if(0 >= disk->ud_cyls  && 0 <  disk->ud_heads &&
+       0 <  disk->ud_sects && 0 <  disk->ud_size )
     {
-        disk->upd_cyls = disk->upd_size / disk->upd_sects / disk->upd_heads;
+        disk->ud_cyls = disk->ud_size / disk->ud_sects / disk->ud_heads;
         return 0;
     }
 
     /* guess heads from other three */
-    if(0 <  disk->upd_cyls  && 0 >= disk->upd_heads &&
-       0 <  disk->upd_sects && 0 <  disk->upd_size )
+    if(0 <  disk->ud_cyls  && 0 >= disk->ud_heads &&
+       0 <  disk->ud_sects && 0 <  disk->ud_size )
     {
-        disk->upd_heads = disk->upd_size / disk->upd_sects / disk->upd_cyls;
+        disk->ud_heads = disk->ud_size / disk->ud_sects / disk->ud_cyls;
         return 0;
     }
 
     /* guess sects from other three */
-    if(0 <  disk->upd_cyls  && 0 <  disk->upd_heads &&
-       0 >= disk->upd_sects && 0 <  disk->upd_size )
+    if(0 <  disk->ud_cyls  && 0 <  disk->ud_heads &&
+       0 >= disk->ud_sects && 0 <  disk->ud_size )
     {
-        disk->upd_sects = disk->upd_size / disk->upd_heads / disk->upd_cyls;
+        disk->ud_sects = disk->ud_size / disk->ud_heads / disk->ud_cyls;
         return 0;
     }
 
     /* guess size from other three */
-    if(0 <  disk->upd_cyls  && 0 <  disk->upd_heads &&
-       0 <  disk->upd_sects && 0 >= disk->upd_size )
+    if(0 <  disk->ud_cyls  && 0 <  disk->ud_heads &&
+       0 <  disk->ud_sects && 0 >= disk->ud_size )
     {
-        disk->upd_size = disk->upd_sects * disk->upd_heads * disk->upd_cyls;
+        disk->ud_size = disk->ud_sects * disk->ud_heads * disk->ud_cyls;
         return 0;
     }
 
@@ -409,21 +400,28 @@ up_disk_print(const struct up_disk *disk, void *_stream, int verbose)
     const char *        unit;
     float               size;
 
-    size = up_fmtsize(disk->upd_size * disk->upd_sectsize, &unit);
+    size = up_fmtsize(UP_DISK_SIZEBYTES(disk), &unit);
     if(UP_NOISY(verbose, NORMAL))
         fprintf(stream, "%s: %.*f%s (%"PRId64" sectors of %d bytes)\n",
-            disk->upd_name, UP_BESTDECIMAL(size), size, unit,
-            disk->upd_size, disk->upd_sectsize);
+                UP_DISK_PATH(disk), UP_BESTDECIMAL(size), size, unit,
+                UP_DISK_SIZESECTS(disk), UP_DISK_1SECT(disk));
     if(UP_NOISY(verbose, EXTRA))
         fprintf(stream,
-            "    device path:         %s\n"
-            "    sector size:         %d\n"
-            "    total sectors:       %"PRId64"\n"
-            "    total cylinders:     %d (cylinders)\n"
-            "    tracks per cylinder: %d (heads)\n"
-            "    sectors per track:   %d (sectors)\n"
-            "\n", disk->upd_path, disk->upd_sectsize, disk->upd_size,
-            (int)disk->upd_cyls, (int)disk->upd_heads, (int)disk->upd_sects);
+#ifdef XXXfmt
+                "    label:               %s\n"
+#endif
+                "    device path:         %s\n"
+                "    sector size:         %d\n"
+                "    total sectors:       %"PRId64"\n"
+                "    total cylinders:     %"PRId64" (cylinders)\n"
+                "    tracks per cylinder: %"PRId64" (heads)\n"
+                "    sectors per track:   %"PRId64" (sectors)\n"
+                "\n",
+#ifdef XXXfmt
+                UP_DISK_LABEL(disk),
+#endif
+                UP_DISK_PATH(disk), UP_DISK_1SECT(disk), UP_DISK_SIZESECTS(disk),
+                UP_DISK_CYLS(disk), UP_DISK_HEADS(disk), UP_DISK_SPT(disk));
     if(UP_NOISY(verbose, NORMAL))
         fputc('\n', stream);
 }

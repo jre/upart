@@ -211,7 +211,7 @@ bsdlabel_load(struct up_disk *disk, const struct up_part *parent, void **priv,
                         &buf, &sectoff, &byteoff, &endian, opts);
     if(0 >= res)
         return res;
-    assert(disk->upd_sectsize - LABEL_BASE_SIZE >= byteoff);
+    assert(UP_DISK_1SECT(disk) - LABEL_BASE_SIZE >= byteoff);
 
     /* allocate label struct */
     label = calloc(1, sizeof *label);
@@ -225,13 +225,13 @@ bsdlabel_load(struct up_disk *disk, const struct up_part *parent, void **priv,
     label->sectoff     = sectoff;
     label->byteoff     = byteoff;
     label->endian      = endian;
-    assert(byteoff + sizeof(label->label) <= disk->upd_sectsize);
+    assert(byteoff + sizeof(label->label) <= UP_DISK_1SECT(disk));
     memcpy(&label->label, buf + byteoff, sizeof label->label);
 
     /* check if the label extends past the end of the sector */
     size = LABEL_BASE_SIZE + (LABEL_PART_SIZE *
                               LABEL_LGETINT16(label, maxpart));
-    if(byteoff + size > disk->upd_sectsize)
+    if(byteoff + size > UP_DISK_1SECT(disk))
     {
         if(UP_NOISY(opts->verbosity, QUIET))
             up_err("ignoring truncated BSD disklabel in sector %"PRId64
@@ -261,7 +261,7 @@ bsdlabel_setup(struct up_map *map, const struct up_opts *opts)
 
     max  = LABEL_LGETINT16(label, maxpart);
     buf += label->byteoff + LABEL_BASE_SIZE;
-    assert(map->disk->upd_sectsize >=
+    assert(UP_DISK_1SECT(map->disk) >=
            label->byteoff + LABEL_BASE_SIZE + (LABEL_PART_SIZE * max));
 
     /* verify the checksum */
@@ -340,7 +340,7 @@ bsdlabel_info(const struct up_map *map, int verbose, char *buf, int size)
                     "  track-to-track seek: %u\n"
                     "  byte order: %s endian\n"
                     "  partition count: %u\n",
-                    map->start, priv->sectoff, map->disk->upd_name,
+                    map->start, priv->sectoff, UP_DISK_PATH(map->disk),
                     disktypestr, disktype,
                     typename,
                     packname,
@@ -363,7 +363,7 @@ bsdlabel_info(const struct up_map *map, int verbose, char *buf, int size)
     else if(UP_NOISY(verbose, NORMAL))
         return snprintf(buf, size, "BSD disklabel in sector %"PRId64
                         " (offset %d) of %s:",
-                        map->start, priv->sectoff, map->disk->upd_name);
+                        map->start, priv->sectoff, UP_DISK_PATH(map->disk));
     else
         return 0;
 }
@@ -469,7 +469,7 @@ bsdlabel_read(struct up_disk *disk, int64_t start, int64_t size,
     if(!buf)
         return -1;
 
-    for(ii = 0; disk->upd_sectsize - LABEL_BASE_SIZE >= ii; ii++)
+    for(ii = 0; UP_DISK_1SECT(disk) - LABEL_BASE_SIZE >= ii; ii++)
     {
         if(LABEL_MAGIC0BE == buf[ii+LABEL_OFF_MAGIC1] &&
            LABEL_MAGIC0BE == buf[ii+LABEL_OFF_MAGIC2])

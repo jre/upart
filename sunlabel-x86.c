@@ -114,7 +114,7 @@ sun_x86_load(struct up_disk *disk, const struct up_part *parent, void **priv,
     assert(SUNX86_SIZE == sizeof(struct up_sunx86_p));
     *priv = NULL;
 
-    if(disk->upd_sectsize < SUNX86_SIZE)
+    if(UP_DISK_1SECT(disk) < SUNX86_SIZE)
         return 0;
 
     /* read map and check magic */
@@ -211,7 +211,7 @@ sun_x86_info(const struct up_map *map, int verbose, char *buf, int size)
                     "  rpm: %u\n"
                     "  write sectskip: %u\n"
                     "  read sectskip: %u\n",
-                    map->start, SUNX86_OFF, map->disk->upd_name,
+                    map->start, SUNX86_OFF, UP_DISK_PATH(map->disk),
                     name,
                     UP_LETOH16(packed->sectsize),
                     UP_LETOH16(packed->partcount),
@@ -230,7 +230,7 @@ sun_x86_info(const struct up_map *map, int verbose, char *buf, int size)
     }
     else if(UP_NOISY(verbose, NORMAL))
         return snprintf(buf, size, "Sun x86 disk label in sector %"PRId64" of %s:",
-                        map->start, map->disk->upd_name);
+                        map->start, UP_DISK_PATH(map->disk));
     else
         return 0;
 }

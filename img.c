@@ -72,8 +72,8 @@ img_save_iter(const struct up_disk *disk, const struct up_disk_sectnode *node,
 #endif
     hdr->off  = UP_HTOBE64(node->first);
     hdr->size = UP_HTOBE64(node->last - node->first + 1);
-    memcpy(*data, node->data, (node->last - node->first + 1) * disk->upd_sectsize);
-    *data += (node->last - node->first + 1) * disk->upd_sectsize;
+    memcpy(*data, node->data, (node->last - node->first + 1) * UP_DISK_1SECT(disk));
+    *data += (node->last - node->first + 1) * UP_DISK_1SECT(disk);
 }
 
 int
@@ -90,13 +90,13 @@ up_img_save(const struct up_disk *disk, void *_stream, const char *label,
 
     /* allocate the data buffer */
     datalen = disk->upd_sectsused_count *
-        (disk->upd_sectsize + sizeof(struct up_imgsect_p));
+        (UP_DISK_1SECT(disk) + sizeof(struct up_imgsect_p));
     if(0 == disk->upd_sectsused_count)
         data = NULL;
     else
     {
         data = up_malloc(disk->upd_sectsused_count,
-                         disk->upd_sectsize + sizeof(struct up_imgsect_p));
+                         UP_DISK_1SECT(disk) + sizeof(struct up_imgsect_p));
         if(!data)
         {
             perror("malloc");
@@ -123,12 +123,12 @@ up_img_save(const struct up_disk *disk, void *_stream, const char *label,
     hdr.datastart = UP_HTOBE32(IMG_HDR_LEN);
     hdr.datasize  = UP_HTOBE32(datalen);
     hdr.datacrc   = UP_HTOBE32(up_crc32(data, datalen, 0));
-    hdr.sectsize  = UP_HTOBE32(disk->upd_sectsize);
+    hdr.sectsize  = UP_HTOBE32(UP_DISK_1SECT(disk));
     hdr.pad       = 0;
-    hdr.size      = UP_HTOBE64(disk->upd_size);
-    hdr.cyls      = UP_HTOBE64(disk->upd_cyls);
-    hdr.heads     = UP_HTOBE64(disk->upd_heads);
-    hdr.sects     = UP_HTOBE64(disk->upd_sects);
+    hdr.size      = UP_HTOBE64(UP_DISK_SIZESECTS(disk));
+    hdr.cyls      = UP_HTOBE64(UP_DISK_CYLS(disk));
+    hdr.heads     = UP_HTOBE64(UP_DISK_HEADS(disk));
+    hdr.sects     = UP_HTOBE64(UP_DISK_SPT(disk));
     strlcpy(hdr.label, label, sizeof hdr.label);
     /* this must go last, for reasons which should be obvious */
     hdr.hdrcrc    = UP_HTOBE32(up_crc32(&hdr, IMG_HDR_LEN, 0));
@@ -299,11 +299,11 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
 int
 up_img_getparams(struct up_disk *disk, struct up_img *img)
 {
-    disk->upd_sectsize = UP_BETOH32(img->hdr.sectsize);
-    disk->upd_size     = UP_BETOH64(img->hdr.size);
-    disk->upd_cyls     = UP_BETOH64(img->hdr.cyls);
-    disk->upd_heads    = UP_BETOH64(img->hdr.heads);
-    disk->upd_sects    = UP_BETOH64(img->hdr.sects);
+    disk->ud_sectsize = UP_BETOH32(img->hdr.sectsize);
+    disk->ud_size     = UP_BETOH64(img->hdr.size);
+    disk->ud_cyls     = UP_BETOH64(img->hdr.cyls);
+    disk->ud_heads    = UP_BETOH64(img->hdr.heads);
+    disk->ud_sects    = UP_BETOH64(img->hdr.sects);
     
     return 0;
 }

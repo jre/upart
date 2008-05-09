@@ -93,7 +93,7 @@ up_map_load(struct up_disk *disk, struct up_part *parent,
 
     CHECKTYPE(type);
     assert(0 <= parent->start && 0 <= parent->size &&
-           parent->start + parent->size <= disk->upd_size);
+           parent->start + parent->size <= UP_DISK_SIZESECTS(disk));
 
     funcs     = &st_types[type];
     *mapret   = NULL;
@@ -149,7 +149,7 @@ up_map_loadall(struct up_disk *disk, const struct up_opts *opts)
 {
     assert(!disk->maps);
 
-    disk->maps = map_newcontainer(disk->upd_size);
+    disk->maps = map_newcontainer(UP_DISK_SIZESECTS(disk));
     if(!disk->maps)
         return -1;
 
@@ -464,10 +464,11 @@ up_map_dumpsect(const struct up_map *map, void *_stream, int64_t start,
                                      tag, buf, sizeof buf);
 
     fprintf(stream, "\n\nDump of %s %s at sector %"PRId64" (0x%"PRIx64")%s:\n",
-            map->disk->upd_name, st_types[map->type].label, start, start, buf);
+            UP_DISK_PATH(map->disk), st_types[map->type].label,
+            start, start, buf);
 
-    up_hexdump(data, map->disk->upd_sectsize * size,
-               map->disk->upd_sectsize * start, stream);
+    up_hexdump(data, UP_DISK_1SECT(map->disk) * size,
+               UP_DISK_1SECT(map->disk) * start, stream);
 }
 
 const struct up_part *

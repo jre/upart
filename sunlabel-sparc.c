@@ -157,7 +157,7 @@ sparc_load(struct up_disk *disk, const struct up_part *parent, void **priv,
 
     *priv = NULL;
 
-    if(disk->upd_sectsize < SPARC_SIZE)
+    if(UP_DISK_1SECT(disk) < SPARC_SIZE)
         return 0;
 
     /* read map and check magic */
@@ -254,7 +254,7 @@ sparc_info(const struct up_map *map, int verbose, char *buf, int size)
                         "  alternate cylinders: %u\n"
                         "  tracks/cylinder: %u\n"
                         "  sectors/track: %u\n",
-                        extstr, map->start, map->disk->upd_name,
+                        extstr, map->start, UP_DISK_PATH(map->disk),
                         UP_BETOH16(sparc->rpm),
                         UP_BETOH16(sparc->physcyls),
                         UP_BETOH16(sparc->alts),
@@ -289,7 +289,7 @@ sparc_info(const struct up_map *map, int verbose, char *buf, int size)
     else if(UP_NOISY(verbose, NORMAL))
         return snprintf(buf, size,
                         "Sun sparc disklabel%s in sector %"PRId64" of %s:",
-                        extstr, map->start, map->disk->upd_name);
+                        extstr, map->start, UP_DISK_PATH(map->disk));
     else
         return 0;
 }

@@ -22,13 +22,13 @@ RB_HEAD(up_disk_sectmap, up_disk_sectnode);
 
 struct up_disk
 {
-    char *      upd_name;           /* disk name supplied by the user */
-    char *      upd_path;           /* path to opened device node */
-    int         upd_sectsize;       /* size of a sector in bytes */
-    int64_t     upd_cyls;           /* total number of cylinders */
-    int64_t     upd_heads;          /* number of tracks per cylinder */
-    int64_t     upd_sects;          /* number of sectors per track */
-    int64_t     upd_size;           /* total number of sects */
+    char *                  ud_name;        /* disk name supplied by user */
+    char *                  ud_path;        /* path to opened device node */
+    int                     ud_sectsize;    /* size of a sector in bytes */
+    int64_t                 ud_cyls;        /* total number of cylinders */
+    int64_t                 ud_heads;       /* number of tracks per cylinder */
+    int64_t                 ud_sects;       /* number of sectors per track */
+    int64_t                 ud_size;        /* total number of sects */
 
     /* don't touch any of these */
     int                     upd_fd;
@@ -38,6 +38,17 @@ struct up_disk
     struct up_disk_sectmap  upd_sectsused;
     int64_t                 upd_sectsused_count;
 };
+
+#define UP_DISK_LABEL(disk)     ((disk)->ud_name)
+#define UP_DISK_PATH(disk)      ((disk)->ud_path)
+#define UP_DISK_1SECT(disk)     ((disk)->ud_sectsize)
+#define UP_DISK_CYLS(disk)      ((disk)->ud_cyls)
+#define UP_DISK_HEADS(disk)     ((disk)->ud_heads)
+#define UP_DISK_SPT(disk)       ((disk)->ud_sects)
+#define UP_DISK_SIZESECTS(disk) ((disk)->ud_size)
+/* XXX should handle overflow here and anywhere sects are converted to bytes */
+#define UP_DISK_SIZEBYTES(disk) ((disk)->ud_size * (disk)->ud_sectsize)
+#define UP_DISK_IS_IMG(disk)    (NULL != (disk)->upd_img)
 
 /* Open the disk device read-only and get drive params */
 struct up_disk *up_disk_open(const char *path, struct up_opts *opts);

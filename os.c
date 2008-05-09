@@ -131,18 +131,18 @@ getparams_disklabel(int fd, struct up_disk *disk, const struct up_opts *opts)
     {
         if(errno && UP_NOISY(opts->verbosity, QUIET))
             up_err("failed to read disklabel for %s: %s",
-                   disk->upd_path, strerror(errno));
+                   UP_DISK_PATH(disk), strerror(errno));
         return -1;
     }
 
-    disk->upd_sectsize = dl.d_secsize;
-    disk->upd_cyls     = dl.d_ncylinders;
-    disk->upd_heads    = dl.d_ntracks;
-    disk->upd_sects    = dl.d_nsectors;
+    disk->ud_sectsize = dl.d_secsize;
+    disk->ud_cyls     = dl.d_ncylinders;
+    disk->ud_heads    = dl.d_ntracks;
+    disk->ud_sects    = dl.d_nsectors;
 #ifdef DL_GETDSIZE
-    disk->upd_size     = DL_GETDSIZE(&dl);
+    disk->ud_size     = DL_GETDSIZE(&dl);
 #else
-    disk->upd_size     = dl.d_secperunit;
+    disk->ud_size     = dl.d_secperunit;
 #endif
 
     return 0;
@@ -160,28 +160,28 @@ getparams_freebsd(int fd, struct up_disk *disk, const struct up_opts *opts)
         return -1;
 
     if(0 == ioctl(fd, DIOCGSECTORSIZE, &ival))
-        disk->upd_sectsize = ival;
+        disk->ud_sectsize = ival;
     else if(UP_NOISY(opts->verbosity, QUIET))
         up_warn("failed to read disk size for %s: %s",
-                disk->upd_path, strerror(errno));
+                UP_DISK_PATH(disk), strerror(errno));
 
-    if(0 < disk->upd_sectsize && 0 == ioctl(fd, DIOCGMEDIASIZE, &oval))
-        disk->upd_size = oval / disk->upd_sectsize;
+    if(0 < disk->ud_sectsize && 0 == ioctl(fd, DIOCGMEDIASIZE, &oval))
+        disk->ud_size = oval / disk->ud_sectsize;
     else if(UP_NOISY(opts->verbosity, QUIET))
         up_warn("failed to read sector size for %s: %s",
-                disk->upd_path, strerror(errno));
+                UP_DISK_PATH(disk), strerror(errno));
 
     if(0 == ioctl(fd, DIOCGFWSECTORS, &ival))
-        disk->upd_sects = ival;
+        disk->ud_sects = ival;
     else if(UP_NOISY(opts->verbosity, QUIET))
         up_warn("failed to read sectors per track for %s: %s",
-                disk->upd_path, strerror(errno));
+                UP_DISK_PATH(disk), strerror(errno));
 
     if(0 == ioctl(fd, DIOCGFWHEADS, &ival))
-        disk->upd_heads = ival;
+        disk->ud_heads = ival;
     else if(UP_NOISY(opts->verbosity, QUIET))
         up_warn("failed to read heads (tracks per cylinder) for %s: %s",
-                disk->upd_path, strerror(errno));
+                UP_DISK_PATH(disk), strerror(errno));
 
     return 0;
 }
@@ -202,23 +202,23 @@ getparams_linux(int fd, struct up_disk *disk, const struct up_opts *opts)
 
     if(0 == ioctl(fd, HDIO_GETGEO, &geom))
     {
-        disk->upd_cyls  = geom.cylinders;
-        disk->upd_heads = geom.heads;
-        disk->upd_sects = geom.sectors;
+        disk->ud_cyls  = geom.cylinders;
+        disk->ud_heads = geom.heads;
+        disk->ud_sects = geom.sectors;
     }
     if(0 == ioctl(fd, BLKSSZGET, &smallsize))
     {
-        disk->upd_sectsize = smallsize;
+        disk->ud_sectsize = smallsize;
         if(0 == ioctl(fd, BLKGETSIZE64, &bigsize))
-            disk->upd_size = bigsize / disk->upd_sectsize;
+            disk->ud_size = bigsize / disk->ud_sectsize;
     }
     else if(0 == ioctl(fd, BLKGETSIZE, &smallsize))
-        disk->upd_size = smallsize;
+        disk->ud_size = smallsize;
     else
     {
         if(UP_NOISY(opts->verbosity, QUIET))
             up_err("failed to read disk size for %s: %s",
-                disk->upd_path, strerror(errno));
+                UP_DISK_PATH(disk), strerror(errno));
         return -1;
     }
 
@@ -237,15 +237,15 @@ getparams_darwin(int fd, struct up_disk *disk, const struct up_opts *opts)
         return -1;
 
     if(0 == ioctl(fd, DKIOCGETBLOCKSIZE, &smallsize))
-        disk->upd_sectsize = smallsize;
+        disk->ud_sectsize = smallsize;
     else if(UP_NOISY(opts->verbosity, QUIET))
         up_warn("failed to read sector size for %s: %s",
-                disk->upd_path, strerror(errno));
+                UP_DISK_PATH(disk), strerror(errno));
     if(0 == ioctl(fd, DKIOCGETBLOCKCOUNT, &bigsize))
-        disk->upd_size = bigsize;
+        disk->ud_size = bigsize;
     else if(UP_NOISY(opts->verbosity, QUIET))
         up_warn("failed to read block count for %s: %s",
-                disk->upd_path, strerror(errno));
+                UP_DISK_PATH(disk), strerror(errno));
 
     return 0;
 }

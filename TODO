@@ -25,6 +25,7 @@ tests:
     add tests to trigger all relaxable checks
   there should be a test for every single error message, except i/o or resource
   run tests for a specific set of images instead of all of them
+  image with sector headers describing zero sectors
 document image format
 move more sun common code and defines into shared header?
 other extended mbr ID?

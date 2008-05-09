@@ -70,23 +70,19 @@ up_os_opendisk(const char *name, const char **path, const struct up_opts *opts)
 
     *path = NULL;
 
+    if(opts->plainfile || strchr(name, '/'))
+        return open(name, OPENFLAGS);
+
 #ifdef HAVE_OPENDISK
     buf[0] = 0;
     ret = opendisk(name, OPENFLAGS, buf, sizeof buf, 0);
+#else
+    strlcpy(buf, "/dev/", sizeof buf);
+    strlcat(buf, name, sizeof buf);
+    ret = open(buf, OPENFLAGS);
+#endif
     if(0 <= ret && buf[0])
         *path = buf;
-    return ret;
-#endif
-
-    ret = open(name, OPENFLAGS);
-    if(0 > ret && ENOENT == errno)
-    {
-        strlcpy(buf, "/dev/", sizeof buf);
-        strlcat(buf, name, sizeof buf);
-        ret = open(buf, OPENFLAGS);
-        if(0 <= ret)
-            *path = buf;
-    }
     return ret;
 }
 
@@ -118,7 +114,7 @@ getparams_disklabel(int fd, struct up_disk *disk, const struct up_opts *opts)
 {
     struct disklabel dl;
 
-    if(opts->plainfile)
+    if(UP_DISK_IS_FILE(disk))
         return -1;
 
     errno = 0;
@@ -156,7 +152,7 @@ getparams_freebsd(int fd, struct up_disk *disk, const struct up_opts *opts)
     u_int ival;
     off_t oval;
 
-    if(opts->plainfile)
+    if(UP_DISK_IS_FILE(disk))
         return -1;
 
     if(0 == ioctl(fd, DIOCGSECTORSIZE, &ival))
@@ -197,7 +193,7 @@ getparams_linux(int fd, struct up_disk *disk, const struct up_opts *opts)
     int smallsize;
     uint64_t bigsize;
 
-    if(opts->plainfile)
+    if(UP_DISK_IS_FILE(disk))
         return -1;
 
     if(0 == ioctl(fd, HDIO_GETGEO, &geom))
@@ -233,7 +229,7 @@ getparams_darwin(int fd, struct up_disk *disk, const struct up_opts *opts)
     uint32_t smallsize;
     uint64_t bigsize;
 
-    if(opts->plainfile)
+    if(UP_DISK_IS_FILE(disk))
         return -1;
 
     if(0 == ioctl(fd, DKIOCGETBLOCKSIZE, &smallsize))

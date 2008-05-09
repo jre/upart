@@ -27,12 +27,12 @@ static int sectcmp(struct up_disk_sectnode *left,
 RB_GENERATE_STATIC(up_disk_sectmap, up_disk_sectnode, link, sectcmp);
 
 struct up_disk *
-up_disk_open(const char *name, struct up_opts *opts)
+up_disk_open(const char *name, const struct up_opts *opts)
 {
     struct up_disk *disk;
     struct up_img  *img;
     const char     *path;
-    int             fd, res;
+    int             fd, res, plain;
     struct stat     sb;
 
     /* open device */
@@ -47,14 +47,22 @@ up_disk_open(const char *name, struct up_opts *opts)
 
     /* is it a plain file? */
     if(0 == fstat(fd, &sb) && S_ISREG(sb.st_mode))
-        opts->plainfile = 1;
+        plain = 1;
+    else
+        plain = 0;
 
     /* check if it's an image file */
-    res = up_img_load(fd, name, opts, &img);
-    if(0 > res)
+    img = NULL;
+    if(plain)
     {
-        close(fd);
-        return NULL;
+        res = up_img_load(fd, name, opts, &img);
+        if(0 > res)
+        {
+            close(fd);
+            return NULL;
+        }
+        else if(0 == res)
+            assert(NULL != img);
     }
 
     /* disk struct */
@@ -65,6 +73,7 @@ up_disk_open(const char *name, struct up_opts *opts)
         close(fd);
         return NULL;
     }
+    disk->ud_flag_plainfile = plain;
     RB_INIT(&disk->upd_sectsused);
     disk->upd_sectsused_count = 0;
     disk->ud_name = strdup(name);
@@ -81,7 +90,7 @@ up_disk_open(const char *name, struct up_opts *opts)
         goto fail;
     }
 
-    if(0 == res)
+    if(NULL == img)
     {
         /* it's not an image, initalize the disk struct normally */
         disk->upd_fd = fd;
@@ -328,7 +337,7 @@ fixparams(struct up_disk *disk, const struct up_opts *opts)
 
     /* we can get the total size for a plain file */
     if(0 >= disk->ud_size && !UP_DISK_IS_IMG(disk) &&
-       opts->plainfile && 0 == stat(UP_DISK_PATH(disk), &sb))
+       UP_DISK_IS_FILE(disk) && 0 == stat(UP_DISK_PATH(disk), &sb))
         disk->ud_size = sb.st_size / disk->ud_sectsize;
 
     /* is that good enough? */

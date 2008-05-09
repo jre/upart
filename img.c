@@ -167,8 +167,6 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
     ssize_t             res;
 
     *ret = NULL;
-    if(!opts->plainfile)
-        return 0;
 
     assert(IMG_HDR_LEN == sizeof(struct up_imghdr_p));
     assert(IMG_SECT_LEN == sizeof(struct up_imgsect_p));

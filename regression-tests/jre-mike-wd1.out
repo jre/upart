@@ -1,4 +1,5 @@
 jre-mike-wd1.img: 112GB (234441648 sectors of 512 bytes)
+    label:               jre-mike-wd1.img
     device path:         jre-mike-wd1.img
     sector size:         512
     total sectors:       234441648

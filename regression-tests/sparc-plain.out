@@ -1,4 +1,5 @@
 sparc-plain.img: 17.0GB (35566478 sectors of 512 bytes)
+    label:               sparc-plain.img
     device path:         sparc-plain.img
     sector size:         512
     total sectors:       35566478

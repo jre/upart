@@ -1,4 +1,5 @@
 jre-sibyl-wd0.img: 74.5GB (156301488 sectors of 512 bytes)
+    label:               jre-sibyl-wd0.img
     device path:         jre-sibyl-wd0.img
     sector size:         512
     total sectors:       156301488

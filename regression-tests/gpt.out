@@ -1,4 +1,5 @@
 gpt.img: 960MB (1966080 sectors of 512 bytes)
+    label:               gpt.img
     device path:         gpt.img
     sector size:         512
     total sectors:       1966080

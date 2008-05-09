@@ -1,4 +1,5 @@
 junk-before-after.img: 9.84MB (20160 sectors of 512 bytes)
+    label:               junk-before-after.img
     device path:         junk-before-after.img
     sector size:         512
     total sectors:       20160

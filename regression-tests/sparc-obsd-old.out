@@ -1,4 +1,5 @@
 sparc-obsd-old.img: 16.9GB (35378533 sectors of 512 bytes)
+    label:               sparc-obsd-old.img
     device path:         sparc-obsd-old.img
     sector size:         512
     total sectors:       35378533

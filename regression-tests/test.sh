@@ -12,7 +12,7 @@ then
     exit
 fi
 
-upart="../upart -vv"
+upart="../upart -fvv"
 diff="diff -u"
 
 failcount=0

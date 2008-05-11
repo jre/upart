@@ -187,8 +187,9 @@ serialize(const struct up_disk *disk, const struct up_opts *opts)
     out = fopen(opts->serialize, "wb");
     if(!out)
     {
-        fprintf(stderr, "failed to open file for writing: %s: %s\n",
-                opts->serialize, strerror(errno));
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("failed to open file for writing: %s: %s",
+                   opts->serialize, strerror(errno));
         return -1;
     }
 
@@ -201,8 +202,9 @@ serialize(const struct up_disk *disk, const struct up_opts *opts)
 
     if(fclose(out))
     {
-        fprintf(stderr, "failed to write to file: %s: %s\n",
-                opts->serialize, strerror(errno));
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("failed to write to file: %s: %s",
+                   opts->serialize, strerror(errno));
         return -1;
     }
 

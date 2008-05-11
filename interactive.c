@@ -2,9 +2,12 @@
 #include "config.h"
 #endif
 
+#include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "disk.h"
+#include "img.h"
 #include "map.h"
 #include "util.h"
 
@@ -16,25 +19,27 @@
 #else /*  HAVE_READLINE */
 
 #include <assert.h>
-#include <string.h>
 
 static size_t nrl_getline(char *buf, size_t size, FILE *stream);
 
 #endif /*  HAVE_READLINE */
 
+static int saveimg(const struct up_disk *disk, const char *path,
+                   const struct up_opts *opts);
 static int interactive_init(const struct up_opts *opts);
 static const char *interactive_nextline(const char *prompt,
                                         const struct up_opts *opts);
 
 int
 interactive_image(struct up_disk *src, const char *dest,
-                  const struct up_opts *opts)
+                  const struct up_opts *origopts)
 {
+    struct up_opts opts;
     const char *line;
-    int verbosity, done;
+    int done;
 
-    verbosity = opts->verbosity;
-    if(0 > interactive_init(opts))
+    opts = *origopts;
+    if(0 > interactive_init(&opts))
         return -1;
 
     printf("Interactive imaging mode (enter '?' for help)\n"
@@ -42,13 +47,13 @@ interactive_image(struct up_disk *src, const char *dest,
            "Destination image: %s\n\n",
            (UP_DISK_IS_IMG(src) ? "image" : "disk"),
            UP_DISK_PATH(src),
-           (dest ? "dest" : "none (read-only mode)"));
+           (dest ? dest : "none (read-only mode)"));
 
     done = 0;
     while(!done)
     {
         /* XXX make prompt configurable */
-        line = interactive_nextline("> ", opts);
+        line = interactive_nextline("> ", &opts);
         if(!line)
             return 0;
         if(!line[0])
@@ -58,7 +63,7 @@ interactive_image(struct up_disk *src, const char *dest,
         {
             case 'd':
             case 'D':
-                up_disk_print(src, stdout, verbosity);
+                up_disk_print(src, stdout, opts.verbosity);
                 break;
             case 'h':
             case 'H':
@@ -66,28 +71,34 @@ interactive_image(struct up_disk *src, const char *dest,
                 break;
             case 'm':
             case 'M':
-                up_map_printall(src, stdout, verbosity);
+                up_map_printall(src, stdout, opts.verbosity);
                 break;
             case 'p':
             case 'P':
-                up_disk_print(src, stdout, verbosity);
-                up_map_printall(src, stdout, verbosity);
-                if(UP_NOISY(verbosity, SPAM))
+                up_disk_print(src, stdout, opts.verbosity);
+                up_map_printall(src, stdout, opts.verbosity);
+                if(UP_NOISY(opts.verbosity, SPAM))
                     up_disk_dump(src, stdout);
                 break;
             case 'q':
             case 'Q':
-                verbosity--;
-                printf("verbosity level is now %d\n", verbosity);
+                opts.verbosity--;
+                printf("verbosity level is now %d\n", opts.verbosity);
                 break;
             case 'v':
             case 'V':
-                verbosity++;
-                printf("verbosity level is now %d\n", verbosity);
+                opts.verbosity++;
+                printf("verbosity level is now %d\n", opts.verbosity);
                 break;
             case 'w':
             case 'W':
-                printf("not yet implemented\n");
+                if(dest)
+                {
+                    if(0 == saveimg(src, dest, &opts))
+                        printf("successfully wrote image to %s\n", dest);
+                }
+                else if(UP_NOISY(opts.verbosity, QUIET))
+                    up_err("cannot save image: no destination path");
                 break;
             case 'x':
             case 'X':
@@ -108,6 +119,38 @@ interactive_image(struct up_disk *src, const char *dest,
 "  x  exit\n");
                 break;
         }
+    }
+
+    return 0;
+}
+
+int
+saveimg(const struct up_disk *disk, const char *path,
+        const struct up_opts *opts)
+{
+    FILE *out;
+
+    out = fopen(path, "wb");
+    if(!out)
+    {
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("failed to open file for writing: %s: %s",
+                   path, strerror(errno));
+        return -1;
+    }
+
+    if(0 > up_img_save(disk, out, UP_DISK_LABEL(disk), path, opts))
+    {
+        fclose(out);
+        return -1;
+    }
+
+    if(fclose(out))
+    {
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_err("failed to write to file: %s: %s",
+                   path, strerror(errno));
+        return -1;
     }
 
     return 0;

@@ -4,6 +4,8 @@
 
 #include <stdio.h>
 
+#include "disk.h"
+#include "map.h"
 #include "util.h"
 
 #ifdef HAVE_READLINE
@@ -25,22 +27,90 @@ static const char *interactive_nextline(const char *prompt,
                                         const struct up_opts *opts);
 
 int
-interactive_loop(const struct up_opts *opts)
+interactive_image(struct up_disk *src, const char *dest,
+                  const struct up_opts *opts)
 {
     const char *line;
+    int verbosity, done;
 
+    verbosity = opts->verbosity;
     if(0 > interactive_init(opts))
         return -1;
 
-    for(;;)
+    printf("Interactive imaging mode (enter '?' for help)\n"
+           "Source %s: %s\n"
+           "Destination image: %s\n\n",
+           (UP_DISK_IS_IMG(src) ? "image" : "disk"),
+           UP_DISK_PATH(src),
+           (dest ? "dest" : "none (read-only mode)"));
+
+    done = 0;
+    while(!done)
     {
-        /* XXX make this configurable */
+        /* XXX make prompt configurable */
         line = interactive_nextline("> ", opts);
         if(!line)
             return 0;
+        if(!line[0])
+            continue;
 
-        printf("echo: %s\n", line);
+        switch(line[0])
+        {
+            case 'd':
+            case 'D':
+                up_disk_print(src, stdout, verbosity);
+                break;
+            case 'h':
+            case 'H':
+                up_disk_dump(src, stdout);
+                break;
+            case 'm':
+            case 'M':
+                up_map_printall(src, stdout, verbosity);
+                break;
+            case 'p':
+            case 'P':
+                up_disk_print(src, stdout, verbosity);
+                up_map_printall(src, stdout, verbosity);
+                if(UP_NOISY(verbosity, SPAM))
+                    up_disk_dump(src, stdout);
+                break;
+            case 'q':
+            case 'Q':
+                verbosity--;
+                printf("verbosity level is now %d\n", verbosity);
+                break;
+            case 'v':
+            case 'V':
+                verbosity++;
+                printf("verbosity level is now %d\n", verbosity);
+                break;
+            case 'w':
+            case 'W':
+                printf("not yet implemented\n");
+                break;
+            case 'x':
+            case 'X':
+                done = 1;
+                break;
+            default:
+                if('?' != line[0])
+                    printf("invalid command: %c\n", line[0]);
+                printf("Valid commands:\n"
+"  ?  show this message\n"
+"  d  print disk information\n"
+"  h  print hexdump of all map sectors\n"
+"  m  print partition map\n"
+"  p  print disk and map info\n"
+"  q  decrease verbosity level\n"
+"  v  increase verbosity level\n"
+"  w  write image to destination file\n"
+"  x  exit\n");
+                break;
+        }
     }
+
+    return 0;
 }
 
 #ifdef HAVE_READLINE

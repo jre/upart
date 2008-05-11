@@ -32,6 +32,7 @@ main(int argc, char *argv[])
     struct up_opts              opts;
     char                       *name;
     struct up_disk             *disk;
+    int                         ret;
 
     if(0 > up_savename(argv[0]) || 0 > up_getendian())
         return EXIT_FAILURE;
@@ -46,12 +47,6 @@ main(int argc, char *argv[])
     if(NULL == name)
         return EXIT_FAILURE;
 
-    if(opts.interactive)
-    {
-        interactive_loop(&opts);
-        return EXIT_FAILURE;
-    }
-
     disk = up_disk_open(name, &opts);
     if(!disk)
         return EXIT_FAILURE;
@@ -61,13 +56,16 @@ main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    if(opts.serialize)
+    ret = EXIT_SUCCESS;
+    if(opts.interactive)
+    {
+        if(0 > interactive_image(disk, opts.serialize, &opts))
+            ret = EXIT_FAILURE;
+    }
+    else if(opts.serialize)
     {
         if(0 > serialize(disk, &opts))
-        {
-            up_disk_close(disk);
-            return EXIT_FAILURE;
-        }
+            ret = EXIT_FAILURE;
     }
     else
     {
@@ -79,7 +77,7 @@ main(int argc, char *argv[])
 
     up_disk_close(disk);
 
-    return EXIT_SUCCESS;
+    return ret;
 }
 
 static char *

@@ -14,6 +14,7 @@
 #include "map.h"
 #include "util.h"
 
+#define SUNX86_LABEL            "Sun x86 disk label"
 #define SUNX86_OFF              (1)
 #define SUNX86_MAGIC1           (0x600DDEEE)
 #define SUNX86_MAGIC1_OFF       (12)
@@ -90,7 +91,7 @@ static int sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
 void up_sunlabel_x86_register(void)
 {
     up_map_register(UP_MAP_SUN_X86,
-                    "Sun x86 disk label",
+                    SUNX86_LABEL,
                     0,
                     sun_x86_load,
                     sun_x86_setup,
@@ -154,8 +155,8 @@ sun_x86_setup(struct up_map *map, const struct up_opts *opts)
     if(SUNX86_MAXPARTITIONS < max)
     {
         if(UP_NOISY(opts->verbosity, QUIET))
-            up_warn("clamping partition count in sun x86 label from %d "
-                    "down to %d", max, SUNX86_MAXPARTITIONS);
+            up_warn("clamping partition count in %s from %d down to %d",
+                    up_map_label(map), max, SUNX86_MAXPARTITIONS);
         max = SUNX86_MAXPARTITIONS;
     }
 
@@ -195,7 +196,7 @@ sun_x86_info(const struct up_map *map, int verbose, char *buf, int size)
     {
         memcpy(name, packed->name, sizeof(packed->name));
         name[sizeof(name)-1] = 0;
-        return snprintf(buf, size, "Sun x86 disk label in sector %"PRId64" (offset %d) of %s:\n"
+        return snprintf(buf, size, "%s in sector %"PRId64" (offset %d) of %s:\n"
                     "  name: %s\n"
                     "  bytes/sector: %u\n"
                     "  partition count: %u\n"
@@ -211,6 +212,7 @@ sun_x86_info(const struct up_map *map, int verbose, char *buf, int size)
                     "  rpm: %u\n"
                     "  write sectskip: %u\n"
                     "  read sectskip: %u\n",
+                    up_map_label(map),
                     map->start, SUNX86_OFF, UP_DISK_PATH(map->disk),
                     name,
                     UP_LETOH16(packed->sectsize),
@@ -229,8 +231,8 @@ sun_x86_info(const struct up_map *map, int verbose, char *buf, int size)
                     UP_LETOH16(packed->readskip));
     }
     else if(UP_NOISY(verbose, NORMAL))
-        return snprintf(buf, size, "Sun x86 disk label in sector %"PRId64" of %s:",
-                        map->start, UP_DISK_PATH(map->disk));
+        return snprintf(buf, size, "%s in sector %"PRId64" of %s:",
+                        up_map_label(map), map->start, UP_DISK_PATH(map->disk));
     else
         return 0;
 }
@@ -292,26 +294,27 @@ sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
     {
         if(SUNX86_MAGIC1 == UP_BETOH32(magic1) &&
            UP_NOISY(opts->verbosity, QUIET))
-            up_err("sun x86 label in sector %"PRId64" (offset %d) "
-                   "with unknown byte order: big endian", start, SUNX86_OFF);
+            up_err("%s in sector %"PRId64" (offset %d) "
+                   "with unknown byte order: big endian",
+                   SUNX86_LABEL, start, SUNX86_OFF);
         return 0;
     }
 
     if(SUNX86_VERSION != UP_LETOH32(vers))
     {
         if(UP_NOISY(opts->verbosity, QUIET))
-            up_err("sun x86 label in sector %"PRId64" (offset %d) "
+            up_err("%s in sector %"PRId64" (offset %d) "
                    "with unknown version: %u",
-                   start, SUNX86_OFF, UP_LETOH32(vers));
+                   SUNX86_LABEL, start, SUNX86_OFF, UP_LETOH32(vers));
         return 0;
     }
 
     if(SUNX86_MAGIC2 != UP_LETOH16(magic2))
     {
         if(UP_NOISY(opts->verbosity, QUIET))
-            up_err("sun x86 label in sector %"PRId64
-                   " (offset %d) with bad secondary magic number: 0x%04x",
-                start, SUNX86_OFF, UP_LETOH16(magic2));
+            up_err("%s in sector %"PRId64" (offset %d) "
+                   "with bad secondary magic number: 0x%04x",
+                   SUNX86_LABEL, start, SUNX86_OFF, UP_LETOH16(magic2));
         return 0;
     }
 
@@ -325,8 +328,9 @@ sun_x86_read(struct up_disk *disk, int64_t start, int64_t size,
     {
         if(UP_NOISY(opts->verbosity, QUIET))
             up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
-                   "sun x86 label in sector %"PRId64" (offset %d) "
-                   "with bad checksum", start, SUNX86_OFF);
+                   "%s in sector %"PRId64" (offset %d) "
+                   "with bad checksum",
+                   SUNX86_LABEL, start, SUNX86_OFF);
         if(!opts->relaxed)
             return 0;
     }

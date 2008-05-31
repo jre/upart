@@ -243,8 +243,8 @@ mbr_getinfo(const struct up_map *map, int verbose, char *buf, int size)
 {
     if(!UP_NOISY(verbose, NORMAL))
         return 0;
-    return snprintf(buf, size, "MBR partition table in sector %"PRId64" of %s:",
-                    map->start, UP_DISK_PATH(map->disk));
+    return snprintf(buf, size, "%s partition table in sector %"PRId64" of %s:",
+                    up_map_label(map), map->start, UP_DISK_PATH(map->disk));
 }
 
 static int

@@ -332,6 +332,14 @@ up_map_freeprivpart_def(struct up_part *part, void *priv)
     free(priv);
 }
 
+const char *
+up_map_label(const struct up_map *map)
+{
+    CHECKTYPE(map->type);
+
+    return st_types[map->type].label;
+}
+
 void
 up_map_print(const struct up_map *map, void *_stream, int verbose, int recurse)
 {

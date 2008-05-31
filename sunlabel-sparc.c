@@ -15,6 +15,7 @@
 #include "sunlabel-sparc.h"
 #include "util.h"
 
+#define SPARC_LABEL             "Sun sparc disklabel"
 #define SPARC_MAGIC             (0xdabe)
 #define SPARC_MAGIC_OFF         (508)
 #define SPARC_CHECKSUM_OFF      (510)
@@ -130,7 +131,7 @@ static unsigned int sparc_check_obsd(const struct up_sparcobsd_p *obsd);
 void up_sunlabel_sparc_register(void)
 {
     up_map_register(UP_MAP_SUN_SPARC,
-                    "Sun sparc disklabel",
+                    SPARC_LABEL,
                     0,
                     sparc_load,
                     sparc_setup,
@@ -245,7 +246,7 @@ sparc_info(const struct up_map *map, int verbose, char *buf, int size)
     if(UP_NOISY(verbose, EXTRA))
     {
         res1 = snprintf(buf, size,
-                        "Sun sparc disklabel%s in sector %"PRId64" of %s:\n"
+                        "%s%s in sector %"PRId64" of %s:\n"
                         "  rpm: %u\n"
                         "  physical cylinders: %u\n"
                         "  alternates/cylinder: %u\n"
@@ -254,7 +255,8 @@ sparc_info(const struct up_map *map, int verbose, char *buf, int size)
                         "  alternate cylinders: %u\n"
                         "  tracks/cylinder: %u\n"
                         "  sectors/track: %u\n",
-                        extstr, map->start, UP_DISK_PATH(map->disk),
+                        up_map_label(map), extstr,
+                        map->start, UP_DISK_PATH(map->disk),
                         UP_BETOH16(sparc->rpm),
                         UP_BETOH16(sparc->physcyls),
                         UP_BETOH16(sparc->alts),
@@ -288,7 +290,7 @@ sparc_info(const struct up_map *map, int verbose, char *buf, int size)
     }
     else if(UP_NOISY(verbose, NORMAL))
         return snprintf(buf, size,
-                        "Sun sparc disklabel%s in sector %"PRId64" of %s:",
+                        "%s%s in sector %"PRId64" of %s:", up_map_label(map),
                         extstr, map->start, UP_DISK_PATH(map->disk));
     else
         return 0;
@@ -379,8 +381,8 @@ sparc_read(struct up_disk *disk, int64_t start, int64_t size,
         if(SPARC_MAGIC == UP_LETOH16(magic) &&
            UP_NOISY(opts->verbosity, QUIET))
             /* this is kind of silly but hey, why not? */
-            up_err("sun sparc label in sector %"PRId64" with unknown "
-                   "byte order: little endian", start);
+            up_err("%s in sector %"PRId64" with unknown "
+                   "byte order: little endian", SPARC_LABEL, start);
         return 0;
     }
 
@@ -394,8 +396,8 @@ sparc_read(struct up_disk *disk, int64_t start, int64_t size,
     {
         if(UP_NOISY(opts->verbosity, QUIET))
             up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
-                   "sun sparc label in sector %"PRId64" with bad checksum",
-                   start);
+                   "%s in sector %"PRId64" with bad checksum",
+                   SPARC_LABEL, start);
         if(!opts->relaxed)
             return 0;
     }

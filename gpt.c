@@ -224,7 +224,7 @@ gpt_getinfo(const struct up_map *map, int verbose, char *buf, int size)
     const struct up_gpt *gpt = map->priv;
 
     if(UP_NOISY(verbose, EXTRA))
-        return snprintf(buf, size, "EFI GPT partition table in sectors %"PRId64" "
+        return snprintf(buf, size, "%s partition table in sectors %"PRId64" "
                     "and %"PRId64" of %s:\n"
                     "  size:                 %u\n"
                     "  primary gpt sector:   %"PRIu64"\n"
@@ -236,6 +236,7 @@ gpt_getinfo(const struct up_map *map, int verbose, char *buf, int size)
                     "  max partitions:       %u\n"
                     "  partition size:       %u\n"
                     "\n",
+                    up_map_label(map),
                     GPT_PRIOFF(map->start, map->size),
                     GPT_SECOFF(map->start, map->size), UP_DISK_PATH(map->disk),
                     UP_LETOH32(gpt->gpt.size),
@@ -248,8 +249,9 @@ gpt_getinfo(const struct up_map *map, int verbose, char *buf, int size)
                     UP_LETOH32(gpt->gpt.maxpart),
                     UP_LETOH32(gpt->gpt.partsize));
     else if(UP_NOISY(verbose, NORMAL))
-        return snprintf(buf, size, "EFI GPT partition table in sectors %"PRId64
+        return snprintf(buf, size, "%s partition table in sectors %"PRId64
                         " and %"PRId64" of %s:",
+                        up_map_label(map),
                         GPT_PRIOFF(map->start, map->size),
                         GPT_SECOFF(map->start, map->size), UP_DISK_PATH(map->disk));
     else

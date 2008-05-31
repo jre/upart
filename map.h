@@ -93,6 +93,7 @@ void up_map_free(struct up_map *map);
 void up_map_freeprivmap_def(struct up_map *map, void *priv);
 void up_map_freeprivpart_def(struct up_part *part, void *priv);
 
+const char *up_map_label(const struct up_map *map);
 void up_map_print(const struct up_map *map, void *stream,
                   int verbose, int recurse);
 void up_map_dumpsect(const struct up_map *map, void *_stream, int64_t start,

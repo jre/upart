@@ -204,8 +204,8 @@ apm_info(const struct up_map *map, int verbose, char *buf, int size)
     if(!UP_NOISY(verbose, NORMAL))
         return 0;
     /* XXX display driver info here like pdisk does? */
-    return snprintf(buf, size, "Apple partition map in sector %"PRId64
-                    " of %s:", map->start, UP_DISK_PATH(map->disk));
+    return snprintf(buf, size, "%s in sector %"PRId64" of %s:",
+                    up_map_label(map), map->start, UP_DISK_PATH(map->disk));
 }
 
 static int

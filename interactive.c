@@ -26,6 +26,8 @@ static size_t nrl_getline(char *buf, size_t size, FILE *stream);
 
 static int saveimg(const struct up_disk *disk, const char *path,
                    const struct up_opts *opts);
+static void iter_listsect(const struct up_disk *disk,
+                          const struct up_disk_sectnode *sect, void *arg);
 static int interactive_init(const struct up_opts *opts);
 static const char *interactive_nextline(const char *prompt,
                                         const struct up_opts *opts);
@@ -36,7 +38,7 @@ interactive_image(struct up_disk *src, const char *dest,
 {
     struct up_opts opts;
     const char *line;
-    int done;
+    int done, itercount;
 
     opts = *origopts;
     if(0 > interactive_init(&opts))
@@ -68,6 +70,15 @@ interactive_image(struct up_disk *src, const char *dest,
             case 'h':
             case 'H':
                 up_disk_dump(src, stdout);
+                break;
+            case 'l':
+            case 'L':
+                if(UP_NOISY(opts.verbosity, NORMAL))
+                {
+                    itercount = 0;
+                    iter_listsect(src, NULL, NULL);
+                    up_disk_sectsiter(src, iter_listsect, &itercount);
+                }
                 break;
             case 'm':
             case 'M':
@@ -111,6 +122,7 @@ interactive_image(struct up_disk *src, const char *dest,
 "  ?  show this message\n"
 "  d  print disk information\n"
 "  h  print hexdump of all map sectors\n"
+"  l  list offset and size of all map sectors\n"
 "  m  print partition map\n"
 "  p  print disk and map info\n"
 "  q  decrease verbosity level\n"
@@ -154,6 +166,19 @@ saveimg(const struct up_disk *disk, const char *path,
     }
 
     return 0;
+}
+
+void
+iter_listsect(const struct up_disk *disk,
+              const struct up_disk_sectnode *sect, void *arg)
+{
+    int *count = arg;
+
+    if(sect)
+        printf("%3d %15"PRId64" %7"PRId64" %s\n", (*count)++, sect->first,
+               sect->last - sect->first + 1, up_map_label(sect->ref));
+    else
+        printf("  # %15s %7s Type\n", "Offset", "Sectors");
 }
 
 #ifdef HAVE_READLINE

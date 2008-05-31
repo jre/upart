@@ -427,7 +427,8 @@ up_map_print(const struct up_map *map, void *_stream, int verbose, int recurse)
             putc('\n', stream);
 
         /* recurse */
-        map_printcontainer(ii, stream, verbose);
+        if(recurse)
+            map_printcontainer(ii, stream, verbose);
     }
 }
 

@@ -2,8 +2,11 @@
 #include "config.h"
 #endif
 
+#include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "disk.h"
@@ -24,32 +27,38 @@ static size_t nrl_getline(char *buf, size_t size, FILE *stream);
 
 #endif /*  HAVE_READLINE */
 
+static char *splitword(char *str);
 static int saveimg(const struct up_disk *disk, const char *path,
                    const struct up_opts *opts);
+static void callsectlist(const struct up_disk *disk, char *sects,
+                         void (*func)(const struct up_disk *,
+                                      const struct up_disk_sectnode *, void *),
+                         void *arg);
+static void iter_dumpsect(const struct up_disk *disk,
+                          const struct up_disk_sectnode *sect, void *arg);
+static void iter_sectmap(const struct up_disk *disk,
+                          const struct up_disk_sectnode *sect, void *arg);
 static void iter_listsect(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
 static int interactive_init(const struct up_opts *opts);
-static const char *interactive_nextline(const char *prompt,
-                                        const struct up_opts *opts);
+static char *interactive_nextline(const char *prompt,
+                                  const struct up_opts *opts);
 
 int
-interactive_image(struct up_disk *src, const char *dest,
-                  const struct up_opts *origopts)
+up_interactive(struct up_disk *src, const struct up_opts *origopts)
 {
     struct up_opts opts;
-    const char *line;
-    int done, itercount;
+    char *line, *args;
+    int done;
 
     opts = *origopts;
     if(0 > interactive_init(&opts))
         return -1;
 
     printf("Interactive imaging mode (enter '?' for help)\n"
-           "Source %s: %s\n"
-           "Destination image: %s\n\n",
+           "Source %s: %s\n\n",
            (UP_DISK_IS_IMG(src) ? "image" : "disk"),
-           UP_DISK_PATH(src),
-           (dest ? dest : "none (read-only mode)"));
+           UP_DISK_PATH(src));
 
     done = 0;
     while(!done)
@@ -58,8 +67,11 @@ interactive_image(struct up_disk *src, const char *dest,
         line = interactive_nextline("> ", &opts);
         if(!line)
             return 0;
+        while(isspace(line[0]))
+            line++;
         if(!line[0])
             continue;
+        args = splitword(line);
 
         switch(line[0])
         {
@@ -69,20 +81,25 @@ interactive_image(struct up_disk *src, const char *dest,
                 break;
             case 'h':
             case 'H':
-                up_disk_dump(src, stdout);
+                if(*args)
+                    callsectlist(src, args, iter_dumpsect, NULL);
+                else
+                    up_disk_dump(src, stdout);
                 break;
             case 'l':
             case 'L':
-                if(UP_NOISY(opts.verbosity, NORMAL))
                 {
-                    itercount = 0;
+                    int itercount = 0;
                     iter_listsect(src, NULL, NULL);
                     up_disk_sectsiter(src, iter_listsect, &itercount);
                 }
                 break;
             case 'm':
             case 'M':
-                up_map_printall(src, stdout, opts.verbosity);
+                if(*args)
+                    callsectlist(src, args, iter_sectmap, &opts);
+                else
+                    up_map_printall(src, stdout, opts.verbosity);
                 break;
             case 'p':
             case 'P':
@@ -103,13 +120,10 @@ interactive_image(struct up_disk *src, const char *dest,
                 break;
             case 'w':
             case 'W':
-                if(dest)
-                {
-                    if(0 == saveimg(src, dest, &opts))
-                        printf("successfully wrote image to %s\n", dest);
-                }
-                else if(UP_NOISY(opts.verbosity, QUIET))
-                    up_err("cannot save image: no destination path");
+                if(!*args)
+                    up_err("cannot save image: no path given");
+                else if(0 == saveimg(src, args, &opts))
+                    printf("successfully wrote image to %s\n", args);
                 break;
             case 'x':
             case 'X':
@@ -119,21 +133,50 @@ interactive_image(struct up_disk *src, const char *dest,
                 if('?' != line[0])
                     printf("invalid command: %c\n", line[0]);
                 printf("Valid commands:\n"
-"  ?  show this message\n"
-"  d  print disk information\n"
-"  h  print hexdump of all map sectors\n"
-"  l  list offset and size of all map sectors\n"
-"  m  print partition map\n"
-"  p  print disk and map info\n"
-"  q  decrease verbosity level\n"
-"  v  increase verbosity level\n"
-"  w  write image to destination file\n"
-"  x  exit\n");
+"  ?             show this message\n"
+"  d             print disk information\n"
+"  h [sect#...]  print hexdump of all map sectors\n"
+"  l             list offset and size of all map sectors\n"
+"  m [sect#...]  print partition map\n"
+"  p             print disk and map info\n"
+"  q             decrease verbosity level\n"
+"  v             increase verbosity level\n"
+"  w path        write an image to path\n"
+"  x             exit\n");
                 break;
         }
     }
 
     return 0;
+}
+
+char *
+splitword(char *str)
+{
+    char *ii = str;
+
+    /* skip over any initial whitespace */
+    while(*ii && isspace(*ii))
+        ii++;
+
+    /* skip over first word */
+    while(*ii && !isspace(*ii))
+        ii++;
+
+    /* if we hit end of string then there are no more words,
+       return zero-length string */
+    if(!*ii)
+        return ii;
+
+    /* terminate string at end of first word */
+    *(ii++) = '\0';
+
+    /* skip over whitespace */
+    while(*ii && isspace(*ii))
+        ii++;
+
+    /* return beginning of next word or zero-length string */
+    return ii;
 }
 
 int
@@ -169,6 +212,52 @@ saveimg(const struct up_disk *disk, const char *path,
 }
 
 void
+callsectlist(const struct up_disk *disk, char *sects,
+             void (*func)(const struct up_disk *,
+                          const struct up_disk_sectnode *, void *), void *arg)
+{
+    char *num, *end;
+    long off;
+    const struct up_disk_sectnode *node;
+
+    while(*sects)
+    {
+        num = sects;
+        sects = splitword(sects);
+        end = NULL;
+        off = strtol(num, &end, 10);
+        if(!end || num == end || *end)
+            up_err("argument is not a number: %s", num);
+        else if(0 > off || INT_MAX < off)
+            up_err("invalid sector index: %ld", off);
+        else
+        {
+            node = up_disk_nthsect(disk, off);
+            if(node)
+                func(disk, node, arg);
+            else
+                up_err("no sector at index %ld", off);
+        }
+    }
+}
+
+void
+iter_dumpsect(const struct up_disk *disk,
+              const struct up_disk_sectnode *sect, void *arg)
+{
+    up_map_dumpsect(sect->ref, stdout, sect->first,
+                    sect->last - sect->first + 1, sect->data, sect->tag);
+}
+
+void
+iter_sectmap(const struct up_disk *disk,
+             const struct up_disk_sectnode *sect, void *arg)
+{
+    const struct up_opts *opts = arg;
+    up_map_print(sect->ref, stdout, opts->verbosity, 0);
+}
+
+void
 iter_listsect(const struct up_disk *disk,
               const struct up_disk_sectnode *sect, void *arg)
 {
@@ -197,7 +286,7 @@ interactive_init(const struct up_opts *opts)
     return 0;
 }
 
-const char *
+char *
 interactive_nextline(const char *prompt, const struct up_opts *opts)
 {
     char *line = readline(prompt);
@@ -219,7 +308,7 @@ interactive_init(const struct up_opts *opts)
     return 0;
 }
 
-const char *
+char *
 interactive_nextline(const char *prompt, const struct up_opts *opts)
 {
     static char buf[1024];

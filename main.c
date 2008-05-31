@@ -59,7 +59,7 @@ main(int argc, char *argv[])
     ret = EXIT_SUCCESS;
     if(opts.interactive)
     {
-        if(0 > interactive_image(disk, opts.serialize, &opts))
+        if(0 > up_interactive(disk, &opts))
             ret = EXIT_FAILURE;
     }
     else if(opts.serialize)
@@ -143,6 +143,8 @@ readargs(int argc, char *argv[], struct up_opts *opts)
 
     if(opts->label && !opts->serialize)
         usage("-w is required for -l");
+    if(opts->interactive && opts->serialize)
+        usage("-i and -w are not compatible");
     if(optind + 1 == argc)
         return argv[optind];
     else

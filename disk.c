@@ -454,6 +454,19 @@ up_disk_sectsiter(const struct up_disk *disk,
         func(disk, node, arg);
 }
 
+const struct up_disk_sectnode *
+up_disk_nthsect(const struct up_disk *disk, int off)
+{
+    struct up_disk_sectnode *node;
+
+    assert(0 <= off);
+    for(node = RB_MIN(up_disk_sectmap, &disk->upd_sectsused); node;
+        node = RB_NEXT(up_disk_sectmap, &disk->upd_sectsused, node))
+        if(0 == off--)
+            return node;
+    return NULL;
+}
+
 static int
 sectcmp(struct up_disk_sectnode *left, struct up_disk_sectnode *right)
 {

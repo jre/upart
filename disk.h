@@ -87,6 +87,8 @@ void up_disk_sectsiter(const struct up_disk *disk,
                        void (*func)(const struct up_disk *,
                                     const struct up_disk_sectnode *, void *),
                        void *arg);
+/* return the nth sector */
+const struct up_disk_sectnode *up_disk_nthsect(const struct up_disk *disk, int n);
 
 /* Close disk and free struct. */
 void up_disk_close(struct up_disk *disk);

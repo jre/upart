@@ -240,7 +240,7 @@ interactive_nextline(const char *prompt, const struct up_opts *opts)
     nl = strchr(buf, '\n');
     if(nl)
         *nl = '\0';
-    else
+    else if(!feof(stdin))
     {
         if(UP_NOISY(opts->verbosity, QUIET))
             up_warn("truncating line to %zu characters", sizeof(buf) - 1);

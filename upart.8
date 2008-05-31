@@ -1,5 +1,5 @@
 .Dd April 25, 2008
-.Dt UPART 1
+.Dt UPART 8
 .Os
 .Sh NAME
 .Nm upart
@@ -53,16 +53,18 @@ A text label to save with an image created with
 the default is the full device path. The label will be truncated to
 255 characters if it is longer.
 .It Fl q
-Show less information when printing partition maps. Multiple
+Show less information when reading, parsing, and printing partition
+maps. Additional
 .Fl q
-options decreases the verbosity level further.
+options decrease the verbosity level further.
 .It Fl r
 Relax some checks when parsing partition maps. This may be useful to
-extract information out of a corrupted map.
+extract information out of a partially corrupted map.
 .It Fl v
-Show more information when printing partition maps. Multiple
+Show more information when reading, parsing, and printing partition
+maps. Additional
 .Fl v
-options decreases the verbosity level further.
+options increase the verbosity level further.
 .It Fl V
 Display the version of
 .Nm
@@ -70,7 +72,9 @@ and exit.
 .It Fl w Ar file
 Save partition information for the disk to
 .Ar file
-in a special compact image format.
+in a compact binary image format. The image may later be read by
+.Nm
+as if it were the original disk.
 .It Fl z Ar size
 Specify an alternative sector size in bytes.
 .El

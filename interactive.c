@@ -27,6 +27,7 @@ static size_t nrl_getline(char *buf, size_t size, FILE *stream);
 
 #endif /*  HAVE_READLINE */
 
+static int numstr(const char *str, int *num);
 static char *splitword(char *str);
 static int saveimg(const struct up_disk *disk, const char *path,
                    const struct up_opts *opts);
@@ -110,13 +111,21 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
                 break;
             case 'q':
             case 'Q':
-                opts.verbosity--;
-                printf("verbosity level is now %d\n", opts.verbosity);
+                done = 1;
                 break;
             case 'v':
             case 'V':
-                opts.verbosity++;
-                printf("verbosity level is now %d\n", opts.verbosity);
+                if(!*args)
+                    printf("verbosity level is %d\n", opts.verbosity);
+                else
+                {
+                    int level;
+                    if(0 == numstr(args, &level))
+                    {
+                        opts.verbosity = level;
+                        printf("verbosity level is now %d\n", opts.verbosity);
+                    }
+                }
                 break;
             case 'w':
             case 'W':
@@ -124,10 +133,6 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
                     up_err("cannot save image: no path given");
                 else if(0 == saveimg(src, args, &opts))
                     printf("successfully wrote image to %s\n", args);
-                break;
-            case 'x':
-            case 'X':
-                done = 1;
                 break;
             default:
                 if('?' != line[0])
@@ -139,15 +144,34 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
 "  l             list offset and size of all map sectors\n"
 "  m [sect#...]  print partition map\n"
 "  p             print disk and map info\n"
-"  q             decrease verbosity level\n"
-"  v             increase verbosity level\n"
-"  w path        write an image to path\n"
-"  x             exit\n");
+"  q             quit\n"
+"  v [level]     get or set verbosity level\n"
+"  w path        write an image to path\n");
                 break;
         }
     }
 
     return 0;
+}
+
+int
+numstr(const char *str, int *ret)
+{
+    char *end;
+    long num;
+
+    end = NULL;
+    num = strtol(str, &end, 10);
+    if(!end || str == end || *end)
+        up_err("argument is not a number: %s", str);
+    else if(INT_MIN > num || INT_MAX < num)
+        up_err("number out of range: %ld", num);
+    else
+    {
+        *ret = num;
+        return 0;
+    }
+    return -1;
 }
 
 char *
@@ -216,27 +240,21 @@ callsectlist(const struct up_disk *disk, char *sects,
              void (*func)(const struct up_disk *,
                           const struct up_disk_sectnode *, void *), void *arg)
 {
-    char *num, *end;
-    long off;
+    char *num;
+    int off;
     const struct up_disk_sectnode *node;
 
     while(*sects)
     {
         num = sects;
         sects = splitword(sects);
-        end = NULL;
-        off = strtol(num, &end, 10);
-        if(!end || num == end || *end)
-            up_err("argument is not a number: %s", num);
-        else if(0 > off || INT_MAX < off)
-            up_err("invalid sector index: %ld", off);
-        else
+        if(0 == numstr(num, &off))
         {
             node = up_disk_nthsect(disk, off);
             if(node)
                 func(disk, node, arg);
             else
-                up_err("no sector at index %ld", off);
+                up_err("no sector at index %d", off);
         }
     }
 }

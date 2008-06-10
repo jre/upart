@@ -2,6 +2,7 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
@@ -50,7 +51,6 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
 {
     struct up_opts opts;
     char *line, *args;
-    int done;
 
     opts = *origopts;
     if(0 > interactive_init(&opts))
@@ -61,8 +61,7 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
            (UP_DISK_IS_IMG(src) ? "image" : "disk"),
            UP_DISK_PATH(src));
 
-    done = 0;
-    while(!done)
+    for(;;)
     {
         /* XXX make prompt configurable */
         line = interactive_nextline("> ", &opts);
@@ -82,7 +81,7 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
             printf("Valid commands:\n"
 "  ?             show this message\n"
 "  d             print disk information\n"
-"  h [sect#...]  print hexdump of all map sectors\n"
+"  h [sect#...]  print hexdump of all map sector(s)\n"
 "  l             list offset and size of all map sectors\n"
 "  m [sect#...]  print partition map\n"
 "  p             print disk and map info\n"
@@ -129,8 +128,7 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
                 break;
             case 'q':
             case 'Q':
-                done = 1;
-                break;
+                return 0;
             case 'v':
             case 'V':
                 if(!*args)
@@ -157,7 +155,8 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
         }
     }
 
-    return 0;
+    assert("woa man, I'm freakin' out!");
+    return -1;
 }
 
 int

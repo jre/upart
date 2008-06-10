@@ -74,6 +74,24 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
             continue;
         args = splitword(line);
 
+        if(line[1])
+        {
+          usage:
+            if('?' != line[0])
+                printf("invalid command: %s\n", line);
+            printf("Valid commands:\n"
+"  ?             show this message\n"
+"  d             print disk information\n"
+"  h [sect#...]  print hexdump of all map sectors\n"
+"  l             list offset and size of all map sectors\n"
+"  m [sect#...]  print partition map\n"
+"  p             print disk and map info\n"
+"  q             quit\n"
+"  v [level]     get or set verbosity level\n"
+"  w path        write an image to path\n");
+            continue;
+        }
+
         switch(line[0])
         {
             case 'd':
@@ -135,19 +153,7 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
                     printf("successfully wrote image to %s\n", args);
                 break;
             default:
-                if('?' != line[0])
-                    printf("invalid command: %c\n", line[0]);
-                printf("Valid commands:\n"
-"  ?             show this message\n"
-"  d             print disk information\n"
-"  h [sect#...]  print hexdump of all map sectors\n"
-"  l             list offset and size of all map sectors\n"
-"  m [sect#...]  print partition map\n"
-"  p             print disk and map info\n"
-"  q             quit\n"
-"  v [level]     get or set verbosity level\n"
-"  w path        write an image to path\n");
-                break;
+                goto usage;
         }
     }
 

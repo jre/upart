@@ -219,6 +219,7 @@ void up_warn(const char *fmt, ...) __attribute__((format (printf, 1, 2)));
 void up_msg(unsigned int flags, const char *fmt, ...)
     __attribute__((format (printf, 2, 3)));
 
+#define UP_VERBOSITY_SILENT     -2
 #define UP_VERBOSITY_QUIET      -1
 #define UP_VERBOSITY_NORMAL     0
 #define UP_VERBOSITY_EXTRA      1

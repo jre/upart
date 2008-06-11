@@ -35,6 +35,7 @@ up_disk_open(const char *name, const struct up_opts *opts,
     const char     *path;
     int             fd, res, plain;
     struct stat     sb;
+    char           *newname, *newpath;
 
     /* open device */
     fd = up_os_opendisk(name, &path, opts, writable);
@@ -66,7 +67,7 @@ up_disk_open(const char *name, const struct up_opts *opts,
             assert(NULL != img);
     }
 
-    /* disk struct */
+    /* allocate disk struct and name and path strings */
     disk = calloc(1, sizeof *disk);
     if(!disk)
     {
@@ -74,42 +75,52 @@ up_disk_open(const char *name, const struct up_opts *opts,
         close(fd);
         return NULL;
     }
+    newname = strdup(name);
+    if(!newname)
+    {
+        perror("malloc");
+        close(fd);
+        free(disk);
+        return NULL;
+    }
+    newpath = strdup(path ? path : newname);
+    if(!newpath)
+    {
+        perror("malloc");
+        close(fd);
+        free(disk);
+        free(newname);
+        return NULL;
+    }
+
+    /* populate disk struct */
     disk->ud_flag_plainfile = plain;
     RB_INIT(&disk->upd_sectsused);
     disk->upd_sectsused_count = 0;
-    disk->ud_name = strdup(name);
-    if(!disk->ud_name)
-    {
-        perror("malloc");
-        close(fd);
-        goto fail;
-    }
-    disk->ud_path = strdup(path ? path : disk->ud_name);
-    if(!disk->ud_path)
-    {
-        perror("malloc");
-        goto fail;
-    }
-
+    disk->ud_name = newname;
+    disk->ud_path = newpath;
     if(NULL == img)
-    {
-        /* it's not an image, initalize the disk struct normally */
         disk->upd_fd = fd;
-
-        /* try to get drive parameters from OS */
-        up_os_getparams(fd, disk, opts);
-    }
     else
     {
-        /* it is an image, initalize the disk accordingly */
         close(fd);
         disk->upd_fd = -1;
         disk->upd_img = img;
-
-        /* try to get drive parameters from image */
-        if(0 > up_img_getparams(&disk->ud_params, img))
-            goto fail;
     }
+
+    return disk;
+}
+
+int
+up_disk_setup(struct up_disk *disk, const struct up_opts *opts)
+{
+    if(!UP_DISK_IS_IMG(disk))
+        /* try to get drive parameters from OS */
+        up_os_getparams(disk->upd_fd, disk, opts);
+    else
+        /* try to get drive parameters from image */
+        if(0 > up_img_getparams(&disk->ud_params, disk->upd_img))
+            return -1;
 
     /* try to fill in missing drive paramaters */
     if(0 > fixparams(disk, opts))
@@ -117,14 +128,11 @@ up_disk_open(const char *name, const struct up_opts *opts,
         if(UP_NOISY(opts->verbosity, QUIET))
             up_err("failed to determine disk parameters for %s",
                    UP_DISK_PATH(disk));
-        goto fail;
+        return -1;
     }
 
-    return disk;
-
-  fail:
-    up_disk_close(disk);
-    return NULL;
+    disk->ud_flag_setup = 1;
+    return 0;
 }
 
 int64_t
@@ -134,6 +142,7 @@ up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
     ssize_t res;
 
     /* validate and fixup arguments */
+    assert(disk->ud_flag_setup);
     assert(0 < bufsize && 0 < size && 0 <= start);
     bufsize -= bufsize % UP_DISK_1SECT(disk);
     if(bufsize / UP_DISK_1SECT(disk) < size)
@@ -194,6 +203,7 @@ up_disk_checksectrange(struct up_disk *disk, int64_t start, int64_t size)
 {
     struct up_disk_sectnode key;
 
+    assert(disk->ud_flag_setup);
     assert(0 < size);
     memset(&key, 0, sizeof key);
     key.first = start;
@@ -228,6 +238,7 @@ up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t size,
     struct up_disk_sectnode *new;
 
     /* allocate data structure */
+    assert(disk->ud_flag_setup);
     assert(0 < size);
     new = calloc(1, sizeof *new);
     if(NULL == new)
@@ -282,6 +293,7 @@ up_disk_sectsunref(struct up_disk *disk, const void *ref)
 {
     struct up_disk_sectnode *ii, *inc;
 
+    assert(disk->ud_flag_setup);
     for(ii = RB_MIN(up_disk_sectmap, &disk->upd_sectsused); ii; ii = inc)
     {
         inc = RB_NEXT(up_disk_sectmap, &disk->upd_sectsused, ii);
@@ -410,6 +422,7 @@ up_disk_print(const struct up_disk *disk, void *_stream, int verbose)
     const char *        unit;
     float               size;
 
+    assert(disk->ud_flag_setup);
     size = up_fmtsize(UP_DISK_SIZEBYTES(disk), &unit);
     if(UP_NOISY(verbose, NORMAL))
         fprintf(stream, "%s: %.*f%s (%"PRId64" sectors of %d bytes)\n",
@@ -436,6 +449,7 @@ up_disk_dump(const struct up_disk *disk, void *stream)
 {
     struct up_disk_sectnode *node;
 
+    assert(disk->ud_flag_setup);
     for(node = RB_MIN(up_disk_sectmap, &disk->upd_sectsused); node;
         node = RB_NEXT(up_disk_sectmap, &disk->upd_sectsused, node))
         up_map_dumpsect(node->ref, stream, node->first,
@@ -450,6 +464,7 @@ up_disk_sectsiter(const struct up_disk *disk,
 {
     struct up_disk_sectnode *node;
 
+    assert(disk->ud_flag_setup);
     for(node = RB_MIN(up_disk_sectmap, &disk->upd_sectsused); node;
         node = RB_NEXT(up_disk_sectmap, &disk->upd_sectsused, node))
         func(disk, node, arg);
@@ -460,6 +475,7 @@ up_disk_nthsect(const struct up_disk *disk, int off)
 {
     struct up_disk_sectnode *node;
 
+    assert(disk->ud_flag_setup);
     assert(0 <= off);
     for(node = RB_MIN(up_disk_sectmap, &disk->upd_sectsused); node;
         node = RB_NEXT(up_disk_sectmap, &disk->upd_sectsused, node))

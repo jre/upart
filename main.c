@@ -50,7 +50,7 @@ main(int argc, char *argv[])
     disk = up_disk_open(name, &opts, 0);
     if(!disk)
         return EXIT_FAILURE;
-    if(0 > up_map_loadall(disk, &opts))
+    if(0 > up_disk_setup(disk, &opts) || 0 > up_map_loadall(disk, &opts))
     {
         up_disk_close(disk);
         return EXIT_FAILURE;

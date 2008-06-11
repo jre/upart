@@ -27,6 +27,7 @@ struct up_disk
     char *                  ud_path;        /* path to opened device node */
     struct up_diskparams    ud_params;
 
+    unsigned int            ud_flag_setup     : 1;
     unsigned int            ud_flag_plainfile : 1;
 
     /* don't touch any of these */
@@ -51,9 +52,12 @@ struct up_disk
 #define UP_DISK_IS_IMG(disk)    (NULL != (disk)->upd_img)
 #define UP_DISK_IS_FILE(disk)   ((disk)->ud_flag_plainfile)
 
-/* Open the disk device read-only and get drive params */
+/* Open the disk device, must call up_disk_setup() after this */
 struct up_disk *up_disk_open(const char *path, const struct up_opts *opts,
                              int writable);
+
+/* Read get drive parameters and make disk ready to read from or write to */
+int up_disk_setup(struct up_disk *disk, const struct up_opts *opts);
 
 /* Read from disk into buffer. Note that START, SIZE, and the return
    value are in sectors but bufsize is in bytes. */

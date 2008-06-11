@@ -270,6 +270,11 @@ dorestore(const struct up_disk *src, const char *path,
     /* XXX silently open ro to get parameters, then prompt to see if
        correct */
     data.dest = up_disk_open(path, opts, 0 /* XXX */);
+    if(0 > up_disk_setup(data.dest, opts))
+    {
+        up_disk_close(data.dest);
+        return;
+    }
     if(!data.dest)
         return;
 

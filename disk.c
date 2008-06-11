@@ -42,8 +42,8 @@ up_disk_open(const char *name, const struct up_opts *opts,
     if(0 > fd)
     {
         if(UP_NOISY(opts->verbosity, QUIET))
-            up_err("failed to open %s for reading: %s",
-                   (path ? path : name), strerror(errno));
+            up_err("failed to open %s %s: %s", (path ? path : name),
+                   (writable ? "read-write" : "read-only"), strerror(errno));
         return NULL;
     }
 

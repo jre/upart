@@ -47,7 +47,7 @@ main(int argc, char *argv[])
     if(NULL == name)
         return EXIT_FAILURE;
 
-    disk = up_disk_open(name, &opts);
+    disk = up_disk_open(name, &opts, 0);
     if(!disk)
         return EXIT_FAILURE;
     if(0 > up_map_loadall(disk, &opts))

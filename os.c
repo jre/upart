@@ -35,9 +35,9 @@
 #include "util.h"
 
 #ifdef O_LARGEFILE
-#define OPENFLAGS O_RDONLY | O_LARGEFILE
+#define OPENFLAGS(flags)        (O_LARGEFILE | (flags))
 #else
-#define OPENFLAGS O_RDONLY
+#define OPENFLAGS(flags)        (flags)
 #endif
 
 #if defined(HAVE_SYS_DISKLABEL_H) && \
@@ -63,23 +63,25 @@ static int getparams_darwin(int fd, struct up_disk *disk,
 #endif
 
 int
-up_os_opendisk(const char *name, const char **path, const struct up_opts *opts)
+up_os_opendisk(const char *name, const char **path, const struct up_opts *opts,
+               int writable)
 {
     static char buf[MAXPATHLEN];
-    int ret;
+    int flags, ret;
 
     *path = NULL;
+    flags = OPENFLAGS(writable ? O_RDWR : O_RDONLY);
 
     if(opts->plainfile || strchr(name, '/'))
-        return open(name, OPENFLAGS);
+        return open(name, flags);
 
 #ifdef HAVE_OPENDISK
     buf[0] = 0;
-    ret = opendisk(name, OPENFLAGS, buf, sizeof buf, 0);
+    ret = opendisk(name, flags, buf, sizeof buf, 0);
 #else
     strlcpy(buf, "/dev/", sizeof buf);
     strlcat(buf, name, sizeof buf);
-    ret = open(buf, OPENFLAGS);
+    ret = open(buf, flags);
 #endif
     if(0 <= ret && buf[0])
         *path = buf;

@@ -27,7 +27,8 @@ static int sectcmp(struct up_disk_sectnode *left,
 RB_GENERATE_STATIC(up_disk_sectmap, up_disk_sectnode, link, sectcmp);
 
 struct up_disk *
-up_disk_open(const char *name, const struct up_opts *opts)
+up_disk_open(const char *name, const struct up_opts *opts,
+             int writable)
 {
     struct up_disk *disk;
     struct up_img  *img;
@@ -36,7 +37,7 @@ up_disk_open(const char *name, const struct up_opts *opts)
     struct stat     sb;
 
     /* open device */
-    fd = up_os_opendisk(name, &path, opts);
+    fd = up_os_opendisk(name, &path, opts, writable);
     if(0 > fd)
     {
         if(UP_NOISY(opts->verbosity, QUIET))

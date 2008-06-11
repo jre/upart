@@ -38,6 +38,9 @@ static void dorestore(const struct up_disk *src, const char *path,
                       const struct up_opts *opts);
 static void iter_dorestore(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
+static int promptparam(int64_t *val, int64_t min, int64_t max,
+                       const struct up_opts *opts,
+                       const char *desc, const char *help);
 static void callsectlist(const struct up_disk *disk, char *sects,
                          void (*func)(const struct up_disk *,
                                       const struct up_disk_sectnode *, void *),
@@ -62,7 +65,8 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
     if(0 > interactive_init(&opts))
         return -1;
 
-    printf("Interactive imaging and restore mode (enter '?' for help)\n"
+    printf("Interactive imaging and restore mode\n"
+           "  (enter '?' for help at any prompt)\n"
            "Source %s: %s\n\n",
            (UP_DISK_IS_IMG(src) ? "image" : "disk"),
            UP_DISK_PATH(src));
@@ -180,8 +184,9 @@ numstr(const char *str, int *ret)
     long num;
 
     end = NULL;
+    errno = 0;
     num = strtol(str, &end, 10);
-    if(!end || str == end || *end)
+    if(errno || !end || str == end || *end)
         up_err("argument is not a number: %s", str);
     else if(INT_MIN > num || INT_MAX < num)
         up_err("number out of range: %ld", num);
@@ -263,22 +268,56 @@ struct restoredata
 
 void
 dorestore(const struct up_disk *src, const char *path,
-          const struct up_opts *opts)
+          const struct up_opts *origopts)
 {
-    struct restoredata data;
+    struct up_opts      opts;
+    struct restoredata  data;
+    int64_t             annoyance;
 
-    /* XXX silently open ro to get parameters, then prompt to see if
-       correct */
-    data.dest = up_disk_open(path, opts, 0 /* XXX */);
-    if(0 > up_disk_setup(data.dest, opts))
+    opts = *origopts;
+    memset(&opts.params, 0, sizeof opts.params);
+    data.dest = up_disk_open(path, &opts, 0);
+    if(!data.dest)
+        return;
+    opts.verbosity = UP_VERBOSITY_SILENT;
+    up_disk_setup(data.dest, &opts);
+    opts.verbosity = origopts->verbosity;
+    opts.params = data.dest->ud_params;
+    up_disk_close(data.dest);
+
+    printf("Interactive restore from %s to %s:\n",
+           UP_DISK_PATH(src), path);
+
+    printf("Drive parameters for %s:\n", path);
+    annoyance = opts.params.ud_sectsize;
+    if(0 > promptparam(&annoyance, 0, INT_MAX, &opts,
+                       "sector size",
+                       "size of a single sector in bytes, usually 512") ||
+       0 > promptparam(&opts.params.ud_cyls, 0, INT64_MAX, &opts,
+                       "total cylinders count",
+                       "commonly referred to just as \"cylinders\"") ||
+       0 > promptparam(&opts.params.ud_heads, 0, INT64_MAX, &opts,
+                       "tracks per cylinder",
+                       "commonly called \"heads\"") ||
+       0 > promptparam(&opts.params.ud_sects, 0, INT64_MAX, &opts,
+                       "sectors per track",
+                       "commonly just referred to as \"sectors\""))
+        return;
+    opts.params.ud_sectsize = annoyance;
+
+    data.dest = up_disk_open(path, &opts, 0 /* XXX */);
+    if(!data.dest)
+        return;
+    if(0 > up_disk_setup(data.dest, &opts))
     {
         up_disk_close(data.dest);
         return;
     }
-    if(!data.dest)
-        return;
 
-    data.opts = opts;
+    printf("ok, I think it worked\n");
+    up_disk_print(data.dest, stdout, opts.verbosity);
+
+    data.opts = &opts;
     data.index = 0;
     up_disk_sectsiter(src, iter_dorestore, &data);
 
@@ -294,6 +333,46 @@ iter_dorestore(const struct up_disk *disk, const struct up_disk_sectnode *sect,
 
     printf("XXX prompt restore index %d sector %"PRId64" count %"PRId64"\n",
            index, sect->first, sect->last - sect->first + 1);
+}
+
+int
+promptparam(int64_t *val, int64_t min, int64_t max, const struct up_opts *opts,
+            const char *desc, const char *help)
+{
+    char prompt[80];
+    char *line, *end;
+    long long num;
+
+    snprintf(prompt, sizeof prompt, "%s: [%"PRId64"] ", desc, *val);
+
+    for(;;)
+    {
+        line = interactive_nextline(prompt, opts);
+        if(!line)
+            return -1;
+        while(isspace(line[0]))
+            line++;
+        if(!line[0])
+            return 0;
+        if('?' == line[0])
+        {
+            printf("%s\n", help);
+            continue;
+        }
+
+        end = NULL;
+        errno = 0;
+        num = strtol(line, &end, 10);
+        if(errno || !end || *end)
+            up_err("failed to parse number: %s", line);
+        else if(min > num || max < num)
+            up_err("number out of range: %s", line);
+        else
+        {
+            *val = num;
+            return 0;
+        }
+    }
 }
 
 void
@@ -370,7 +449,9 @@ interactive_nextline(const char *prompt, const struct up_opts *opts)
 {
     char *line = readline(prompt);
 
-    if(line && line[0])
+    if(!line)
+        rl_crlf();
+    else if(line[0])
         add_history(line);
 
     return line;

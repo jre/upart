@@ -28,10 +28,16 @@ static size_t nrl_getline(char *buf, size_t size, FILE *stream);
 
 #endif /*  HAVE_READLINE */
 
+struct restoredata;
+
 static int numstr(const char *str, int *num);
 static char *splitword(char *str);
 static int saveimg(const struct up_disk *disk, const char *path,
                    const struct up_opts *opts);
+static void dorestore(const struct up_disk *src, const char *path,
+                      const struct up_opts *opts);
+static void iter_dorestore(const struct up_disk *disk,
+                          const struct up_disk_sectnode *sect, void *arg);
 static void callsectlist(const struct up_disk *disk, char *sects,
                          void (*func)(const struct up_disk *,
                                       const struct up_disk_sectnode *, void *),
@@ -56,7 +62,7 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
     if(0 > interactive_init(&opts))
         return -1;
 
-    printf("Interactive imaging mode (enter '?' for help)\n"
+    printf("Interactive imaging and restore mode (enter '?' for help)\n"
            "Source %s: %s\n\n",
            (UP_DISK_IS_IMG(src) ? "image" : "disk"),
            UP_DISK_PATH(src));
@@ -86,6 +92,7 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
 "  m [sect#...]  print partition map\n"
 "  p             print disk and map info\n"
 "  q             quit\n"
+"  r device      interactive restore from source to device\n"
 "  v [level]     get or set verbosity level\n"
 "  w path        write an image to path\n");
             continue;
@@ -129,6 +136,13 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
             case 'q':
             case 'Q':
                 return 0;
+            case 'r':
+            case 'R':
+                if(!*args)
+                    up_err("cannot restore: no device given");
+                else
+                    dorestore(src, args, &opts);
+                break;
             case 'v':
             case 'V':
                 if(!*args)
@@ -238,6 +252,43 @@ saveimg(const struct up_disk *disk, const char *path,
     }
 
     return 0;
+}
+
+struct restoredata
+{
+    struct up_disk             *dest;
+    const struct up_opts       *opts;
+    int                         index;
+};
+
+void
+dorestore(const struct up_disk *src, const char *path,
+          const struct up_opts *opts)
+{
+    struct restoredata data;
+
+    /* XXX silently open ro to get parameters, then prompt to see if
+       correct */
+    data.dest = up_disk_open(path, opts, 0 /* XXX */);
+    if(!data.dest)
+        return;
+
+    data.opts = opts;
+    data.index = 0;
+    up_disk_sectsiter(src, iter_dorestore, &data);
+
+    up_disk_close(data.dest);
+}
+
+void
+iter_dorestore(const struct up_disk *disk, const struct up_disk_sectnode *sect,
+               void *arg)
+{
+    struct restoredata *data = arg;
+    int index = (data->index++);
+
+    printf("XXX prompt restore index %d sector %"PRId64" count %"PRId64"\n",
+           index, sect->first, sect->last - sect->first + 1);
 }
 
 void

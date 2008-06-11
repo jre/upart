@@ -2,6 +2,7 @@
 #define HDR_UPART_DISK
 
 #include "bsdtree.h"
+#include "util.h"
 
 struct up_opts;
 struct up_map;
@@ -24,11 +25,7 @@ struct up_disk
 {
     char *                  ud_name;        /* disk name supplied by user */
     char *                  ud_path;        /* path to opened device node */
-    int64_t                 ud_cyls;        /* total number of cylinders */
-    int64_t                 ud_heads;       /* number of tracks per cylinder */
-    int64_t                 ud_sects;       /* number of sectors per track */
-    int64_t                 ud_size;        /* total number of sects */
-    int                     ud_sectsize;    /* size of a sector in bytes */
+    struct up_diskparams    ud_params;
 
     unsigned int            ud_flag_plainfile : 1;
 
@@ -43,13 +40,14 @@ struct up_disk
 
 #define UP_DISK_LABEL(disk)     ((disk)->ud_name)
 #define UP_DISK_PATH(disk)      ((disk)->ud_path)
-#define UP_DISK_1SECT(disk)     ((disk)->ud_sectsize)
-#define UP_DISK_CYLS(disk)      ((disk)->ud_cyls)
-#define UP_DISK_HEADS(disk)     ((disk)->ud_heads)
-#define UP_DISK_SPT(disk)       ((disk)->ud_sects)
-#define UP_DISK_SIZESECTS(disk) ((disk)->ud_size)
+#define UP_DISK_1SECT(disk)     ((disk)->ud_params.ud_sectsize)
+#define UP_DISK_CYLS(disk)      ((disk)->ud_params.ud_cyls)
+#define UP_DISK_HEADS(disk)     ((disk)->ud_params.ud_heads)
+#define UP_DISK_SPT(disk)       ((disk)->ud_params.ud_sects)
+#define UP_DISK_SIZESECTS(disk) ((disk)->ud_params.ud_size)
 /* XXX should handle overflow here and anywhere sects are converted to bytes */
-#define UP_DISK_SIZEBYTES(disk) ((disk)->ud_size * (disk)->ud_sectsize)
+#define UP_DISK_SIZEBYTES(disk) \
+    ((disk)->ud_params.ud_size * (disk)->ud_params.ud_sectsize)
 #define UP_DISK_IS_IMG(disk)    (NULL != (disk)->upd_img)
 #define UP_DISK_IS_FILE(disk)   ((disk)->ud_flag_plainfile)
 

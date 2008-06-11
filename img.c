@@ -295,7 +295,7 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
 }
 
 int
-up_img_getparams(struct up_disk *disk, struct up_img *img)
+up_img_getparams(struct up_diskparams *disk, struct up_img *img)
 {
     disk->ud_sectsize = UP_BETOH32(img->hdr.sectsize);
     disk->ud_size     = UP_BETOH64(img->hdr.size);

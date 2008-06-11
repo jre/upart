@@ -20,7 +20,7 @@
 /* #define DEBUG_SECTOR_SAVE */
 
 static int fixparams(struct up_disk *disk, const struct up_opts *opts);
-static int fixparams_checkone(struct up_disk *disk);
+static int fixparams_checkone(struct up_diskparams *disk);
 static int sectcmp(struct up_disk_sectnode *left,
                    struct up_disk_sectnode *right);
 
@@ -107,7 +107,7 @@ up_disk_open(const char *name, const struct up_opts *opts,
         disk->upd_img = img;
 
         /* try to get drive parameters from image */
-        if(0 > up_img_getparams(disk, img))
+        if(0 > up_img_getparams(&disk->ud_params, img))
             goto fail;
     }
 
@@ -323,36 +323,36 @@ fixparams(struct up_disk *disk, const struct up_opts *opts)
     struct stat sb;
 
     /* command-line options override any other values */
-    if(0 < opts->sectsize)
-        disk->ud_sectsize = opts->sectsize;
-    if(0 < opts->cyls)
-        disk->ud_cyls = opts->cyls;
-    if(0 < opts->heads)
-        disk->ud_heads = opts->heads;
-    if(0 < opts->sects)
-        disk->ud_sects = opts->sects;
+    if(0 < opts->params.ud_sectsize)
+        disk->ud_params.ud_sectsize = opts->params.ud_sectsize;
+    if(0 < opts->params.ud_cyls)
+        disk->ud_params.ud_cyls = opts->params.ud_cyls;
+    if(0 < opts->params.ud_heads)
+        disk->ud_params.ud_heads = opts->params.ud_heads;
+    if(0 < opts->params.ud_sects)
+        disk->ud_params.ud_sects = opts->params.ud_sects;
 
     /* sector size defaults to 512 */
-    if(0 >= disk->ud_sectsize)
-        disk->ud_sectsize = 512;
+    if(0 >= disk->ud_params.ud_sectsize)
+        disk->ud_params.ud_sectsize = 512;
 
     /* we can get the total size for a plain file */
-    if(0 >= disk->ud_size && !UP_DISK_IS_IMG(disk) &&
+    if(0 >= disk->ud_params.ud_size && !UP_DISK_IS_IMG(disk) &&
        UP_DISK_IS_FILE(disk) && 0 == stat(UP_DISK_PATH(disk), &sb))
-        disk->ud_size = sb.st_size / disk->ud_sectsize;
+        disk->ud_params.ud_size = sb.st_size / disk->ud_params.ud_sectsize;
 
     /* is that good enough? */
-    if(0 == fixparams_checkone(disk))
+    if(0 == fixparams_checkone(&disk->ud_params))
         return 0;
 
     /* apparently not, try defaulting heads and sectors to 255 and 63 */
-    if(0 >= disk->ud_heads)
-        disk->ud_heads = 255;
-    if(0 >= disk->ud_sects)
-        disk->ud_sects = 63;
+    if(0 >= disk->ud_params.ud_heads)
+        disk->ud_params.ud_heads = 255;
+    if(0 >= disk->ud_params.ud_sects)
+        disk->ud_params.ud_sects = 63;
 
     /* ok, is it good enough now? */
-    if(0 == fixparams_checkone(disk))
+    if(0 == fixparams_checkone(&disk->ud_params))
         return 0;
 
     /* guess not */
@@ -360,7 +360,7 @@ fixparams(struct up_disk *disk, const struct up_opts *opts)
 }
 
 static int
-fixparams_checkone(struct up_disk *disk)
+fixparams_checkone(struct up_diskparams *disk)
 {
     /* if we have all 4 then we're good */
     if(0 <  disk->ud_cyls  && 0 <  disk->ud_heads &&

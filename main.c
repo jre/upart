@@ -83,6 +83,7 @@ main(int argc, char *argv[])
 static char *
 readargs(int argc, char *argv[], struct up_opts *opts)
 {
+    struct up_diskparams *params = &opts->params;
     int opt;
 
     memset(opts, 0, sizeof *opts);
@@ -91,16 +92,16 @@ readargs(int argc, char *argv[], struct up_opts *opts)
         switch(opt)
         {
             case 'c':
-                opts->cyls = strtol(optarg, NULL, 0);
-                if(0 >= opts->cyls)
+                params->ud_cyls = strtol(optarg, NULL, 0);
+                if(0 >= params->ud_cyls)
                     usage("illegal cylinder count: %s", optarg);
                 break;
             case 'f':
                 opts->plainfile = 1;
                 break;
             case 'h':
-                opts->heads = strtol(optarg, NULL, 0);
-                if(0 >= opts->heads)
+                params->ud_heads = strtol(optarg, NULL, 0);
+                if(0 >= params->ud_heads)
                     usage("illegal tracks per cylinder (head) count: %s", optarg);
                 break;
             case 'i':
@@ -116,8 +117,8 @@ readargs(int argc, char *argv[], struct up_opts *opts)
                 opts->relaxed = 1;
                 break;
             case 's':
-                opts->sects = strtol(optarg, NULL, 0);
-                if(0 >= opts->sects)
+                params->ud_sects = strtol(optarg, NULL, 0);
+                if(0 >= params->ud_sects)
                     usage("illegal sectors per track count (sectors): %s", optarg);
                 break;
             case 'v':
@@ -131,8 +132,8 @@ readargs(int argc, char *argv[], struct up_opts *opts)
                 opts->serialize = optarg;
                 break;
             case 'z':
-                opts->sectsize = strtol(optarg, NULL, 0);
-                if(0 >= opts->sectsize)
+                params->ud_sectsize = strtol(optarg, NULL, 0);
+                if(0 >= params->ud_sectsize)
                     usage("illegal sector size: %s", optarg);
                 break;
             default:

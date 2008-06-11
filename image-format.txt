@@ -1,0 +1,32 @@
+The upart partition image is used to store disk metadata, such as
+geometry, as well as the contents of any disk sectors known to contain
+partition information.  A partition map may later be extracted from an
+image which should be identical to that extracted from the original
+disk.
+
+This document describes version 1.0 of the upart image format.
+
+The image format consists of the main image header followed by zero or
+more sector groups.  Each sector group consists of a sector header
+followed by zero or more sectors of data.  All integer values used in
+the main and sector headers are unsigned and in big-endian byte order.
+
+The contents of the main image header are as follows:
+
+Magic number - 64 bits.  The byte sequence 55 50 41 52 54 ea f2 e5.
+Major version - 16 bits.  See below for format version handling.
+Minor version - 16 bits.  See below for format version handling.
+Header length - 32 bits.  The length of this header.  Must be 328 for version 1.0
+Header CRC32 - 32 bits.
+Data offset - 32 bits.
+Data size - 32 bits.
+Data CRC32 - 32 bits.
+Sector size - 32 bits.
+Unused - 32 bits.
+Disk sector count size - 64 bits.
+Disk cylinder count - 64 bits.
+Disk head count - 64 bits.
+Disk sectors per track - 64 bits.
+Human-readable label - 256 bytes.
+
+XXX finish this

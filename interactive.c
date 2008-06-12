@@ -30,6 +30,7 @@ static size_t nrl_getline(char *buf, size_t size, FILE *stream);
 
 struct restoredata;
 
+static void newverbose(struct up_opts *opts, char *arg);
 static int numstr(const char *str, int *num);
 static char *splitword(char *str);
 static int saveimg(const struct up_disk *disk, const char *path,
@@ -93,7 +94,7 @@ up_interactive(const struct up_disk *src, const struct up_opts *origopts)
             printf("Valid commands:\n"
 "  ?             show this message\n"
 "  d             show disk information\n"
-"  h [sect#...]  show hexdump of all map sector(s)\n"
+"  h [sect#...]  show hexdump of all map sectors\n"
 "  l             list offset and size of all map sectors\n"
 "  m [sect#...]  show partition map\n"
 "  p             show disk and map info\n"
@@ -120,7 +121,7 @@ up_interactive(const struct up_disk *src, const struct up_opts *origopts)
             case 'l':
             case 'L':
                 {
-                    int itercount = 0;
+                    int itercount = 1;
                     iter_listsect(src, NULL, NULL);
                     up_disk_sectsiter(src, iter_listsect, &itercount);
                 }
@@ -151,17 +152,7 @@ up_interactive(const struct up_disk *src, const struct up_opts *origopts)
                 break;
             case 'v':
             case 'V':
-                if(!*args)
-                    printf("verbosity level is %d\n", opts.verbosity);
-                else
-                {
-                    int level;
-                    if(0 == numstr(args, &level))
-                    {
-                        opts.verbosity = level;
-                        printf("verbosity level is now %d\n", opts.verbosity);
-                    }
-                }
+                newverbose(&opts, args);
                 break;
             case 'w':
             case 'W':
@@ -177,6 +168,17 @@ up_interactive(const struct up_disk *src, const struct up_opts *origopts)
 
     assert("woa man, I'm freakin' out!");
     return -1;
+}
+
+void
+newverbose(struct up_opts *opts, char *arg)
+{
+    int newlevel;
+
+    if(!*arg)
+        printf("verbosity level is %d\n", opts->verbosity);
+    else if(0 == numstr(arg, &newlevel))
+        printf("verbosity level is now %d\n", (opts->verbosity = newlevel));
 }
 
 int
@@ -327,7 +329,7 @@ dorestore(const struct up_disk *src, const char *path,
 
     data.dest = dest;
     data.opts = opts;
-    data.index = 0;
+    data.index = 1;
     data.count = 0;
     data.giveup = 0;
     up_disk_sectsiter(src, iter_countsect, &data.count);
@@ -359,7 +361,6 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
 
     for(;;)
     {
-        /* XXX mixing sector group offset and count here is confusing */
         printf("\nRestoring sector group %d of %d "
                "(%"PRId64" sector%s at %"PRId64")\n"
                "  map type: %s\n", index, data->count, UP_SECT_COUNT(sect),
@@ -428,18 +429,7 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
                 return 1;
             case 'v':
             case 'V':
-                if(!*args)
-                    printf("verbosity level is %d\n", data->opts->verbosity);
-                else
-                {
-                    int level;
-                    if(0 == numstr(args, &level))
-                    {
-                        data->opts->verbosity = level;
-                        printf("verbosity level is now %d\n",
-                               data->opts->verbosity);
-                    }
-                }
+                newverbose(data->opts, args);
                 break;
             default:
                 if('?' != line[0])
@@ -529,11 +519,18 @@ callsectlist(const struct up_disk *disk, char *sects,
         sects = splitword(sects);
         if(0 == numstr(num, &off))
         {
-            node = up_disk_nthsect(disk, off);
-            if(!node)
-                up_err("no sector at index %d", off);
-            else if(0 == func(disk, node, arg))
-                break;
+            if(1 > off)
+                up_err("sector group number out of range: %d is too small",
+                       off);
+            else
+            {
+                node = up_disk_nthsect(disk, off - 1);
+                if(!node)
+                    up_err("sector group number out of range: %d is too big",
+                           off);
+                else if(0 == func(disk, node, arg))
+                    break;
+            }
         }
     }
 }

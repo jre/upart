@@ -34,10 +34,12 @@ static int numstr(const char *str, int *num);
 static char *splitword(char *str);
 static int saveimg(const struct up_disk *disk, const char *path,
                    const struct up_opts *opts);
-static void dorestore(const struct up_disk *src, const char *path,
+static void dorestore(struct up_disk *src, const char *path,
                       const struct up_opts *opts);
 static int iter_dorestore(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
+static int cmpsects(struct up_disk *first, struct up_disk *second,
+                    int64_t start, int64_t end, const struct up_opts *opts);
 static int promptparam(int64_t *val, int64_t min, int64_t max,
                        const struct up_opts *opts,
                        const char *desc, const char *help);
@@ -48,6 +50,8 @@ static int iter_dumpsect(const struct up_disk *disk,
 static int iter_sectmap(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
 static int iter_listsect(const struct up_disk *disk,
+                          const struct up_disk_sectnode *sect, void *arg);
+static int iter_countsect(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
 static int interactive_init(const struct up_opts *opts);
 static char *interactive_nextline(const char *prompt,
@@ -71,7 +75,6 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
 
     for(;;)
     {
-        /* XXX make prompt configurable */
         line = interactive_nextline("> ", &opts);
         if(!line)
             return 0;
@@ -80,6 +83,7 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
         if(!line[0])
             continue;
         args = splitword(line);
+        /* XXX show error for extra args */
 
         if(line[1])
         {
@@ -88,11 +92,11 @@ up_interactive(struct up_disk *src, const struct up_opts *origopts)
                 printf("invalid command: %s\n", line);
             printf("Valid commands:\n"
 "  ?             show this message\n"
-"  d             print disk information\n"
-"  h [sect#...]  print hexdump of all map sector(s)\n"
+"  d             show disk information\n"
+"  h [sect#...]  show hexdump of all map sector(s)\n"
 "  l             list offset and size of all map sectors\n"
-"  m [sect#...]  print partition map\n"
-"  p             print disk and map info\n"
+"  m [sect#...]  show partition map\n"
+"  p             show disk and map info\n"
 "  q             quit\n"
 "  r device      interactive restore from source to device\n"
 "  v [level]     get or set verbosity level\n"
@@ -259,13 +263,15 @@ saveimg(const struct up_disk *disk, const char *path,
 
 struct restoredata
 {
+    struct up_disk             *stupidconsting;
     struct up_disk             *dest;
     const struct up_opts       *opts;
     int                         index;
+    int                         count;
 };
 
 void
-dorestore(const struct up_disk *src, const char *path,
+dorestore(struct up_disk *src, const char *path,
           const struct up_opts *origopts)
 {
     struct up_opts      opts;
@@ -312,27 +318,130 @@ dorestore(const struct up_disk *src, const char *path,
         return;
     }
 
-    printf("ok, I think it worked\n");
-    up_disk_print(data.dest, stdout, opts.verbosity);
+    if(src->ud_params.ud_sectsize != data.dest->ud_params.ud_sectsize)
+    {
+        up_err("source and destination disks have different sector sizes");
+        up_disk_close(data.dest);
+        return;
+    }
 
+    /* XXX I should pre-allocate the sect buf so that getsect can be const */
+    data.stupidconsting = src;
     data.opts = &opts;
     data.index = 0;
-    up_disk_sectsiter(src, iter_dorestore, &data);
+    data.count = 0;
+    up_disk_sectsiter(src, iter_countsect, &data.count);
 
+    putc('\n', stdout);
+    up_disk_sectsiter(src, iter_dorestore, &data);
     up_disk_close(data.dest);
 }
 
 int
-iter_dorestore(const struct up_disk *disk, const struct up_disk_sectnode *sect,
+iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
                void *arg)
 {
     struct restoredata *data = arg;
     int index = (data->index++);
+    char *line, *args;
 
-    printf("XXX prompt restore index %d sector %"PRId64" count %"PRId64"\n",
-           index, sect->first, sect->last - sect->first + 1);
+    switch(cmpsects(data->stupidconsting, data->dest,
+                    sect->first, sect->last, data->opts))
+    {
+        case -1:
+            return 0;
+        case 0:
+            printf("Skipping sector group %d, it is the same on both disks\n",
+                   index);
+            return 1;
+    }
 
-    return 1;
+    for(;;)
+    {
+        /* mixing sector group offset and count here is confusing */
+        printf("Restoring sector group %d of %d "
+               "(%"PRId64" sector%s at %"PRId64")\n"
+               "  map type: %s\n", index, data->count,
+               /* XXX I really need a macro for this */
+               sect->last - sect->first + 1,
+               (sect->last == sect->first ? "" : "s"), sect->first,
+               up_map_label(sect->ref));
+        line = interactive_nextline("] ", data->opts);
+        if(!line)
+            return 0;
+        while(isspace(line[0]))
+            line++;
+        if(!line[0])
+            continue;
+        args = splitword(line);
+
+        if(line[1])
+        {
+          usage:
+            if('?' != line[0])
+                printf("invalid command: %s\n", line);
+            printf("Valid commands:\n"
+"  ?             show this message\n"
+"  d             diff source and destination sector(s)\n"
+"  h d           show hexdump of sector(s) from destination\n"
+"  h s           show hexdump of sector(s) from source\n"
+"  m             show partition map containing sector(s)\n"
+"  q             abort and return to main prompt\n"
+"  r             restore sector group from source to destination\n");
+            continue;
+        }
+
+        switch(line[0])
+        {
+            case 'd':
+            case 'D':
+                printf("XXX diff not implemented\n");
+                break;
+            case 'h':
+            case 'H':
+                printf("XXX I'm too sleepy to make hexdump work\n");
+                break;
+            case 'm':
+            case 'M':
+                printf("XXX I'll fix this tomorrow\n");
+                break;
+            case 'q':
+            case 'Q':
+                return 0;
+            case 'r':
+            case 'R':
+                printf("XXX just pretend I wrote the sectors, ok?\n");
+                return 1;
+            default:
+                goto usage;
+        }
+    }
+}
+
+int
+cmpsects(struct up_disk *first, struct up_disk *second,
+         int64_t start, int64_t end, const struct up_opts *opts)
+{
+    int ii;
+    const uint8_t *firstbuf, *secondbuf;
+
+    assert(first->ud_params.ud_sectsize == second->ud_params.ud_sectsize);
+
+    while(start <= end)
+    {
+        firstbuf = up_disk_getsect(first, start, opts->verbosity);
+        if(!firstbuf)
+            return -1;
+        secondbuf = up_disk_getsect(second, start, opts->verbosity);
+        if(!secondbuf)
+            return -1;
+        for(ii = 0; ii < first->ud_params.ud_sectsize; ii++)
+            if(firstbuf[ii] != secondbuf[ii])
+                return 1;
+        start++;
+    }
+
+    return 0;
 }
 
 int
@@ -428,6 +537,15 @@ iter_listsect(const struct up_disk *disk,
     else
         printf("  # %15s %7s Type\n", "Offset", "Sectors");
 
+    return 1;
+}
+
+int
+iter_countsect(const struct up_disk *disk,
+               const struct up_disk_sectnode *sect, void *arg)
+{
+    int *count = arg;
+    (*count)++;
     return 1;
 }
 

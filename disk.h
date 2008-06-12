@@ -9,6 +9,11 @@ struct up_map;
 struct up_part;
 struct up_img;
 
+#define UP_SECT_OFF(sect)       ((sect)->first)
+#define UP_SECT_COUNT(sect)     ((sect)->last - (sect)->first + 1)
+#define UP_SECT_MAP(sect)       ((sect)->ref)
+#define UP_SECT_DATA(sect)      ((sect)->data)
+
 struct up_disk_sectnode
 {
     int64_t                     first;

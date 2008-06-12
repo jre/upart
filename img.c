@@ -68,12 +68,13 @@ img_save_iter(const struct up_disk *disk, const struct up_disk_sectnode *node,
     *data += IMG_SECT_LEN;
 #ifdef IMG_DEBUG
     fprintf(stderr, "saving %"PRId64" sectors at offset %"PRId64"\n",
-            node->last - node->first + 1, node->first);
+            UP_SECT_COUNT(node), UP_SECT_OFF(node));
 #endif
-    hdr->off  = UP_HTOBE64(node->first);
-    hdr->size = UP_HTOBE64(node->last - node->first + 1);
-    memcpy(*data, node->data, (node->last - node->first + 1) * UP_DISK_1SECT(disk));
-    *data += (node->last - node->first + 1) * UP_DISK_1SECT(disk);
+    hdr->off  = UP_HTOBE64(UP_SECT_OFF(node));
+    hdr->size = UP_HTOBE64(UP_SECT_COUNT(node));
+    memcpy(*data, UP_SECT_DATA(node),
+           UP_SECT_COUNT(node) * UP_DISK_1SECT(disk));
+    *data += UP_SECT_COUNT(node) * UP_DISK_1SECT(disk);
 
     return 1;
 }

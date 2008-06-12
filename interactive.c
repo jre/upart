@@ -39,7 +39,7 @@ static void dorestore(const struct up_disk *src, const char *path,
 static int iter_dorestore(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
 static int cmpsects(const struct up_disk *first, const struct up_disk *second,
-                    int64_t start, int64_t end, const struct up_opts *opts);
+                    int64_t start, int64_t count, const struct up_opts *opts);
 static int promptparam(int64_t *val, int64_t min, int64_t max,
                        const struct up_opts *opts,
                        const char *desc, const char *help);
@@ -344,7 +344,8 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
     int index = (data->index++);
     char *line, *args;
 
-    switch(cmpsects(src, data->dest, sect->first, sect->last, data->opts))
+    switch(cmpsects(src, data->dest, UP_SECT_OFF(sect), UP_SECT_COUNT(sect),
+                    data->opts))
     {
         case -1:
             return 0;
@@ -359,11 +360,9 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
         /* mixing sector group offset and count here is confusing */
         printf("Restoring sector group %d of %d "
                "(%"PRId64" sector%s at %"PRId64")\n"
-               "  map type: %s\n", index, data->count,
-               /* XXX I really need a macro for this */
-               sect->last - sect->first + 1,
-               (sect->last == sect->first ? "" : "s"), sect->first,
-               up_map_label(sect->ref));
+               "  map type: %s\n", index, data->count, UP_SECT_COUNT(sect),
+               (1 == UP_SECT_COUNT(sect) ? "" : "s"), UP_SECT_OFF(sect),
+               up_map_label(UP_SECT_MAP(sect)));
         line = interactive_nextline("] ", data->opts);
         if(!line)
             return 0;
@@ -418,25 +417,25 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
 
 int
 cmpsects(const struct up_disk *first, const struct up_disk *second,
-         int64_t start, int64_t end, const struct up_opts *opts)
+         int64_t start, int64_t count, const struct up_opts *opts)
 {
+    int64_t off;
     int ii;
     const uint8_t *firstbuf, *secondbuf;
 
     assert(first->ud_params.ud_sectsize == second->ud_params.ud_sectsize);
 
-    while(start <= end)
+    for(off = start; off < start + count; off++)
     {
-        firstbuf = up_disk_getsect(first, start, opts->verbosity);
+        firstbuf = up_disk_getsect(first, off, opts->verbosity);
         if(!firstbuf)
             return -1;
-        secondbuf = up_disk_getsect(second, start, opts->verbosity);
+        secondbuf = up_disk_getsect(second, off, opts->verbosity);
         if(!secondbuf)
             return -1;
         for(ii = 0; ii < first->ud_params.ud_sectsize; ii++)
             if(firstbuf[ii] != secondbuf[ii])
                 return 1;
-        start++;
     }
 
     return 0;
@@ -509,8 +508,8 @@ int
 iter_dumpsect(const struct up_disk *disk,
               const struct up_disk_sectnode *sect, void *arg)
 {
-    up_map_dumpsect(sect->ref, stdout, sect->first,
-                    sect->last - sect->first + 1, sect->data, sect->tag);
+    up_map_dumpsect(UP_SECT_MAP(sect), stdout, UP_SECT_OFF(sect),
+                    UP_SECT_COUNT(sect), UP_SECT_DATA(sect), sect->tag);
     return 1;
 }
 
@@ -519,7 +518,7 @@ iter_sectmap(const struct up_disk *disk,
              const struct up_disk_sectnode *sect, void *arg)
 {
     const struct up_opts *opts = arg;
-    up_map_print(sect->ref, stdout, opts->verbosity, 0);
+    up_map_print(UP_SECT_MAP(sect), stdout, opts->verbosity, 0);
     return 1;
 }
 
@@ -530,8 +529,8 @@ iter_listsect(const struct up_disk *disk,
     int *count = arg;
 
     if(sect)
-        printf("%3d %15"PRId64" %7"PRId64" %s\n", (*count)++, sect->first,
-               sect->last - sect->first + 1, up_map_label(sect->ref));
+        printf("%3d %15"PRId64" %7"PRId64" %s\n", (*count)++, UP_SECT_OFF(sect),
+               UP_SECT_COUNT(sect), up_map_label(UP_SECT_MAP(sect)));
     else
         printf("  # %15s %7s Type\n", "Offset", "Sectors");
 

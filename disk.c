@@ -131,6 +131,14 @@ up_disk_setup(struct up_disk *disk, const struct up_opts *opts)
         return -1;
     }
 
+    assert(!disk->upd_buf);
+    disk->upd_buf = malloc(UP_DISK_1SECT(disk));
+    if(!disk->upd_buf)
+    {
+        perror("malloc");
+        return -1;
+    }
+
     disk->ud_flag_setup = 1;
     return 0;
 }
@@ -174,18 +182,9 @@ up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
 }
 
 const void *
-up_disk_getsect(struct up_disk *disk, int64_t sect, int vrb)
+up_disk_getsect(const struct up_disk *disk, int64_t sect, int vrb)
 {
-    if(!disk->upd_buf)
-    {
-        disk->upd_buf = malloc(UP_DISK_1SECT(disk));
-        if(!disk->upd_buf)
-        {
-            perror("malloc");
-            return NULL;
-        }
-    }
-
+    assert(disk->upd_buf);
     if(1 > up_disk_read(disk, sect, 1, disk->upd_buf, UP_DISK_1SECT(disk), vrb))
         return NULL;
     else
@@ -193,13 +192,13 @@ up_disk_getsect(struct up_disk *disk, int64_t sect, int vrb)
 }
 
 int
-up_disk_check1sect(struct up_disk *disk, int64_t sect)
+up_disk_check1sect(const struct up_disk *disk, int64_t sect)
 {
     return up_disk_checksectrange(disk, sect, 1);
 }
 
 int
-up_disk_checksectrange(struct up_disk *disk, int64_t start, int64_t size)
+up_disk_checksectrange(const struct up_disk *disk, int64_t start, int64_t size)
 {
     struct up_disk_sectnode key;
 

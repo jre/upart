@@ -161,7 +161,8 @@ static char *up_fstypes[] =
 static int bsdlabel_load(const struct up_disk *disk,
                          const struct up_part *parent, void **priv,
                          const struct up_opts *opts);
-static int bsdlabel_setup(struct up_map *map, const struct up_opts *opts);
+static int bsdlabel_setup(struct up_disk *disk, struct up_map *map,
+                          const struct up_opts *opts);
 static int bsdlabel_info(const struct up_map *map, int verbose,
                          char *buf, int size);
 static int bsdlabel_index(const struct up_part *part, char *buf, int size);
@@ -249,7 +250,8 @@ bsdlabel_load(const struct up_disk *disk, const struct up_part *parent,
 }
 
 static int
-bsdlabel_setup(struct up_map *map, const struct up_opts *opts)
+bsdlabel_setup(struct up_disk *disk, struct up_map *map,
+               const struct up_opts *opts)
 {
     struct up_bsd              *label = map->priv;
     int                         ii, max, flags;
@@ -257,14 +259,14 @@ bsdlabel_setup(struct up_map *map, const struct up_opts *opts)
     const uint8_t              *buf;
     int64_t                     start, size;
 
-    buf = up_disk_save1sect(map->disk, map->start + label->sectoff, map, 0,
+    buf = up_disk_save1sect(disk, map->start + label->sectoff, map, 0,
                             opts->verbosity);
     if(!buf)
         return -1;
 
     max  = LABEL_LGETINT16(label, maxpart);
     buf += label->byteoff + LABEL_BASE_SIZE;
-    assert(UP_DISK_1SECT(map->disk) >=
+    assert(UP_DISK_1SECT(disk) >=
            label->byteoff + LABEL_BASE_SIZE + (LABEL_PART_SIZE * max));
 
     /* verify the checksum */

@@ -85,7 +85,8 @@ struct up_gpt
 
 static int gpt_load(const struct up_disk *disk, const struct up_part *parent,
                     void **priv, const struct up_opts *opts);
-static int gpt_setup(struct up_map *map, const struct up_opts *opts);
+static int gpt_setup(struct up_disk *disk, struct up_map *map,
+                     const struct up_opts *opts);
 static int gpt_getinfo(const struct up_map *part, int verbose,
                        char *buf, int size);
 static int gpt_getindex(const struct up_part *part, char *buf, int size);
@@ -159,7 +160,7 @@ gpt_load(const struct up_disk *disk, const struct up_part *parent, void **priv,
 }
 
 static int
-gpt_setup(struct up_map *map, const struct up_opts *opts)
+gpt_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
 {
     struct up_gpt              *priv = map->priv;
     struct up_gpt_p            *gpt = &priv->gpt;
@@ -170,12 +171,12 @@ gpt_setup(struct up_map *map, const struct up_opts *opts)
 
     /* calculate partition buffer size */
     partbytes = UP_LETOH32(gpt->maxpart) * GPT_PART_SIZE;
-    partsects = partbytes / UP_DISK_1SECT(map->disk);
+    partsects = partbytes / UP_DISK_1SECT(disk);
 
     /* save sectors from primary and secondary maps */
-    data1 = up_disk_savesectrange(map->disk, GPT_PRIOFF(map->start, map->size),
+    data1 = up_disk_savesectrange(disk, GPT_PRIOFF(map->start, map->size),
                                   1 + partsects, map, 0, opts->verbosity);
-    data2 = up_disk_savesectrange(map->disk, GPT_SECOFF(map->start, map->size)
+    data2 = up_disk_savesectrange(disk, GPT_SECOFF(map->start, map->size)
                                   - partsects, 1 + partsects, map, 0,
                                   opts->verbosity);
     if(!data1 || !data2)
@@ -183,7 +184,7 @@ gpt_setup(struct up_map *map, const struct up_opts *opts)
 
     /* verify the crc */
     if(UP_LETOH32(gpt->partcrc) !=
-       (up_crc32(data1 + UP_DISK_1SECT(map->disk),  partbytes, ~0) ^ ~0))
+       (up_crc32(data1 + UP_DISK_1SECT(disk),  partbytes, ~0) ^ ~0))
     {
         if(UP_NOISY(opts->verbosity, QUIET))
             up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
@@ -193,9 +194,9 @@ gpt_setup(struct up_map *map, const struct up_opts *opts)
     }
 
     /* walk through the partition buffer and add all partitions found */
-    pk = (const struct up_gptpart_p *)(data1 + UP_DISK_1SECT(map->disk));
+    pk = (const struct up_gptpart_p *)(data1 + UP_DISK_1SECT(disk));
     while((const uint8_t *)pk + sizeof *pk
-          <= data1 + UP_DISK_1SECT(map->disk) * partsects)
+          <= data1 + UP_DISK_1SECT(disk) * partsects)
     {
         part = calloc(1, sizeof *part);
         if(!part)

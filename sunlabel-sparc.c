@@ -115,7 +115,8 @@ struct up_sparcpart
 
 static int sparc_load(const struct up_disk *disk, const struct up_part *parent,
                       void **priv, const struct up_opts *opts);
-static int sparc_setup(struct up_map *map, const struct up_opts *opts);
+static int sparc_setup(struct up_disk *disk, struct up_map *map,
+                       const struct up_opts *opts);
 static int sparc_info(const struct up_map *map, int verbose,
                       char *buf, int size);
 static int sparc_index(const struct up_part *part, char *buf, int size);
@@ -183,7 +184,8 @@ sparc_load(const struct up_disk *disk, const struct up_part *parent, void **priv
 }
 
 static int
-sparc_setup(struct up_map *map, const struct up_opts *opts)
+sparc_setup(struct up_disk *disk, struct up_map *map,
+            const struct up_opts *opts)
 {
     struct up_sparc            *priv = map->priv;
     struct up_sparc_p          *packed = &priv->packed;
@@ -191,7 +193,7 @@ sparc_setup(struct up_map *map, const struct up_opts *opts)
     struct up_sparcpart        *part;
     int64_t                     cylsize, start, size;
 
-    if(!up_disk_save1sect(map->disk, map->start, map, 0, opts->verbosity))
+    if(!up_disk_save1sect(disk, map->start, map, 0, opts->verbosity))
         return -1;
 
     cylsize = (uint64_t)UP_BETOH16(packed->heads) *

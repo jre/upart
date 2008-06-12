@@ -24,7 +24,7 @@ struct up_map_funcs
     int flags;
     int (*load)(const struct up_disk *, const struct up_part *, void **,
                 const struct up_opts *);
-    int (*setup)(struct up_map *, const struct up_opts *);
+    int (*setup)(struct up_disk *, struct up_map *, const struct up_opts *);
     int (*getinfo)(const struct up_map *, int, char *, int);
     int (*getindex)(const struct up_part *, char *, int);
     int (*getextrahdr)(const struct up_map *, int, char *, int);
@@ -38,7 +38,7 @@ struct up_map_funcs
 static int map_loadall(struct up_disk *disk, struct up_part *container,
                        const struct up_opts *opts);
 static struct up_part *map_newcontainer(int64_t size);
-static void map_freecontainer(struct up_part *container);
+static void map_freecontainer(struct up_disk *disk, struct up_part *container);
 static struct up_map *map_new(struct up_disk *disk, struct up_part *parent,
                               enum up_map_type type, void *priv);
 static void map_printcontainer(const struct up_part *container, FILE *stream,
@@ -51,7 +51,8 @@ void
 up_map_register(enum up_map_type type, const char *label, int flags,
                 int (*load)(const struct up_disk *, const struct up_part *,
                             void **, const struct up_opts *),
-                int (*setup)(struct up_map *, const struct up_opts *),
+                int (*setup)(struct up_disk *, struct up_map *,
+                             const struct up_opts *),
                 int (*getinfo)(const struct up_map *, int, char *, int),
                 int (*getindex)(const struct up_part *, char *, int),
                 int (*getextrahdr)(const struct up_map *, int, char *, int),
@@ -117,14 +118,14 @@ up_map_load(struct up_disk *disk, struct up_part *parent,
                 return -1;
             }
             map->parent = parent; /* XXX this is so broken */
-            res = funcs->setup(map, opts);
+            res = funcs->setup(disk, map, opts);
             if(0 >= res)
             {
 #ifdef MAP_PROBE_DEBUG
                 fprintf(stderr, "setup failed\n");
 #endif
                 map->parent = NULL;
-                up_map_free(map);
+                up_map_free(disk, map);
                 return res;
             }
             SIMPLEQ_INSERT_TAIL(&parent->submap, map, link);
@@ -197,7 +198,7 @@ up_map_freeall(struct up_disk *disk)
     if(!disk->maps)
         return;
 
-    map_freecontainer(disk->maps);
+    map_freecontainer(disk, disk->maps);
     free(disk->maps);
     disk->maps = NULL;
 }
@@ -246,7 +247,7 @@ map_newcontainer(int64_t size)
 }
 
 static void
-map_freecontainer(struct up_part *container)
+map_freecontainer(struct up_disk *disk, struct up_part *container)
 {
     struct up_map *ii;
 
@@ -254,7 +255,7 @@ map_freecontainer(struct up_part *container)
     {
         SIMPLEQ_REMOVE_HEAD(&container->submap, link);
         ii->parent = NULL;
-        up_map_free(ii);
+        up_map_free(disk, ii);
     }
 }
 
@@ -288,7 +289,7 @@ up_map_add(struct up_map *map, int64_t start, int64_t size,
 }
 
 void
-up_map_free(struct up_map *map)
+up_map_free(struct up_disk *disk, struct up_map *map)
 {
     struct up_part *ii;
 
@@ -303,7 +304,7 @@ up_map_free(struct up_map *map)
     while((ii = SIMPLEQ_FIRST(&map->list)))
     {
         SIMPLEQ_REMOVE_HEAD(&map->list, link);
-        map_freecontainer(ii);
+        map_freecontainer(disk, ii);
         if(st_types[ii->map->type].freeprivpart && ii->priv)
             st_types[ii->map->type].freeprivpart(ii, ii->priv);
         free(ii);
@@ -314,7 +315,7 @@ up_map_free(struct up_map *map)
         st_types[map->type].freeprivmap(map, map->priv);
 
     /* mark sectors unused */
-    up_disk_sectsunref(map->disk, map);
+    up_disk_sectsunref(disk, map);
 
     /* free map */
     free(map);

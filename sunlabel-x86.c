@@ -78,7 +78,8 @@ struct up_sunx86part
 static int sun_x86_load(const struct up_disk *disk,
                         const struct up_part *parent, void **priv,
                         const struct up_opts *opts);
-static int sun_x86_setup(struct up_map *map, const struct up_opts *opts);
+static int sun_x86_setup(struct up_disk *disk, struct up_map *map,
+                         const struct up_opts *opts);
 static int sun_x86_info(const struct up_map *map, int verbose,
                         char *buf, int size);
 static int sun_x86_index(const struct up_part *part, char *buf, int size);
@@ -139,7 +140,8 @@ sun_x86_load(const struct up_disk *disk, const struct up_part *parent,
 }
 
 static int
-sun_x86_setup(struct up_map *map, const struct up_opts *opts)
+sun_x86_setup(struct up_disk *disk, struct up_map *map,
+              const struct up_opts *opts)
 {
     struct up_sunx86           *priv = map->priv;
     struct up_sunx86_p         *packed = &priv->packed;
@@ -147,7 +149,7 @@ sun_x86_setup(struct up_map *map, const struct up_opts *opts)
     struct up_sunx86part       *part;
     int64_t                     start, size;
 
-    if(!up_disk_save1sect(map->disk, map->start + SUNX86_OFF, map, 0,
+    if(!up_disk_save1sect(disk, map->start + SUNX86_OFF, map, 0,
                           opts->verbosity))
         return -1;
 

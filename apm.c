@@ -93,7 +93,8 @@ static const char *bzb_types[] =
 
 static int apm_load(const struct up_disk *disk, const struct up_part *parent,
                     void **priv, const struct up_opts *opts);
-static int apm_setup(struct up_map *map, const struct up_opts *opts);
+static int apm_setup(struct up_disk *disk, struct up_map *map,
+                     const struct up_opts *opts);
 static int apm_info(const struct up_map *map, int verbose,
                     char *buf, int size);
 static int apm_index(const struct up_part *part, char *buf, int size);
@@ -157,7 +158,7 @@ apm_load(const struct up_disk *disk, const struct up_part *parent,
 }
 
 static int
-apm_setup(struct up_map *map, const struct up_opts *opts)
+apm_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
 {
     struct up_apm              *apm = map->priv;
     int                         ii, flags;
@@ -165,13 +166,13 @@ apm_setup(struct up_map *map, const struct up_opts *opts)
     int64_t                     start, size;
     const uint8_t              *data;
 
-    data = up_disk_savesectrange(map->disk, apm->firstsect, apm->sectcount,
+    data = up_disk_savesectrange(disk, apm->firstsect, apm->sectcount,
                                  map, 0, opts->verbosity);
     if(!data)
         return -1;
     apm->tmpbuf = data;
 
-    for(ii = 0; apm->size / UP_DISK_1SECT(map->disk) > ii; ii++)
+    for(ii = 0; apm->size / UP_DISK_1SECT(disk) > ii; ii++)
     {
         part = calloc(1, sizeof *part);
         if(!part)
@@ -179,7 +180,7 @@ apm_setup(struct up_map *map, const struct up_opts *opts)
             perror("malloc");
             return -1;
         }
-        memcpy(&part->part, data + ii * UP_DISK_1SECT(map->disk),
+        memcpy(&part->part, data + ii * UP_DISK_1SECT(disk),
                sizeof part->part);
         part->index   = ii;
         apm_bounds(&part->part, &start, &size);

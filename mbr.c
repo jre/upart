@@ -62,8 +62,10 @@ static int mbr_load(const struct up_disk *disk, const struct up_part *parent,
                     void **priv, const struct up_opts *opts);
 static int mbrext_load(const struct up_disk *disk, const struct up_part *parent,
                        void **priv, const struct up_opts *opts);
-static int mbr_setup(struct up_map *map, const struct up_opts *opts);
-static int mbrext_setup(struct up_map *map, const struct up_opts *opts);
+static int mbr_setup(struct up_disk *disk, struct up_map *map,
+                     const struct up_opts *opts);
+static int mbrext_setup(struct up_disk *disk, struct up_map *map,
+                        const struct up_opts *opts);
 static int mbr_getinfo(const struct up_map *part, int verbose,
                        char *buf, int size);
 static int mbr_getindex(const struct up_part *part, char *buf, int size);
@@ -160,12 +162,12 @@ mbrext_load(const struct up_disk *disk, const struct up_part *parent, void **pri
 }
 
 static int
-mbr_setup(struct up_map *map, const struct up_opts *opts)
+mbr_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
 {
     struct up_mbr              *mbr = map->priv;
     int                         ii;
 
-    if(!up_disk_save1sect(map->disk, map->start, map, 0, opts->verbosity))
+    if(!up_disk_save1sect(disk, map->start, map, 0, opts->verbosity))
         return -1;
 
     /* add primary partitions */
@@ -177,7 +179,8 @@ mbr_setup(struct up_map *map, const struct up_opts *opts)
 }
 
 static int
-mbrext_setup(struct up_map *map, const struct up_opts *opts)
+mbrext_setup(struct up_disk *disk, struct up_map *map,
+             const struct up_opts *opts)
 {
     struct up_mbr              *parent;
     const struct up_mbr_p      *buf;
@@ -196,7 +199,7 @@ mbrext_setup(struct up_map *map, const struct up_opts *opts)
     {
         /* load extended mbr */
         assert(absoff >= map->start && absoff + max <= map->start + map->size);
-        buf = up_disk_save1sect(map->disk, absoff, map, 1, opts->verbosity);
+        buf = up_disk_save1sect(disk, absoff, map, 1, opts->verbosity);
         if(!buf)
             return -1;
         if(MBR_MAGIC != UP_LETOH16(buf->magic))

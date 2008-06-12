@@ -48,7 +48,7 @@ enum up_map_type
 
 struct up_map
 {
-    struct up_disk     *disk;
+    const struct up_disk *disk;
     enum up_map_type    type;
     int64_t             start;
     int64_t             size;
@@ -64,7 +64,8 @@ void up_map_register(enum up_map_type type, const char *label, int flags,
                      int (*load)(const struct up_disk *,const struct up_part *,
                                  void **, const struct up_opts *),
                      /* add partitions, misc setup not done in load */
-                     int (*setup)(struct up_map *, const struct up_opts *),
+                     int (*setup)(struct up_disk *, struct up_map *,
+                                  const struct up_opts *),
                      /* copy map header line into string */
                      int (*getinfo)(const struct up_map *, int, char *, int),
                      /* copy part index into string */
@@ -90,7 +91,7 @@ int up_map_load(struct up_disk *disk, struct up_part *parent,
 struct up_part *up_map_add(struct up_map *map, int64_t start, int64_t size,
                            int flags, void *priv);
 
-void up_map_free(struct up_map *map);
+void up_map_free(struct up_disk *disk, struct up_map *map);
 void up_map_freeprivmap_def(struct up_map *map, void *priv);
 void up_map_freeprivpart_def(struct up_part *part, void *priv);
 

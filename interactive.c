@@ -39,6 +39,9 @@ static int dorestore(const struct up_disk *src, const char *path,
                      struct up_opts *opts);
 static int iter_dorestore(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
+static int dumpdisksect(const struct up_disk *disk, int64_t off, int64_t count,
+                        uint8_t **buf, size_t *size,
+                        const struct up_opts *opts);
 static int cmpsects(const struct up_disk *first, const struct up_disk *second,
                     int64_t start, int64_t count, const struct up_opts *opts);
 static int promptparam(int64_t *val, int64_t min, int64_t max,
@@ -270,6 +273,8 @@ struct restoredata
     int                         index;
     int                         count;
     int                         giveup;
+    uint8_t                    *buf;
+    size_t                      buflen;
 };
 
 int
@@ -320,22 +325,23 @@ dorestore(const struct up_disk *src, const char *path,
         return 0;
     }
 
-    if(src->ud_params.ud_sectsize != dest->ud_params.ud_sectsize)
+    if(UP_DISK_1SECT(src) != UP_DISK_1SECT(dest))
     {
         up_err("source and destination disks have different sector sizes");
         up_disk_close(dest);
         return 0;
     }
 
+    memset(&data, 0, sizeof data);
     data.dest = dest;
     data.opts = opts;
     data.index = 1;
-    data.count = 0;
-    data.giveup = 0;
     up_disk_sectsiter(src, iter_countsect, &data.count);
 
     up_disk_sectsiter(src, iter_dorestore, &data);
     up_disk_close(dest);
+    if(data.buf)
+        free(data.buf);
 
     return (data.giveup ? -1 : 0);
 }
@@ -405,7 +411,13 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
                 {
                     case 'd':
                     case 'D':
-                        printf("XXX not quite yet\n");
+                        if(0 > dumpdisksect(data->dest, UP_SECT_OFF(sect),
+                                            UP_SECT_COUNT(sect), &data->buf,
+                                            &data->buflen, data->opts))
+                        {
+                            data->giveup = 1;
+                            return 0;
+                        }
                         break;
                     case 's':
                     case 'S':
@@ -418,6 +430,7 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
                 break;
             case 'm':
             case 'M':
+                /* XXX also reading map from dest would be nice */
                 iter_sectmap(src, sect, (void*)data->opts);
                 break;
             case 'q':
@@ -440,6 +453,51 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
 }
 
 int
+dumpdisksect(const struct up_disk *disk, int64_t off, int64_t count,
+             uint8_t **buf, size_t *size, const struct up_opts *opts)
+{
+    uint8_t    *newbuf;
+    size_t      dumplen;
+    int64_t     res;
+
+    /* XXX need a better and more widely used check than this */
+    assert(SIZE_MAX / count > UP_DISK_1SECT(disk));
+
+    dumplen = UP_DISK_1SECT(disk) * count;
+    if(*size < dumplen)
+    {
+        if(*buf)
+            newbuf = realloc(*buf, dumplen);
+        else
+            newbuf = malloc(dumplen);
+        if(!newbuf)
+        {
+            perror("malloc");
+            return -1;
+        }
+        *buf = newbuf;
+        *size = dumplen;
+    }
+
+    res = up_disk_read(disk, off, count, *buf, *size, opts->verbosity);
+    if(0 > res)
+        return -1;
+    else if(res < count)
+    {
+        up_err("failed to read %"PRId64" sector%s from %s starting at sector "
+               "%"PRId64": short read count", count, (1 == count ? "" : "s"),
+               UP_DISK_PATH(disk), off);
+        return -1;
+    }
+
+    printf("\n\nDump of %s at sector %"PRId64" (0x%"PRIx64"):\n",
+           UP_DISK_PATH(disk), off, off);
+    up_hexdump(*buf, dumplen, UP_DISK_1SECT(disk) * off, stdout);
+
+    return 0;
+}
+
+int
 cmpsects(const struct up_disk *first, const struct up_disk *second,
          int64_t start, int64_t count, const struct up_opts *opts)
 {
@@ -447,7 +505,7 @@ cmpsects(const struct up_disk *first, const struct up_disk *second,
     int ii;
     const uint8_t *firstbuf, *secondbuf;
 
-    assert(first->ud_params.ud_sectsize == second->ud_params.ud_sectsize);
+    assert(UP_DISK_1SECT(first) == UP_DISK_1SECT(second));
 
     for(off = start; off < start + count; off++)
     {
@@ -457,7 +515,7 @@ cmpsects(const struct up_disk *first, const struct up_disk *second,
         secondbuf = up_disk_getsect(second, off, opts->verbosity);
         if(!secondbuf)
             return -1;
-        for(ii = 0; ii < first->ud_params.ud_sectsize; ii++)
+        for(ii = 0; ii < UP_DISK_1SECT(first); ii++)
             if(firstbuf[ii] != secondbuf[ii])
                 return 1;
     }

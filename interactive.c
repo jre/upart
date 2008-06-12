@@ -34,8 +34,8 @@ static int numstr(const char *str, int *num);
 static char *splitword(char *str);
 static int saveimg(const struct up_disk *disk, const char *path,
                    const struct up_opts *opts);
-static void dorestore(const struct up_disk *src, const char *path,
-                      const struct up_opts *opts);
+static int dorestore(const struct up_disk *src, const char *path,
+                     struct up_opts *opts);
 static int iter_dorestore(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
 static int cmpsects(const struct up_disk *first, const struct up_disk *second,
@@ -146,8 +146,8 @@ up_interactive(const struct up_disk *src, const struct up_opts *origopts)
             case 'R':
                 if(!*args)
                     up_err("cannot restore: no device given");
-                else
-                    dorestore(src, args, &opts);
+                else if(0 > dorestore(src, args, &opts))
+                    return 0;
                 break;
             case 'v':
             case 'V':
@@ -264,76 +264,78 @@ saveimg(const struct up_disk *disk, const char *path,
 struct restoredata
 {
     const struct up_disk       *dest;
-    const struct up_opts       *opts;
+    struct up_opts             *opts;
     int                         index;
     int                         count;
+    int                         giveup;
 };
 
-void
+int
 dorestore(const struct up_disk *src, const char *path,
-          const struct up_opts *origopts)
+          struct up_opts *opts)
 {
     struct up_disk     *dest;
-    struct up_opts      opts;
     struct restoredata  data;
     int64_t             annoyance;
+    int                 saved;
 
-    opts = *origopts;
-    memset(&opts.params, 0, sizeof opts.params);
-    dest = up_disk_open(path, &opts, 0);
+    dest = up_disk_open(path, opts, 0);
     if(!dest)
-        return;
-    opts.verbosity = UP_VERBOSITY_SILENT;
-    up_disk_setup(dest, &opts);
-    opts.verbosity = origopts->verbosity;
-    opts.params = dest->ud_params;
+        return 0;
+    saved = opts->verbosity;
+    opts->verbosity = UP_VERBOSITY_SILENT;
+    up_disk_setup(dest, opts);
+    opts->verbosity = saved;
+    opts->params = dest->ud_params;
     up_disk_close(dest);
 
     printf("Interactive restore from %s to %s:\n",
            UP_DISK_PATH(src), path);
 
     printf("Drive parameters for %s:\n", path);
-    annoyance = opts.params.ud_sectsize;
-    if(0 > promptparam(&annoyance, 0, INT_MAX, &opts,
+    annoyance = opts->params.ud_sectsize;
+    if(0 > promptparam(&annoyance, 0, INT_MAX, opts,
                        "sector size",
                        "size of a single sector in bytes, usually 512") ||
-       0 > promptparam(&opts.params.ud_cyls, 0, INT64_MAX, &opts,
+       0 > promptparam(&opts->params.ud_cyls, 0, INT64_MAX, opts,
                        "total cylinders count",
                        "commonly referred to just as \"cylinders\"") ||
-       0 > promptparam(&opts.params.ud_heads, 0, INT64_MAX, &opts,
+       0 > promptparam(&opts->params.ud_heads, 0, INT64_MAX, opts,
                        "tracks per cylinder",
                        "commonly called \"heads\"") ||
-       0 > promptparam(&opts.params.ud_sects, 0, INT64_MAX, &opts,
+       0 > promptparam(&opts->params.ud_sects, 0, INT64_MAX, opts,
                        "sectors per track",
                        "commonly just referred to as \"sectors\""))
-        return;
-    opts.params.ud_sectsize = annoyance;
+        return 0;
+    opts->params.ud_sectsize = annoyance;
 
-    dest = up_disk_open(path, &opts, 0 /* XXX */);
+    dest = up_disk_open(path, opts, 0 /* XXX */);
     if(!dest)
-        return;
-    if(0 > up_disk_setup(dest, &opts))
+        return 0;
+    if(0 > up_disk_setup(dest, opts))
     {
         up_disk_close(dest);
-        return;
+        return 0;
     }
 
     if(src->ud_params.ud_sectsize != dest->ud_params.ud_sectsize)
     {
         up_err("source and destination disks have different sector sizes");
         up_disk_close(dest);
-        return;
+        return 0;
     }
 
     data.dest = dest;
-    data.opts = &opts;
+    data.opts = opts;
     data.index = 0;
     data.count = 0;
+    data.giveup = 0;
     up_disk_sectsiter(src, iter_countsect, &data.count);
 
-    putc('\n', stdout);
     up_disk_sectsiter(src, iter_dorestore, &data);
     up_disk_close(dest);
+
+    return (data.giveup ? -1 : 0);
 }
 
 int
@@ -357,15 +359,18 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
 
     for(;;)
     {
-        /* mixing sector group offset and count here is confusing */
-        printf("Restoring sector group %d of %d "
+        /* XXX mixing sector group offset and count here is confusing */
+        printf("\nRestoring sector group %d of %d "
                "(%"PRId64" sector%s at %"PRId64")\n"
                "  map type: %s\n", index, data->count, UP_SECT_COUNT(sect),
                (1 == UP_SECT_COUNT(sect) ? "" : "s"), UP_SECT_OFF(sect),
                up_map_label(UP_SECT_MAP(sect)));
         line = interactive_nextline("] ", data->opts);
         if(!line)
+        {
+            data->giveup = 1;
             return 0;
+        }
         while(isspace(line[0]))
             line++;
         if(!line[0])
@@ -375,8 +380,6 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
         if(line[1])
         {
           usage:
-            if('?' != line[0])
-                printf("invalid command: %s\n", line);
             printf("Valid commands:\n"
 "  ?             show this message\n"
 "  d             diff source and destination sector(s)\n"
@@ -384,7 +387,8 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
 "  h s           show hexdump of sector(s) from source\n"
 "  m             show partition map containing sector(s)\n"
 "  q             abort and return to main prompt\n"
-"  r             restore sector group from source to destination\n");
+"  r             restore sector group from source to destination\n"
+"  v [level]     get or set verbosity level\n");
             continue;
         }
 
@@ -396,11 +400,24 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
                 break;
             case 'h':
             case 'H':
-                printf("XXX I'm too sleepy to make hexdump work\n");
+                switch(args[0])
+                {
+                    case 'd':
+                    case 'D':
+                        printf("XXX not quite yet\n");
+                        break;
+                    case 's':
+                    case 'S':
+                        iter_dumpsect(src, sect, NULL);
+                        break;
+                    default:
+                        printf("argument to h command must be d or s\n");
+                        goto usage;
+                }
                 break;
             case 'm':
             case 'M':
-                printf("XXX I'll fix this tomorrow\n");
+                iter_sectmap(src, sect, (void*)data->opts);
                 break;
             case 'q':
             case 'Q':
@@ -409,7 +426,24 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
             case 'R':
                 printf("XXX just pretend I wrote the sectors, ok?\n");
                 return 1;
+            case 'v':
+            case 'V':
+                if(!*args)
+                    printf("verbosity level is %d\n", data->opts->verbosity);
+                else
+                {
+                    int level;
+                    if(0 == numstr(args, &level))
+                    {
+                        data->opts->verbosity = level;
+                        printf("verbosity level is now %d\n",
+                               data->opts->verbosity);
+                    }
+                }
+                break;
             default:
+                if('?' != line[0])
+                    printf("invalid command: %s\n", line);
                 goto usage;
         }
     }

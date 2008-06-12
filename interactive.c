@@ -34,11 +34,11 @@ static int numstr(const char *str, int *num);
 static char *splitword(char *str);
 static int saveimg(const struct up_disk *disk, const char *path,
                    const struct up_opts *opts);
-static void dorestore(struct up_disk *src, const char *path,
+static void dorestore(const struct up_disk *src, const char *path,
                       const struct up_opts *opts);
 static int iter_dorestore(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
-static int cmpsects(struct up_disk *first, struct up_disk *second,
+static int cmpsects(const struct up_disk *first, const struct up_disk *second,
                     int64_t start, int64_t end, const struct up_opts *opts);
 static int promptparam(int64_t *val, int64_t min, int64_t max,
                        const struct up_opts *opts,
@@ -58,7 +58,7 @@ static char *interactive_nextline(const char *prompt,
                                   const struct up_opts *opts);
 
 int
-up_interactive(struct up_disk *src, const struct up_opts *origopts)
+up_interactive(const struct up_disk *src, const struct up_opts *origopts)
 {
     struct up_opts opts;
     char *line, *args;
@@ -263,31 +263,31 @@ saveimg(const struct up_disk *disk, const char *path,
 
 struct restoredata
 {
-    struct up_disk             *stupidconsting;
-    struct up_disk             *dest;
+    const struct up_disk       *dest;
     const struct up_opts       *opts;
     int                         index;
     int                         count;
 };
 
 void
-dorestore(struct up_disk *src, const char *path,
+dorestore(const struct up_disk *src, const char *path,
           const struct up_opts *origopts)
 {
+    struct up_disk     *dest;
     struct up_opts      opts;
     struct restoredata  data;
     int64_t             annoyance;
 
     opts = *origopts;
     memset(&opts.params, 0, sizeof opts.params);
-    data.dest = up_disk_open(path, &opts, 0);
-    if(!data.dest)
+    dest = up_disk_open(path, &opts, 0);
+    if(!dest)
         return;
     opts.verbosity = UP_VERBOSITY_SILENT;
-    up_disk_setup(data.dest, &opts);
+    up_disk_setup(dest, &opts);
     opts.verbosity = origopts->verbosity;
-    opts.params = data.dest->ud_params;
-    up_disk_close(data.dest);
+    opts.params = dest->ud_params;
+    up_disk_close(dest);
 
     printf("Interactive restore from %s to %s:\n",
            UP_DISK_PATH(src), path);
@@ -309,24 +309,23 @@ dorestore(struct up_disk *src, const char *path,
         return;
     opts.params.ud_sectsize = annoyance;
 
-    data.dest = up_disk_open(path, &opts, 0 /* XXX */);
-    if(!data.dest)
+    dest = up_disk_open(path, &opts, 0 /* XXX */);
+    if(!dest)
         return;
-    if(0 > up_disk_setup(data.dest, &opts))
+    if(0 > up_disk_setup(dest, &opts))
     {
-        up_disk_close(data.dest);
+        up_disk_close(dest);
         return;
     }
 
-    if(src->ud_params.ud_sectsize != data.dest->ud_params.ud_sectsize)
+    if(src->ud_params.ud_sectsize != dest->ud_params.ud_sectsize)
     {
         up_err("source and destination disks have different sector sizes");
-        up_disk_close(data.dest);
+        up_disk_close(dest);
         return;
     }
 
-    /* XXX I should pre-allocate the sect buf so that getsect can be const */
-    data.stupidconsting = src;
+    data.dest = dest;
     data.opts = &opts;
     data.index = 0;
     data.count = 0;
@@ -334,7 +333,7 @@ dorestore(struct up_disk *src, const char *path,
 
     putc('\n', stdout);
     up_disk_sectsiter(src, iter_dorestore, &data);
-    up_disk_close(data.dest);
+    up_disk_close(dest);
 }
 
 int
@@ -345,8 +344,7 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
     int index = (data->index++);
     char *line, *args;
 
-    switch(cmpsects(data->stupidconsting, data->dest,
-                    sect->first, sect->last, data->opts))
+    switch(cmpsects(src, data->dest, sect->first, sect->last, data->opts))
     {
         case -1:
             return 0;
@@ -419,7 +417,7 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
 }
 
 int
-cmpsects(struct up_disk *first, struct up_disk *second,
+cmpsects(const struct up_disk *first, const struct up_disk *second,
          int64_t start, int64_t end, const struct up_opts *opts)
 {
     int ii;

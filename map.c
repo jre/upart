@@ -22,7 +22,7 @@ struct up_map_funcs
 {
     char *label;
     int flags;
-    int (*load)(struct up_disk *, const struct up_part *, void **,
+    int (*load)(const struct up_disk *, const struct up_part *, void **,
                 const struct up_opts *);
     int (*setup)(struct up_map *, const struct up_opts *);
     int (*getinfo)(const struct up_map *, int, char *, int);
@@ -49,8 +49,8 @@ static struct up_map_funcs st_types[UP_MAP_TYPE_COUNT];
 
 void
 up_map_register(enum up_map_type type, const char *label, int flags,
-                int (*load)(struct up_disk *, const struct up_part *, void **,
-                            const struct up_opts *),
+                int (*load)(const struct up_disk *, const struct up_part *,
+                            void **, const struct up_opts *),
                 int (*setup)(struct up_map *, const struct up_opts *),
                 int (*getinfo)(const struct up_map *, int, char *, int),
                 int (*getindex)(const struct up_part *, char *, int),

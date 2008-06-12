@@ -3,6 +3,7 @@
 
 #include "bsdqueue.h"
 
+struct up_disk;
 struct up_map;
 struct up_opts;
 struct up_part;
@@ -60,7 +61,7 @@ struct up_map
 
 void up_map_register(enum up_map_type type, const char *label, int flags,
                      /* check if map exists and allocate private data */
-                     int (*load)(struct up_disk *,const struct up_part *,
+                     int (*load)(const struct up_disk *,const struct up_part *,
                                  void **, const struct up_opts *),
                      /* add partitions, misc setup not done in load */
                      int (*setup)(struct up_map *, const struct up_opts *),

@@ -58,9 +58,9 @@ struct up_mbr
     int                 extcount;
 };
 
-static int mbr_load(struct up_disk *disk, const struct up_part *parent,
+static int mbr_load(const struct up_disk *disk, const struct up_part *parent,
                     void **priv, const struct up_opts *opts);
-static int mbrext_load(struct up_disk *disk, const struct up_part *parent,
+static int mbrext_load(const struct up_disk *disk, const struct up_part *parent,
                        void **priv, const struct up_opts *opts);
 static int mbr_setup(struct up_map *map, const struct up_opts *opts);
 static int mbrext_setup(struct up_map *map, const struct up_opts *opts);
@@ -71,7 +71,7 @@ static int mbr_getextra(const struct up_part *part, int verbose,
                         char *buf, int size);
 static int mbr_addpart(struct up_map *map, const struct up_mbrpart_p *part,
                        int index, int64_t off, const struct up_mbr_p *mbr);
-static int mbr_read(struct up_disk *disk, int64_t start, int64_t size,
+static int mbr_read(const struct up_disk *disk, int64_t start, int64_t size,
                     const struct up_mbr_p **mbr, const struct up_opts *opts);
 static const char *mbr_name(uint8_t type);
 
@@ -106,7 +106,7 @@ up_mbr_register(void)
 }
 
 static int
-mbr_load(struct up_disk *disk, const struct up_part *parent, void **priv,
+mbr_load(const struct up_disk *disk, const struct up_part *parent, void **priv,
          const struct up_opts *opts)
 {
     const struct up_mbr_p      *buf;
@@ -142,7 +142,7 @@ mbr_load(struct up_disk *disk, const struct up_part *parent, void **priv,
 }
 
 static int
-mbrext_load(struct up_disk *disk, const struct up_part *parent, void **priv,
+mbrext_load(const struct up_disk *disk, const struct up_part *parent, void **priv,
             const struct up_opts *opts)
 {
     const struct up_mbr_p *buf;
@@ -333,7 +333,7 @@ mbr_addpart(struct up_map *map, const struct up_mbrpart_p *part, int index,
 }
 
 static int
-mbr_read(struct up_disk *disk, int64_t start, int64_t size,
+mbr_read(const struct up_disk *disk, int64_t start, int64_t size,
         const struct up_mbr_p **mbr, const struct up_opts *opts)
 {
     const void *buf;

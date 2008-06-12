@@ -52,6 +52,9 @@ struct up_disk
 #define UP_DISK_IS_IMG(disk)    (NULL != (disk)->upd_img)
 #define UP_DISK_IS_FILE(disk)   ((disk)->ud_flag_plainfile)
 
+typedef int (*up_disk_iterfunc_t)(const struct up_disk *,
+                                   const struct up_disk_sectnode *, void *);
+
 /* Open the disk device, must call up_disk_setup() after this */
 struct up_disk *up_disk_open(const char *path, const struct up_opts *opts,
                              int writable);
@@ -86,10 +89,9 @@ const void *up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t s
 void up_disk_sectsunref(struct up_disk *disk, const void *ref);
 
 /* iterate through marked sectors */
+/* the passed function should return 0 to stop iteration */
 void up_disk_sectsiter(const struct up_disk *disk,
-                       void (*func)(const struct up_disk *,
-                                    const struct up_disk_sectnode *, void *),
-                       void *arg);
+                       up_disk_iterfunc_t func, void *arg);
 /* return the nth sector */
 const struct up_disk_sectnode *up_disk_nthsect(const struct up_disk *disk, int n);
 

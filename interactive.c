@@ -36,20 +36,18 @@ static int saveimg(const struct up_disk *disk, const char *path,
                    const struct up_opts *opts);
 static void dorestore(const struct up_disk *src, const char *path,
                       const struct up_opts *opts);
-static void iter_dorestore(const struct up_disk *disk,
+static int iter_dorestore(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
 static int promptparam(int64_t *val, int64_t min, int64_t max,
                        const struct up_opts *opts,
                        const char *desc, const char *help);
 static void callsectlist(const struct up_disk *disk, char *sects,
-                         void (*func)(const struct up_disk *,
-                                      const struct up_disk_sectnode *, void *),
-                         void *arg);
-static void iter_dumpsect(const struct up_disk *disk,
+                         up_disk_iterfunc_t func, void *arg);
+static int iter_dumpsect(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
-static void iter_sectmap(const struct up_disk *disk,
+static int iter_sectmap(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
-static void iter_listsect(const struct up_disk *disk,
+static int iter_listsect(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
 static int interactive_init(const struct up_opts *opts);
 static char *interactive_nextline(const char *prompt,
@@ -324,7 +322,7 @@ dorestore(const struct up_disk *src, const char *path,
     up_disk_close(data.dest);
 }
 
-void
+int
 iter_dorestore(const struct up_disk *disk, const struct up_disk_sectnode *sect,
                void *arg)
 {
@@ -333,6 +331,8 @@ iter_dorestore(const struct up_disk *disk, const struct up_disk_sectnode *sect,
 
     printf("XXX prompt restore index %d sector %"PRId64" count %"PRId64"\n",
            index, sect->first, sect->last - sect->first + 1);
+
+    return 1;
 }
 
 int
@@ -377,8 +377,7 @@ promptparam(int64_t *val, int64_t min, int64_t max, const struct up_opts *opts,
 
 void
 callsectlist(const struct up_disk *disk, char *sects,
-             void (*func)(const struct up_disk *,
-                          const struct up_disk_sectnode *, void *), void *arg)
+             up_disk_iterfunc_t func, void *arg)
 {
     char *num;
     int off;
@@ -391,31 +390,33 @@ callsectlist(const struct up_disk *disk, char *sects,
         if(0 == numstr(num, &off))
         {
             node = up_disk_nthsect(disk, off);
-            if(node)
-                func(disk, node, arg);
-            else
+            if(!node)
                 up_err("no sector at index %d", off);
+            else if(0 == func(disk, node, arg))
+                break;
         }
     }
 }
 
-void
+int
 iter_dumpsect(const struct up_disk *disk,
               const struct up_disk_sectnode *sect, void *arg)
 {
     up_map_dumpsect(sect->ref, stdout, sect->first,
                     sect->last - sect->first + 1, sect->data, sect->tag);
+    return 1;
 }
 
-void
+int
 iter_sectmap(const struct up_disk *disk,
              const struct up_disk_sectnode *sect, void *arg)
 {
     const struct up_opts *opts = arg;
     up_map_print(sect->ref, stdout, opts->verbosity, 0);
+    return 1;
 }
 
-void
+int
 iter_listsect(const struct up_disk *disk,
               const struct up_disk_sectnode *sect, void *arg)
 {
@@ -426,6 +427,8 @@ iter_listsect(const struct up_disk *disk,
                sect->last - sect->first + 1, up_map_label(sect->ref));
     else
         printf("  # %15s %7s Type\n", "Offset", "Sectors");
+
+    return 1;
 }
 
 #ifdef HAVE_READLINE

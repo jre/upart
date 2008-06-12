@@ -458,16 +458,15 @@ up_disk_dump(const struct up_disk *disk, void *stream)
 
 void
 up_disk_sectsiter(const struct up_disk *disk,
-                  void (*func)(const struct up_disk *,
-                               const struct up_disk_sectnode *, void *),
-                  void *arg)
+                  up_disk_iterfunc_t func, void *arg)
 {
     struct up_disk_sectnode *node;
 
     assert(disk->ud_flag_setup);
     for(node = RB_MIN(up_disk_sectmap, &disk->upd_sectsused); node;
         node = RB_NEXT(up_disk_sectmap, &disk->upd_sectsused, node))
-        func(disk, node, arg);
+        if(0 == func(disk, node, arg))
+            break;
 }
 
 const struct up_disk_sectnode *

@@ -57,7 +57,7 @@ struct up_img
 static uint32_t img_checkcrc(struct up_imghdr_p *hdr, int fd,
                              const char *name, int verbose);
 
-static void
+static int
 img_save_iter(const struct up_disk *disk, const struct up_disk_sectnode *node,
               void *arg)
 {
@@ -74,6 +74,8 @@ img_save_iter(const struct up_disk *disk, const struct up_disk_sectnode *node,
     hdr->size = UP_HTOBE64(node->last - node->first + 1);
     memcpy(*data, node->data, (node->last - node->first + 1) * UP_DISK_1SECT(disk));
     *data += (node->last - node->first + 1) * UP_DISK_1SECT(disk);
+
+    return 1;
 }
 
 int

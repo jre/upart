@@ -82,12 +82,16 @@ extern int up_endian;
 int up_getendian(void);
 
 /*
-  Dump SIZE bytes of data in BUF to STREAM to stdout, in
-    a format similar to /usr/bin/hexdump -C
-  If STREAM is NULL then stderr will be used.
+
+  Dump SIZE bytes of data in BUF to STREAM, in a format similar to hexdump -C
   DISPOFF is added to offsets when displayed.
 */
 void up_hexdump(const void *buf, size_t size, uint64_t dispoff, void *stream);
+
+/* Print something somewhat similar to hexdump -C piped through diff -u */
+void up_hexdiff(const void *old, size_t osize, uint64_t ooff, const char *oname,
+                const void *new, size_t nsize, uint64_t noff, const char *nname,
+                void *stream);
 
 /* Format NUM as a human readable size. UNITS should point to a const
    char * to store the unit label in. Use the UP_BESTDECIMAL() macro

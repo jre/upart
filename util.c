@@ -106,6 +106,14 @@ up_hexdump(const void *_buf, size_t size, uint64_t dispoff, void *_stream)
     fprintf(stream, "%012"PRIx64"\n", (uint64_t)size + dispoff);
 }
 
+void
+up_hexdiff(const void *old, size_t osize, uint64_t ooff, const char *oname,
+           const void *new, size_t nsize, uint64_t noff, const char *nname,
+           void *stream)
+{
+    printf("XXX not yet\n");
+}
+
 float
 up_fmtsize(int64_t num, const char **units)
 {

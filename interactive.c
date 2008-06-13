@@ -39,9 +39,14 @@ static int dorestore(const struct up_disk *src, const char *path,
                      struct up_opts *opts, int restore);
 static int iter_dorestore(const struct up_disk *disk,
                           const struct up_disk_sectnode *sect, void *arg);
+static int diffdisksect(const struct up_disk *old, const struct up_disk *new,
+                        const struct up_disk_sectnode *oldsect,
+                        uint8_t **newbuf, size_t *newsize,
+                        const struct up_opts *opts);
 static int dumpdisksect(const struct up_disk *disk, int64_t off, int64_t count,
                         uint8_t **buf, size_t *size,
                         const struct up_opts *opts);
+static int growbuf(uint8_t **buf, size_t *size, size_t want);
 static int cmpsects(const struct up_disk *first, const struct up_disk *second,
                     int64_t start, int64_t count, const struct up_opts *opts);
 static int promptparam(int64_t *val, int64_t min, int64_t max,
@@ -417,7 +422,12 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
         {
             case 'd':
             case 'D':
-                printf("XXX diff not implemented\n");
+                if(0 > diffdisksect(src, data->dest, sect, &data->buf,
+                                    &data->buflen, data->opts))
+                {
+                    data->giveup = 1;
+                    return 0;
+                }
                 break;
             case 'h':
             case 'H':
@@ -470,31 +480,50 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
 }
 
 int
+diffdisksect(const struct up_disk *old, const struct up_disk *new,
+             const struct up_disk_sectnode *oldsect,
+             uint8_t **newbuf, size_t *newsize, const struct up_opts *opts)
+{
+    int64_t off = UP_SECT_OFF(oldsect);
+    int64_t count = UP_SECT_COUNT(oldsect);
+    int sectsize = UP_DISK_1SECT(old);
+    int64_t res;
+
+    assert(UP_DISK_1SECT(old) == UP_DISK_1SECT(new));
+    /* XXX need a better and more widely used check than this */
+    assert(SIZE_MAX / count > sectsize);
+
+    if(0 > growbuf(newbuf, newsize, sectsize * count))
+        return -1;
+
+    res = up_disk_read(new, off, count, *newbuf, *newsize, opts->verbosity);
+    if(0 > res)
+        return -1;
+    else if(res < count)
+    {
+        up_err("failed to read %"PRId64" sector%s from %s starting at sector "
+               "%"PRId64": short read count", count, (1 == count ? "" : "s"),
+               UP_DISK_PATH(new), off);
+        return -1;
+    }
+
+    up_hexdiff(UP_SECT_DATA(oldsect), sectsize * count, sectsize * off,
+               UP_DISK_PATH(old), *newbuf, sectsize * count, sectsize * off,
+               UP_DISK_PATH(new), stdout);
+    return 0;
+}
+
+int
 dumpdisksect(const struct up_disk *disk, int64_t off, int64_t count,
              uint8_t **buf, size_t *size, const struct up_opts *opts)
 {
-    uint8_t    *newbuf;
-    size_t      dumplen;
     int64_t     res;
 
     /* XXX need a better and more widely used check than this */
     assert(SIZE_MAX / count > UP_DISK_1SECT(disk));
 
-    dumplen = UP_DISK_1SECT(disk) * count;
-    if(*size < dumplen)
-    {
-        if(*buf)
-            newbuf = realloc(*buf, dumplen);
-        else
-            newbuf = malloc(dumplen);
-        if(!newbuf)
-        {
-            perror("malloc");
-            return -1;
-        }
-        *buf = newbuf;
-        *size = dumplen;
-    }
+    if(0 > growbuf(buf, size, UP_DISK_1SECT(disk) * count))
+        return -1;
 
     res = up_disk_read(disk, off, count, *buf, *size, opts->verbosity);
     if(0 > res)
@@ -509,7 +538,31 @@ dumpdisksect(const struct up_disk *disk, int64_t off, int64_t count,
 
     printf("\n\nDump of %s at sector %"PRId64" (0x%"PRIx64"):\n",
            UP_DISK_PATH(disk), off, off);
-    up_hexdump(*buf, dumplen, UP_DISK_1SECT(disk) * off, stdout);
+    up_hexdump(*buf, UP_DISK_1SECT(disk) * count, UP_DISK_1SECT(disk) * off,
+               stdout);
+
+    return 0;
+}
+
+int
+growbuf(uint8_t **buf, size_t *size, size_t want)
+{
+    uint8_t    *newbuf;
+
+    if(*size < want)
+    {
+        if(*buf)
+            newbuf = realloc(*buf, want);
+        else
+            newbuf = malloc(want);
+        if(!newbuf)
+        {
+            perror("malloc");
+            return -1;
+        }
+        *buf = newbuf;
+        *size = want;
+    }
 
     return 0;
 }

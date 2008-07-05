@@ -1,4 +1,6 @@
 # -*-Makefile-*-
+# @configure_input@
+
 CC           = @CC@
 CFLAGS       = @CFLAGS@ @CPPFLAGS@ @DEFS@
 DEPFLAGS     = -MM

@@ -167,7 +167,7 @@ apm_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
     const uint8_t              *data;
 
     data = up_disk_savesectrange(disk, apm->firstsect, apm->sectcount,
-                                 map, 0, opts->verbosity);
+                                 map, 0, opts);
     if(!data)
         return -1;
     apm->tmpbuf = data;
@@ -305,7 +305,7 @@ apm_find(const struct up_disk *disk, int64_t start, int64_t size,
     {
         if(up_disk_check1sect(disk, start + off + APM_OFFSET))
             return 0;
-        buf = up_disk_getsect(disk, start + off + APM_OFFSET, opts->verbosity);
+        buf = up_disk_getsect(disk, start + off + APM_OFFSET, opts);
         if(!buf)
             return -1;
         if(APM_MAGIC != UP_BETOH16(buf->sig))

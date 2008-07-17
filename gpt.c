@@ -175,10 +175,9 @@ gpt_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
 
     /* save sectors from primary and secondary maps */
     data1 = up_disk_savesectrange(disk, GPT_PRIOFF(map->start, map->size),
-                                  1 + partsects, map, 0, opts->verbosity);
+                                  1 + partsects, map, 0, opts);
     data2 = up_disk_savesectrange(disk, GPT_SECOFF(map->start, map->size)
-                                  - partsects, 1 + partsects, map, 0,
-                                  opts->verbosity);
+                                  - partsects, 1 + partsects, map, 0, opts);
     if(!data1 || !data2)
         return -1;
 
@@ -357,7 +356,7 @@ gpt_readhdr(const struct up_disk *disk, int64_t start, int64_t size,
 
     if(up_disk_check1sect(disk, start))
         return 0;
-    buf = up_disk_getsect(disk, start, opts->verbosity);
+    buf = up_disk_getsect(disk, start, opts);
     if(!buf)
         return -1;
     *gpt = buf;

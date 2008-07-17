@@ -194,7 +194,7 @@ sparc_setup(struct up_disk *disk, struct up_map *map,
     struct up_sparcpart        *part;
     int64_t                     cylsize, start, size;
 
-    if(!up_disk_save1sect(disk, map->start, map, 0, opts->verbosity))
+    if(!up_disk_save1sect(disk, map->start, map, 0, opts))
         return -1;
 
     cylsize = (uint64_t)UP_BETOH16(packed->heads) *
@@ -372,7 +372,7 @@ sparc_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     if(up_disk_check1sect(disk, start))
         return 0;
-    buf = up_disk_getsect(disk, start, opts->verbosity);
+    buf = up_disk_getsect(disk, start, opts);
     if(!buf)
         return -1;
 

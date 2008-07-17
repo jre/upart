@@ -167,7 +167,7 @@ mbr_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
     struct up_mbr              *mbr = map->priv;
     int                         ii;
 
-    if(!up_disk_save1sect(disk, map->start, map, 0, opts->verbosity))
+    if(!up_disk_save1sect(disk, map->start, map, 0, opts))
         return -1;
 
     /* add primary partitions */
@@ -199,7 +199,7 @@ mbrext_setup(struct up_disk *disk, struct up_map *map,
     {
         /* load extended mbr */
         assert(absoff >= map->start && absoff + max <= map->start + map->size);
-        buf = up_disk_save1sect(disk, absoff, map, 1, opts->verbosity);
+        buf = up_disk_save1sect(disk, absoff, map, 1, opts);
         if(!buf)
             return -1;
         if(MBR_MAGIC != UP_LETOH16(buf->magic))
@@ -348,7 +348,7 @@ mbr_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     if(up_disk_check1sect(disk, start))
         return 0;
-    buf = up_disk_getsect(disk, start, opts->verbosity);
+    buf = up_disk_getsect(disk, start, opts);
     if(!buf)
         return -1;
     *mbr = buf;

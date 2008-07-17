@@ -152,6 +152,7 @@ struct up_opts
     unsigned int        plainfile     : 1;
     unsigned int        relaxed       : 1;
     unsigned int        interactive   : 1;
+    unsigned int        sloppyio      : 1;
 };
 
 #endif /* HDR_UPART_UTIL */

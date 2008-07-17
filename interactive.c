@@ -496,7 +496,7 @@ diffdisksect(const struct up_disk *old, const struct up_disk *new,
     if(0 > growbuf(newbuf, newsize, sectsize * count))
         return -1;
 
-    res = up_disk_read(new, off, count, *newbuf, *newsize, opts->verbosity);
+    res = up_disk_read(new, off, count, *newbuf, *newsize, opts);
     if(0 > res)
         return -1;
     else if(res < count)
@@ -525,7 +525,7 @@ dumpdisksect(const struct up_disk *disk, int64_t off, int64_t count,
     if(0 > growbuf(buf, size, UP_DISK_1SECT(disk) * count))
         return -1;
 
-    res = up_disk_read(disk, off, count, *buf, *size, opts->verbosity);
+    res = up_disk_read(disk, off, count, *buf, *size, opts);
     if(0 > res)
         return -1;
     else if(res < count)
@@ -579,10 +579,10 @@ cmpsects(const struct up_disk *first, const struct up_disk *second,
 
     for(off = start; off < start + count; off++)
     {
-        firstbuf = up_disk_getsect(first, off, opts->verbosity);
+        firstbuf = up_disk_getsect(first, off, opts);
         if(!firstbuf)
             return -1;
-        secondbuf = up_disk_getsect(second, off, opts->verbosity);
+        secondbuf = up_disk_getsect(second, off, opts);
         if(!secondbuf)
             return -1;
         for(ii = 0; ii < UP_DISK_1SECT(first); ii++)

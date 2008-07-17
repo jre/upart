@@ -149,8 +149,7 @@ sun_x86_setup(struct up_disk *disk, struct up_map *map,
     struct up_sunx86part       *part;
     int64_t                     start, size;
 
-    if(!up_disk_save1sect(disk, map->start + SUNX86_OFF, map, 0,
-                          opts->verbosity))
+    if(!up_disk_save1sect(disk, map->start + SUNX86_OFF, map, 0, opts))
         return -1;
 
     max = UP_LETOH16(packed->partcount);
@@ -284,7 +283,7 @@ sun_x86_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     if(up_disk_check1sect(disk, start + SUNX86_OFF))
         return 0;
-    buf = up_disk_getsect(disk, start + SUNX86_OFF, opts->verbosity);
+    buf = up_disk_getsect(disk, start + SUNX86_OFF, opts);
     if(!buf)
         return -1;
 

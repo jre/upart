@@ -87,7 +87,7 @@ readargs(int argc, char *argv[], struct up_opts *opts)
     int opt;
 
     memset(opts, 0, sizeof *opts);
-    while(0 < (opt = getopt(argc, argv, "c:fh:il:qrs:vVw:z:")))
+    while(0 < (opt = getopt(argc, argv, "c:fh:ikl:qrs:vVw:z:")))
     {
         switch(opt)
         {
@@ -106,6 +106,9 @@ readargs(int argc, char *argv[], struct up_opts *opts)
                 break;
             case 'i':
                 opts->interactive = 1;
+                break;
+            case 'k':
+                opts->sloppyio = 1;
                 break;
             case 'l':
                 opts->label = optarg;
@@ -170,6 +173,7 @@ usage(const char *message, ...)
            "  -c cyls   total number of cylinders (cylinders)\n"
            "  -f        path is a plain file and not a device\n"
            "  -h heads  number of tracks per cylinder (heads)\n"
+           "  -k        keep going after I/O errors\n"
            "  -l label  label to use with -w option\n"
            "  -q        lower verbosity level when printing maps\n"
            "  -r        relax some checks when reading maps\n"

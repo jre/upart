@@ -145,7 +145,7 @@ up_disk_setup(struct up_disk *disk, const struct up_opts *opts)
 
 int64_t
 up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
-             void *buf, size_t bufsize, int verbose)
+             void *buf, size_t bufsize, const struct up_opts *opts)
 {
     ssize_t res;
 
@@ -165,27 +165,34 @@ up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     /* if there's an image then read from it instead */
     if(UP_DISK_IS_IMG(disk))
-        return up_img_read(disk->upd_img, start, size, buf, verbose);
+        return up_img_read(disk->upd_img, start, size, buf, opts->verbosity);
 
     /* otherwise try to read from the disk */
     res = pread(disk->upd_fd, buf, size * UP_DISK_1SECT(disk),
                 start * UP_DISK_1SECT(disk));
     if(0 > res)
     {
-        if(UP_NOISY(verbose, QUIET))
-            up_err("failed to read %s sector %"PRIu64": %s",
-                   UP_DISK_PATH(disk), start, strerror(errno));
-        return -1;
+        if(UP_NOISY(opts->verbosity, QUIET))
+            up_msg((opts->sloppyio ? UP_MSG_FWARN : UP_MSG_FERR),
+                   "read from %s failed: %"PRIu64" sector(s) of %u "
+                   "bytes at offset %"PRIu64": %s", UP_DISK_PATH(disk), size,
+                   UP_DISK_1SECT(disk), start, strerror(errno));
+        if(!opts->sloppyio)
+            return -1;
+        res = size * UP_DISK_1SECT(disk);
+        memset(buf, 0, res);
     }
 
     return res / UP_DISK_1SECT(disk);
 }
 
 const void *
-up_disk_getsect(const struct up_disk *disk, int64_t sect, int vrb)
+up_disk_getsect(const struct up_disk *disk, int64_t sect,
+                const struct up_opts *opts)
 {
     assert(disk->upd_buf);
-    if(1 > up_disk_read(disk, sect, 1, disk->upd_buf, UP_DISK_1SECT(disk), vrb))
+    if(1 > up_disk_read(disk, sect, 1, disk->upd_buf,
+                        UP_DISK_1SECT(disk), opts))
         return NULL;
     else
         return disk->upd_buf;
@@ -224,15 +231,16 @@ up_disk_checksectrange(const struct up_disk *disk, int64_t start, int64_t size)
 }
 
 const void *
-up_disk_save1sect(struct up_disk *disk, int64_t sect,
-                  const struct up_map *ref, int tag, int verbose)
+up_disk_save1sect(struct up_disk *disk, int64_t sect, const struct up_map *ref,
+                  int tag, const struct up_opts *opts)
 {
-    return up_disk_savesectrange(disk, sect, 1, ref, tag, verbose);
+    return up_disk_savesectrange(disk, sect, 1, ref, tag, opts);
 }
 
 const void *
 up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t size,
-                      const struct up_map *ref, int tag, int verbose)
+                      const struct up_map *ref, int tag,
+                      const struct up_opts *opts)
 {
     struct up_disk_sectnode *new;
 
@@ -260,7 +268,7 @@ up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t size,
 
     /* try to read the sectors from disk */
     if(size != up_disk_read(disk, first, size, new->data,
-                            size * UP_DISK_1SECT(disk), verbose))
+                            size * UP_DISK_1SECT(disk), opts))
     {
         free(new->data);
         free(new);

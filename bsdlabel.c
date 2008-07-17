@@ -259,8 +259,7 @@ bsdlabel_setup(struct up_disk *disk, struct up_map *map,
     const uint8_t              *buf;
     int64_t                     start, size;
 
-    buf = up_disk_save1sect(disk, map->start + label->sectoff, map, 0,
-                            opts->verbosity);
+    buf = up_disk_save1sect(disk, map->start + label->sectoff, map, 0, opts);
     if(!buf)
         return -1;
 
@@ -470,7 +469,7 @@ bsdlabel_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     if(up_disk_check1sect(disk, start))
         return 0;
-    buf = up_disk_getsect(disk, start, opts->verbosity);
+    buf = up_disk_getsect(disk, start, opts);
     if(!buf)
         return -1;
 

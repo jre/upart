@@ -152,7 +152,7 @@ sparc_load(const struct up_disk *disk, const struct up_part *parent, void **priv
 {
     int                 res;
     const uint8_t      *buf;
-    struct up_sparc    *sparc;
+    struct up_sparc    *label;
 
     assert(SPARC_EXT_SIZE == sizeof(struct up_sparcvtoc_p));
     assert(SPARC_EXT_SIZE == sizeof(struct up_sparcobsd_p));
@@ -169,17 +169,17 @@ sparc_load(const struct up_disk *disk, const struct up_part *parent, void **priv
         return res;
 
     /* allocate map struct */
-    sparc = calloc(1, sizeof *sparc);
-    if(!sparc)
+    label = calloc(1, sizeof *label);
+    if(!label)
     {
         perror("malloc");
         return -1;
     }
-    memcpy(&sparc->packed, buf, sizeof sparc->packed);
-    sparc->ext = sparc_check_vtoc(&sparc->packed.ext.vtoc) |
-                 sparc_check_obsd(&sparc->packed.ext.obsd);
+    memcpy(&label->packed, buf, sizeof label->packed);
+    label->ext = sparc_check_vtoc(&label->packed.ext.vtoc) |
+                 sparc_check_obsd(&label->packed.ext.obsd);
 
-    *priv = sparc;
+    *priv = label;
 
     return 1;
 }
@@ -231,7 +231,7 @@ static int
 sparc_info(const struct up_map *map, int verbose, char *buf, int size)
 {
     const struct up_sparc       *priv = map->priv;
-    const struct up_sparc_p     *sparc = &priv->packed;
+    const struct up_sparc_p     *label = &priv->packed;
     const struct up_sparcvtoc_p *vtoc;
     int                         res1, res2;
     char                        name[sizeof(vtoc->name)+1];
@@ -260,19 +260,19 @@ sparc_info(const struct up_map *map, int verbose, char *buf, int size)
                         "  sectors/track: %u\n",
                         up_map_label(map), extstr,
                         map->start, UP_DISK_PATH(map->disk),
-                        UP_BETOH16(sparc->rpm),
-                        UP_BETOH16(sparc->physcyls),
-                        UP_BETOH16(sparc->alts),
-                        UP_BETOH16(sparc->interleave),
-                        UP_BETOH16(sparc->datacyls),
-                        UP_BETOH16(sparc->altcyls),
-                        UP_BETOH16(sparc->heads),
-                        UP_BETOH16(sparc->sects));
+                        UP_BETOH16(label->rpm),
+                        UP_BETOH16(label->physcyls),
+                        UP_BETOH16(label->alts),
+                        UP_BETOH16(label->interleave),
+                        UP_BETOH16(label->datacyls),
+                        UP_BETOH16(label->altcyls),
+                        UP_BETOH16(label->heads),
+                        UP_BETOH16(label->sects));
         if(0 > res1 || res1 >= size)
             return res1;
         if(SPARC_ISEXT(priv->ext, VTOC))
         {
-            vtoc = &sparc->ext.vtoc;
+            vtoc = &label->ext.vtoc;
             memcpy(name, vtoc->name, sizeof vtoc->name);
             name[sizeof(name)-1] = 0;
             res2 = snprintf(buf + res1, size - res1,

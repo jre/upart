@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #ifdef HAVE_UTIL_H
 #include <util.h>
 #endif
@@ -59,6 +60,11 @@ static int getparams_linux(int fd, struct up_disk *disk,
 #if defined(HAVE_SYS_DISK_H) && defined(DKIOCGETBLOCKSIZE)
 #define HAVE_GETPARAMS_DARWIN
 static int getparams_darwin(int fd, struct up_disk *disk,
+                           const struct up_opts *opts);
+#endif
+#if defined(HAVE_SYS_DKIO_H) && defined(DKIOCGGEOM)
+#define HAVE_GETPARAMS_SUNOS
+static int getparams_sunos(int fd, struct up_disk *disk,
                            const struct up_opts *opts);
 #endif
 
@@ -105,6 +111,10 @@ up_os_getparams(int fd, struct up_disk *disk, const struct up_opts *opts)
 #endif
 #ifdef HAVE_GETPARAMS_DARWIN
     if(0 == getparams_darwin(fd, disk, opts))
+        return 0;
+#endif
+#ifdef HAVE_GETPARAMS_SUNOS
+    if(0 == getparams_sunos(fd, disk, opts))
         return 0;
 #endif
     return -1;
@@ -252,3 +262,30 @@ getparams_darwin(int fd, struct up_disk *disk, const struct up_opts *opts)
     return 0;
 }
 #endif /* HAVE_GETPARAMS_DARWIN */
+
+#ifdef HAVE_GETPARAMS_SUNOS
+static int
+getparams_sunos(int fd, struct up_disk *disk, const struct up_opts *opts)
+{
+    struct up_diskparams *params = &disk->ud_params;
+    struct dk_geom geom;
+
+    if(UP_DISK_IS_FILE(disk))
+        return -1;
+
+    /* XXX is there an ioctl or something to get sector size? */
+    params->ud_sectsize = NBPSCTR;
+
+    if(0 == ioctl(fd, DKIOCGGEOM, &geom))
+    {
+        params->ud_cyls = geom.dkg_pcyl;
+        params->ud_heads = geom.dkg_nhead;
+        params->ud_sects = geom.dkg_nsect;
+    }
+    else if(UP_NOISY(opts->verbosity, QUIET))
+        up_warn("failed to read disk geometry for %s: %s",
+                UP_DISK_PATH(disk), strerror(errno));
+
+    return 0;
+}
+#endif /* HAVE_GETPARAMS_SUNOS */

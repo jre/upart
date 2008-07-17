@@ -5,7 +5,8 @@ then
     cleanfiles=
     for ii in *.img
     do
-        cleanfiles="$cleanfiles test-${ii%.img}.out test-${ii%.img}.err"
+        test="`basename "$ii" .img`"
+        cleanfiles="$cleanfiles test-${test}.out test-${test}.err"
     done
     echo "rm -f$cleanfiles"
     rm -f $cleanfiles
@@ -23,7 +24,7 @@ if [ -n "$UPART_TEST_REGEN" ]
 then
     for ii in *.img
     do
-        test="${ii%.img}"
+        test="`basename "$ii" .img`"
         testoutfile="$test.out"
         testerrfile="$test.err"
         testexitfile="$test.exit"
@@ -41,25 +42,25 @@ echo "running tests..."
 
 for ii in *.img
 do
-    test="${ii%.img}"
+    test="`basename "$ii" .img`"
     testoutfile="test-$test.out"
     testerrfile="test-$test.err"
 
-    if [ -e "$test.exit" ]
+    if [ -r "$test.exit" ]
     then
         wantstatus="`cat "$test.exit"`"
     else
         wantstatus=0
     fi
 
-    if [ ! -e "$test.out" ]
+    if [ ! -r "$test.out" ]
     then
         outfile=/dev/null
     else
         outfile="$test.out"
     fi
 
-    if [ ! -e "$test.err" ]
+    if [ ! -r "$test.err" ]
     then
         errfile=/dev/null
     else
@@ -77,28 +78,28 @@ do
         echo "$test: expected exit status $wantstatus $gotstatus"
     fi
 
-    if ! cmp "$outfile" "$testoutfile" >/dev/null 2>&1
+    if cmp "$outfile" "$testoutfile" >/dev/null 2>&1
     then
+        rm -f "$testoutfile"
+    else
         failed=y
         echo "$test: unexpected standard output"
         $diff "$outfile" "$testoutfile"
-    else
-        rm -f "$testoutfile"
     fi
 
-    if ! cmp "$errfile" "$testerrfile" >/dev/null 2>&1
+    if cmp "$errfile" "$testerrfile" >/dev/null 2>&1
     then
+        rm -f "$testerrfile"
+    else
         failed=y
         echo "$test: unexpected standard error"
         $diff "$errfile" "$testerrfile"
-    else
-        rm -f "$testerrfile"
     fi
 
-    totalcount=$(($totalcount + 1))
+    totalcount="`expr "$totalcount" \+ 1`"
     if [ xy = x"$failed" ]
     then
-        failcount=$(($failcount + 1))
+        failcount="`expr "$failcount" \+ 1`"
         faillist="$faillist $test"
     fi
 done

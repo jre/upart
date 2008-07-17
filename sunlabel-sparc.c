@@ -57,13 +57,14 @@ struct up_sparcvtoc_p
     char                        name[8];
     uint16_t                    partcount;
     struct up_sparcvtocpart_p   parts[SPARC_MAXPART];
+    uint16_t                    alignpad;
     uint32_t                    bootinfo[3];
     uint32_t                    magic;
     uint32_t                    reserved[10];
     uint32_t                    timestamp[SPARC_MAXPART];
     uint16_t                    writeskip;
     uint16_t                    readskip;
-    char                        pad[154];
+    char                        pad[152];
 
 } __attribute__((packed));
 

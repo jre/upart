@@ -4731,6 +4731,7 @@ done
 
 if test xno != x"$with_readline"
 then
+    my_saved_pre_readline_libs="$LIBS"
     { echo "$as_me:$LINENO: checking for library containing tgetent" >&5
 echo $ECHO_N "checking for library containing tgetent... $ECHO_C" >&6; }
 if test "${ac_cv_search_tgetent+set}" = set; then
@@ -4914,7 +4915,7 @@ fi
 echo "$as_me: error: failed to find readline" >&2;}
    { (exit 1); exit 1; }; }
             fi
-            # XXX should probably remove termcap lib here
+            LIBS="$my_saved_pre_readline_libs"
         else
             cat >>confdefs.h <<\_ACEOF
 #define HAVE_READLINE 1

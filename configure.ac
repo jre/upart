@@ -53,6 +53,7 @@ AC_CHECK_FUNCS([strlcpy strlcat])
 dnl try to find readline unless instructed otherwise
 if test xno != x"$with_readline"
 then
+    my_saved_pre_readline_libs="$LIBS"
     AC_SEARCH_LIBS(tgetent, [termcap tinfo curses ncurses])
     if test xno = x"$ac_cv_search_tgetent"
     then
@@ -68,7 +69,7 @@ then
             then
                 AC_ERROR([failed to find readline])
             fi
-            # XXX should probably remove termcap lib here
+            LIBS="$my_saved_pre_readline_libs"
         else
             AC_DEFINE([HAVE_READLINE])
         fi

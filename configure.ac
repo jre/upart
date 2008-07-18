@@ -4,11 +4,8 @@ AC_PREREQ([2.60])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([common.mk])
 
-dnl default to some sane CFLAGS
-if test -z "$CFLAGS"
-then
-    CFLAGS="-g -Wall -Werror -O"
-fi
+dnl remember if CFLAGS was set before AC_PROG_CC messes with it
+had_prior_cflags=${CFLAGS:+yes}
 
 dnl check for --with-readline option
 readline_enabled=yes
@@ -76,6 +73,12 @@ then
             AC_DEFINE([HAVE_READLINE])
         fi
     fi
+fi
+
+dnl try to make sure all warnings are on and fatal for gcc
+if test xyes = x"$GCC" && test xyes != x"$had_prior_cflags"
+then
+    CFLAGS="$CFLAGS -Wall -Werror"
 fi
 
 AC_OUTPUT

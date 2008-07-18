@@ -1697,10 +1697,7 @@ ac_config_headers="$ac_config_headers config.h"
 ac_config_files="$ac_config_files common.mk"
 
 
-if test -z "$CFLAGS"
-then
-    CFLAGS="-g -Wall -Werror -O"
-fi
+had_prior_cflags=${CFLAGS:+yes}
 
 readline_enabled=yes
 readline_prefix=
@@ -4924,6 +4921,11 @@ _ACEOF
 
         fi
     fi
+fi
+
+if test xyes = x"$GCC" && test xyes != x"$had_prior_cflags"
+then
+    CFLAGS="$CFLAGS -Wall -Werror"
 fi
 
 cat >confcache <<\_ACEOF

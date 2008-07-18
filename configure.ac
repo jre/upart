@@ -75,6 +75,18 @@ then
     fi
 fi
 
+dnl try to figure out flags to get makefile dependencies
+dnl XXX there has to be a better way of doing this
+AC_CACHE_CHECK([for C compiler option to generate Makefile dependencies],
+               [my_cc_cv_mkdep_flags],
+               [my_cc_cv_mkdep_flags=-M
+                AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [[#ifndef __SUNPRO_C
+       not sunpro
+#endif
+]])], [my_cc_cv_mkdep_flags=-xM])])
+dnl XXX should use AC_ARG_VAR so user can override
+AC_SUBST([CC_MKDEP_FLAGS], [$my_cc_cv_mkdep_flags])
+
 dnl try to make sure all warnings are on and fatal for gcc
 if test xyes = x"$GCC" && test xyes != x"$had_prior_cflags"
 then

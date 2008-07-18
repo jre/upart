@@ -3,7 +3,7 @@
 
 CC           = @CC@
 CFLAGS       = @CFLAGS@ @CPPFLAGS@ @DEFS@
-DEPFLAGS     = -MM
+DEPFLAGS     = @CC_MKDEP_FLAGS@
 LDFLAGS      = @LDFLAGS@
 LIBS         = @LIBS@
 prefix       = @prefix@

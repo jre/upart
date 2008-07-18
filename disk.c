@@ -24,7 +24,7 @@ static int fixparams_checkone(struct up_diskparams *disk);
 static int sectcmp(struct up_disk_sectnode *left,
                    struct up_disk_sectnode *right);
 
-RB_GENERATE_STATIC(up_disk_sectmap, up_disk_sectnode, link, sectcmp);
+RB_GENERATE_STATIC(up_disk_sectmap, up_disk_sectnode, link, sectcmp)
 
 struct up_disk *
 up_disk_open(const char *name, const struct up_opts *opts,

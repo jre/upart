@@ -28,10 +28,12 @@
 #define BZB_TYPE_UNIX           (0x1)
 #define BZB_TYPE_AUTO           (0x2)
 #define BZB_TYPE_SWAP           (0x3)
-#define BZB_FLAG_ROOT           (1 << 31)
-#define BZB_FLAG_USR            (1 << 30)
-#define BZB_FLAG_CRIT           (1 << 29)
-#define BZB_FLAG_SLICE(val)     (((0x1f << 16) & val) >> 16)
+#define BZB_FLAG_ROOT           (1U << 31)
+#define BZB_FLAG_USR            (1U << 30)
+#define BZB_FLAG_CRIT           (1U << 29)
+#define BZB_FLAG_SLICE(val)     (((0x1fU << 16) & val) >> 16)
+
+#pragma pack(1)
 
 #pragma pack(1)
 

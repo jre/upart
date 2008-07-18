@@ -325,9 +325,10 @@ up_img_getlabel(struct up_img *img, size_t *len)
 }
 
 int64_t
-up_img_read(struct up_img *img, int64_t start, int64_t sects, void *buf,
+up_img_read(struct up_img *img, int64_t start, int64_t sects, void *_buf,
             int verbose)
 {
+    uint8_t            *buf = _buf;
     size_t              imgoff, sectsize;
     struct up_imgsect_p sect;
 

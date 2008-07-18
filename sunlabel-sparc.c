@@ -39,17 +39,19 @@
 
 /* XXX should detect embedded netbsd label (offset 128) */
 
+#pragma pack(1)
+
 struct up_sparcpart_p
 {
     uint32_t                    cyl;
     uint32_t                    size;
-} __attribute__((packed));
+};
 
 struct up_sparcvtocpart_p
 {
     uint16_t tag;
     uint16_t flag;
-} __attribute__((packed));
+};
 
 struct up_sparcvtoc_p
 {
@@ -66,7 +68,7 @@ struct up_sparcvtoc_p
     uint16_t                    readskip;
     char                        pad[152];
 
-} __attribute__((packed));
+};
 
 struct up_sparcobsd_p
 {
@@ -77,7 +79,7 @@ struct up_sparcobsd_p
     uint8_t                     fragblock[OBSD_MAXPART];
     uint16_t                    cpg[OBSD_MAXPART];
     char                        pad[156];
-} __attribute__((packed));
+};
 
 struct up_sparc_p
 {
@@ -100,7 +102,9 @@ struct up_sparc_p
     struct up_sparcpart_p       parts[SPARC_MAXPART];
     uint16_t                    magic;
     uint16_t                    checksum;
-} __attribute__((packed));
+};
+
+#pragma pack()
 
 struct up_sparc
 {

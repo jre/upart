@@ -35,13 +35,15 @@
 #define GPT_PART_SIZE           0x80
 #define GPT_NAME_SIZE           0x48
 
+#pragma pack(1)
+
 struct up_guid_p
 {
     uint32_t            data1;
     uint16_t            data2;
     uint16_t            data3;
     uint8_t             data4[GPT_GUID_DATA4_SIZE];
-} __attribute__((packed));
+};
 
 struct up_gpt_p
 {
@@ -59,7 +61,7 @@ struct up_gpt_p
     uint32_t            maxpart;
     uint32_t            partsize;
     uint32_t            partcrc;
-} __attribute__((packed));
+};
 
 struct up_gptpart_p
 {
@@ -69,7 +71,9 @@ struct up_gptpart_p
     uint64_t            end;
     uint64_t            flags;
     char                name[GPT_NAME_SIZE];
-} __attribute__((packed));
+};
+
+#pragma pack()
 
 struct up_gptpart
 {

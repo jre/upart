@@ -23,6 +23,8 @@
 #define IMG_HDR_LEN             328
 #define IMG_SECT_LEN            16
 
+#pragma pack(1)
+
 struct up_imghdr_p
 {
     uint64_t            magic;
@@ -40,13 +42,15 @@ struct up_imghdr_p
     uint64_t            heads;
     uint64_t            sects;
     char                label[256];
-} __attribute__((packed));
+};
 
 struct up_imgsect_p
 {
     uint64_t            off;
     uint64_t            size;
-} __attribute__((packed));
+};
+
+#pragma pack()
 
 struct up_img
 {

@@ -25,6 +25,8 @@
 #define MBR_GETSECT(sc)         ((sc)[0] & 0x3f)
 #define MBR_GETCYL(sc)          ((((uint16_t)((sc)[0] & 0xc0)) << 2) | (sc)[1])
 
+#pragma pack(1)
+
 struct up_mbrpart_p
 {
     uint8_t         flags;
@@ -35,14 +37,16 @@ struct up_mbrpart_p
     uint8_t         lastsectcyl[2];
     uint32_t        start;
     uint32_t        size;
-} __attribute__((packed));
+};
 
 struct up_mbr_p
 {
     uint8_t             bootcode[446];
     struct up_mbrpart_p part[MBR_PART_COUNT];
     uint16_t            magic;
-} __attribute__((packed));
+};
+
+#pragma pack()
 
 struct up_mbrpart
 {

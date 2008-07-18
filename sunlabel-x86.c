@@ -27,6 +27,8 @@
 /* XXX should use partition count from disk instead of hardcoding this */
 #define SUNX86_MAXPARTITIONS    (16)
 
+#pragma pack(1)
+
 struct up_sunx86part_p
 {
     uint16_t                    type;
@@ -34,7 +36,6 @@ struct up_sunx86part_p
     uint32_t                    start;
     uint32_t                    size;
 };
-
 struct up_sunx86_p
 {
     uint32_t                    pad1[3];
@@ -62,7 +63,9 @@ struct up_sunx86_p
     char                        pad4[20];
     uint16_t                    altmagic;
     uint16_t                    checksum;
-} __attribute__((packed));
+};
+
+#pragma pack()
 
 struct up_sunx86
 {

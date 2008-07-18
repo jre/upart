@@ -46,6 +46,8 @@
 #define LABEL_PGETINT32(labl, prt, fld) \
     (UP_ETOH32((prt)->part.fld, (labl)->endian))
 
+#pragma pack(1)
+
 struct up_bsd_p
 {
     uint32_t            magic1;
@@ -76,7 +78,7 @@ struct up_bsd_p
     uint16_t            maxpart;
     uint32_t            bootsize;
     uint32_t            superblockmax;
-} __attribute__((packed));
+};
 
 struct up_bsdpart_p
 {
@@ -86,7 +88,9 @@ struct up_bsdpart_p
     uint8_t             type;
     uint8_t             fragperblock;
     uint16_t            cylpergroup;
-} __attribute__((packed));
+};
+
+#pragma pack()
 
 struct up_bsd
 {

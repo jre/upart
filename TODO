@@ -29,3 +29,4 @@ tests:
 document image format
 move more sun common code and defines into shared header?
 other extended mbr ID?
+try to get bus errors from misaligned packed structures on sparc with sunpro or gcc

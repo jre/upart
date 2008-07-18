@@ -33,6 +33,8 @@
 #define BZB_FLAG_CRIT           (1 << 29)
 #define BZB_FLAG_SLICE(val)     (((0x1f << 16) & val) >> 16)
 
+#pragma pack(1)
+
 struct up_apm_p
 {
     uint16_t            sig;
@@ -67,7 +69,9 @@ struct up_apm_p
     uint32_t            abmpad[7];
     char                bzbmountpoint[64];
     uint32_t            pad[62];
-} __attribute__((packed));
+};
+
+#pragma pack()
 
 struct up_apm
 {

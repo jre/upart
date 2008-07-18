@@ -4,15 +4,12 @@ disklabel
   openbsd v1 labels
   more testing with labels from other BSDs
   some way to tell which BSD wrote a label?
-sun sparc label
-  test vtoc
 apple map
   fix bzb
 filesystem tasting
 better overall description in manpage
 option to change displayed offset/size units
 interactive restore mode for dumps
-use PACKAGE_NAME instead of "upart" everywhere
 tests:
   add images with just one map format, to make failures easier to diagnose
     make these run before the jre-* images with multiple maps
@@ -30,3 +27,4 @@ document image format
 move more sun common code and defines into shared header?
 other extended mbr ID?
 try to get bus errors from misaligned packed structures on sparc with sunpro or gcc
+  yea, looks like sunpro on sparc with -m64 will do it, this needs to be fixed

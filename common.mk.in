@@ -9,7 +9,7 @@ LIBS         = @LIBS@
 prefix       = @prefix@
 exec_prefix  = @exec_prefix@
 datarootdir  = @datarootdir@
-sbindir      = @sbindir@
+bindir       = @bindir@
 mandir       = @mandir@
 INSTALL      = @INSTALL@
 INSTALL_PROG = @INSTALL_PROGRAM@ -m 755
@@ -34,8 +34,8 @@ ALL_OBJS      = ${ALL_SRCS:.c=.o}
 all: ${ALL_PROGS}
 
 install: all
-	${MKDIR_P} ${DESTDIR}${sbindir}
-	${INSTALL_PROG} upart ${DESTDIR}${sbindir}
+	${MKDIR_P} ${DESTDIR}${bindir}
+	${INSTALL_PROG} upart ${DESTDIR}${bindir}
 	${MKDIR_P} ${DESTDIR}${mandir}/man8
 	${INSTALL_DATA} upart.8 ${DESTDIR}${mandir}/man8
 

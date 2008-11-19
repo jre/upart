@@ -86,7 +86,7 @@ up_interactive(const struct up_disk *src, const struct up_opts *origopts)
         line = interactive_nextline("> ", &opts);
         if(!line)
             return 0;
-        while(isspace(line[0]))
+        while(isspace((int)line[0]))
             line++;
         if(!line[0])
             continue;
@@ -223,11 +223,11 @@ splitword(char *str)
     char *ii = str;
 
     /* skip over any initial whitespace */
-    while(*ii && isspace(*ii))
+    while(*ii && isspace((int)*ii))
         ii++;
 
     /* skip over first word */
-    while(*ii && !isspace(*ii))
+    while(*ii && !isspace((int)*ii))
         ii++;
 
     /* if we hit end of string then there are no more words,
@@ -239,7 +239,7 @@ splitword(char *str)
     *(ii++) = '\0';
 
     /* skip over whitespace */
-    while(*ii && isspace(*ii))
+    while(*ii && isspace((int)*ii))
         ii++;
 
     /* return beginning of next word or zero-length string */
@@ -394,7 +394,7 @@ iter_dorestore(const struct up_disk *src, const struct up_disk_sectnode *sect,
             data->giveup = 1;
             return 0;
         }
-        while(isspace(line[0]))
+        while(isspace((int)line[0]))
             line++;
         if(!line[0])
             continue;
@@ -608,7 +608,7 @@ promptparam(int64_t *val, int64_t min, int64_t max, const struct up_opts *opts,
         line = interactive_nextline(prompt, opts);
         if(!line)
             return -1;
-        while(isspace(line[0]))
+        while(isspace((int)line[0]))
             line++;
         if(!line[0])
             return 0;

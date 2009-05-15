@@ -17,13 +17,15 @@
 #define MBR_MAGIC               (0xaa55)
 #define MBR_PART_COUNT          (4)
 #define MBR_FLAG_ACTIVE         (0x80)
-#define MBR_ID_EXT              (0x05)
+#define MBR_ID_EXTDOS           (0x05)
+#define MBR_ID_EXTWIN           (0x0f)
 #define MBR_ID_UNUSED           (0x00)
 #define MBR_EXTPART             (0)
 #define MBR_EXTNEXT             (1)
 
 #define MBR_GETSECT(sc)         ((sc)[0] & 0x3f)
 #define MBR_GETCYL(sc)          ((((uint16_t)((sc)[0] & 0xc0)) << 2) | (sc)[1])
+#define MBR_ID_IS_EXT(id)       (MBR_ID_EXTDOS == (id) || MBR_ID_EXTWIN == (id))
 
 #pragma pack(1)
 
@@ -158,7 +160,7 @@ mbrext_load(const struct up_disk *disk, const struct up_part *parent, void **pri
 
     /* refuse to load unless parent is the right type of mbr partition */
     if(!parent->map || UP_MAP_MBR != parent->map->type ||
-       MBR_ID_EXT != ((const struct up_mbrpart*)parent->priv)->part.type)
+       !MBR_ID_IS_EXT(((const struct up_mbrpart*)parent->priv)->part.type))
         return 0;
 
     /* load and discard the first extended mbr sector to check the magic */
@@ -206,29 +208,38 @@ mbrext_setup(struct up_disk *disk, struct up_map *map,
         buf = up_disk_save1sect(disk, absoff, map, 1, opts);
         if(!buf)
             return -1;
+
         if(MBR_MAGIC != UP_LETOH16(buf->magic))
-            /* XXX should warn here, maybe allow relaxed check */
-            return 0;
+        {
+            if(UP_NOISY(opts->verbosity, QUIET))
+                up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
+                       "logical MBR partition %d lacks magic number", index + 1);
+            if(!opts->relaxed)
+                return 0;
+        }
+
         if(0 > mbr_addpart(map, &buf->part[MBR_EXTPART], index, absoff, buf))
             return -1;
 
         if(MBR_ID_UNUSED == buf->part[MBR_EXTNEXT].type)
             break;
-        else if(MBR_ID_EXT != buf->part[MBR_EXTNEXT].type)
-            /* XXX should warn here */
+        else if(!MBR_ID_IS_EXT(buf->part[MBR_EXTNEXT].type))
+        {
+            if(UP_NOISY(opts->verbosity, QUIET))
+                up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
+                       "logical MBR partition %d has invalid type for "
+                       "extended partition: 0x%02x",
+                       index + 1, buf->part[MBR_EXTNEXT].type);
+            if(!opts->relaxed)
+                return 0;
             break;
+        }
 
         index++;
 
         max    = UP_LETOH32(buf->part[MBR_EXTNEXT].size);
         reloff = UP_LETOH32(buf->part[MBR_EXTNEXT].start);
         absoff = reloff + map->start;
-#if 0 /* XXX why fix up bad partitions instead of ignoring them? */
-        if(reloff + max > map->size)
-            max = map->size - reloff;
-        if(0 > max)
-            max = 0;
-#endif
 
         if(0 > reloff || 0 >= max || reloff + max > map->size)
         {

@@ -153,18 +153,11 @@ static int
 mbrext_load(const struct up_disk *disk, const struct up_part *parent, void **priv,
             const struct up_opts *opts)
 {
-    const struct up_mbr_p *buf;
-
-    assert(MBR_SIZE == sizeof *buf);
     *priv = NULL;
 
     /* refuse to load unless parent is the right type of mbr partition */
-    if(!parent->map || UP_MAP_MBR != parent->map->type ||
-       !MBR_ID_IS_EXT(((const struct up_mbrpart*)parent->priv)->part.type))
-        return 0;
-
-    /* load and discard the first extended mbr sector to check the magic */
-    return mbr_read(disk, parent->start, parent->size, &buf, opts);
+    return (NULL != parent->map && UP_MAP_MBR == parent->map->type &&
+            MBR_ID_IS_EXT(((const struct up_mbrpart*)parent->priv)->part.type));
 }
 
 static int
@@ -213,7 +206,8 @@ mbrext_setup(struct up_disk *disk, struct up_map *map,
         {
             if(UP_NOISY(opts->verbosity, QUIET))
                 up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
-                       "logical MBR partition %d lacks magic number", index + 1);
+                       "extended MBR in sector %"PRId64
+                       " has invalid magic number", absoff);
             if(!opts->relaxed)
                 return 0;
         }
@@ -227,9 +221,9 @@ mbrext_setup(struct up_disk *disk, struct up_map *map,
         {
             if(UP_NOISY(opts->verbosity, QUIET))
                 up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
-                       "logical MBR partition %d has invalid type for "
-                       "extended partition: 0x%02x",
-                       index + 1, buf->part[MBR_EXTNEXT].type);
+                       "extended MBR in sector %"PRId64
+                       " has invalid type for partition %d 0x%02x",
+                       absoff, MBR_EXTNEXT, buf->part[MBR_EXTNEXT].type);
             if(!opts->relaxed)
                 return 0;
             break;

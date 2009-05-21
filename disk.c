@@ -64,7 +64,7 @@ up_disk_open(const char *name, const struct up_opts *opts,
             return NULL;
         }
         else if(0 == res)
-            assert(NULL != img);
+            assert(NULL == img);
     }
 
     /* allocate disk struct and name and path strings */

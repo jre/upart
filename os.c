@@ -85,9 +85,13 @@ up_os_opendisk(const char *name, const char **path, const struct up_opts *opts,
     buf[0] = 0;
     ret = opendisk(name, flags, buf, sizeof buf, 0);
 #else
-    strlcpy(buf, "/dev/", sizeof buf);
-    strlcat(buf, name, sizeof buf);
-    ret = open(buf, flags);
+    ret = open(name, flags);
+    if(0 > ret)
+    {
+        strlcpy(buf, "/dev/", sizeof buf);
+        strlcat(buf, name, sizeof buf);
+        ret = open(buf, flags);
+    }
 #endif
     if(0 <= ret && buf[0])
         *path = buf;

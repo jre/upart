@@ -5,4 +5,4 @@
 depend dep:
 	${CC} ${CFLAGS} ${DEPFLAGS} ${ALL_SRCS} > .depend
 
-${ALL_OBJS}: BSDmakefile
+${ALL_OBJS}: Makefile

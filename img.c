@@ -187,7 +187,7 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
             up_err("failed to read from %s: %s", name, strerror(errno));
         return -1;
     }
-    if(IMG_MAGIC != UP_BETOH64(hdr.magic))
+    if(res != IMG_HDR_LEN || IMG_MAGIC != UP_BETOH64(hdr.magic))
         return 0;
     if(res != IMG_HDR_LEN)
     {

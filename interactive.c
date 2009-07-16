@@ -753,7 +753,7 @@ interactive_nextline(const char *prompt, const struct up_opts *opts)
     size_t res;
 
     if(prompt)
-        printf(prompt);
+        fputs(prompt, stdout);
 
     res = nrl_getline(buf, sizeof buf, stdin);
     if(!res)

@@ -15,7 +15,6 @@
 #include "disk.h"
 #include "gpt.h"
 #include "img.h"
-#include "interactive.h"
 #include "map.h"
 #include "mbr.h"
 #include "util.h"
@@ -57,12 +56,7 @@ main(int argc, char *argv[])
     }
 
     ret = EXIT_SUCCESS;
-    if(opts.interactive)
-    {
-        if(0 > up_interactive(disk, &opts))
-            ret = EXIT_FAILURE;
-    }
-    else if(opts.serialize)
+    if(opts.serialize)
     {
         if(0 > serialize(disk, &opts))
             ret = EXIT_FAILURE;
@@ -87,7 +81,7 @@ readargs(int argc, char *argv[], struct up_opts *opts)
     int opt;
 
     memset(opts, 0, sizeof *opts);
-    while(0 < (opt = getopt(argc, argv, "c:fh:ikl:qrs:vVw:z:")))
+    while(0 < (opt = getopt(argc, argv, "c:fh:kl:qrs:vVw:z:")))
     {
         switch(opt)
         {
@@ -103,9 +97,6 @@ readargs(int argc, char *argv[], struct up_opts *opts)
                 params->ud_heads = strtol(optarg, NULL, 0);
                 if(0 >= params->ud_heads)
                     usage("illegal tracks per cylinder (head) count: %s", optarg);
-                break;
-            case 'i':
-                opts->interactive = 1;
                 break;
             case 'k':
                 opts->sloppyio = 1;
@@ -147,8 +138,6 @@ readargs(int argc, char *argv[], struct up_opts *opts)
 
     if(opts->label && !opts->serialize)
         usage("-w is required for -l");
-    if(opts->interactive && opts->serialize)
-        usage("-i and -w are not compatible");
     if(optind + 1 == argc)
         return argv[optind];
     else

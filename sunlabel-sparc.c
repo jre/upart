@@ -352,13 +352,14 @@ sparc_extra(const struct up_part *part, int verbose, char *buf, int size)
         return up_sunlabel_fmt(buf, size,
                                UP_BETOH16(vtoc->parts[priv->index].tag),
                                UP_BETOH16(vtoc->parts[priv->index].flag));
-    else if(SPARC_ISEXT(label->ext, OBSD_TYPES))
-        return up_bsdlabel_fmt(part, verbose, buf, size,
-                               obsd->types[priv->index],
-                               0,
-                               obsd->fragblock[priv->index],
-                               UP_BETOH16(obsd->cpg[priv->index]),
-                               1);
+    else if(SPARC_ISEXT(label->ext, OBSD_TYPES)) {
+	    uint8_t bf = obsd->fragblock[priv->index];
+	    int frags = OBSDLABEL_BF_FRAG(bf);
+	    return up_bsdlabel_fmt(part, verbose, buf, size,
+		obsd->types[priv->index],
+		(frags ? OBSDLABEL_BF_BSIZE(bf) / frags : 0),
+		frags, UP_BETOH16(obsd->cpg[priv->index]));
+    }
     else
         return 0;
 }

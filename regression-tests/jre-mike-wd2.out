@@ -21,7 +21,8 @@ Apple partition map in sector 0 of jre-mike-wd2.img:
 9:                1824           37544 Apple_Bootstrap          Boot                     0x40000033
 10:              39368        73662464 Apple_HFS                Leopard                  0x4000037f
 11:           73701832        46401368 OpenBSD                  OpenBSD                  0x40000373
- BSD disklabel in sector 73701832 (offset 0) of jre-mike-wd2.img:
+ OpenBSD disklabel in sector 73701832 (offset 0) of jre-mike-wd2.img:
+  version: 65536
   type: ESDI (5)
   disk: ESDI/IDE disk
   label: Maxtor 6Y060P0  
@@ -42,13 +43,13 @@ Apple partition map in sector 0 of jre-mike-wd2.img:
   partition count: 16
 
                   Start            Size Type    fsize bsize   cpg
- a:            73701832          524264 4.2BSD      0     0     1
+ a:            73701832          524264 4.2BSD   2048 16384     1
  b:            74226096          525168 swap
  c:   X               0       120103200 unused      0     0
- d:            74751264          525168 4.2BSD      0     0     1
- e:            75276432          525168 4.2BSD      0     0     1
- f:            75801600        20972448 4.2BSD      0     0     1
- g:            96774048        23329152 4.2BSD      0     0     1
+ d:            74751264          525168 4.2BSD   2048 16384     1
+ e:            75276432          525168 4.2BSD   2048 16384     1
+ f:            75801600        20972448 4.2BSD   2048 16384     1
+ g:            96774048        23329152 4.2BSD   2048 16384     1
  h:   X               0               0 unused
  i:   X           39368        73662464 HFS/raid
  j:   X               0               0 unused

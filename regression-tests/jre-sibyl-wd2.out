@@ -80,7 +80,8 @@ MBR partition table in sector 0 of jre-sibyl-wd2.img:
  h:   X               0               0 unused
 2:            73398528        31457664 * 1023/  0/ 1-1023/ 15/63 NTFS or HPFS (0x07)
 3:           104856192       207725616   1023/  0/ 1-1023/ 15/63 OpenBSD (0xa6)
- BSD disklabel in sector 104856192 (offset 1) of jre-sibyl-wd2.img:
+ OpenBSD disklabel in sector 104856192 (offset 1) of jre-sibyl-wd2.img:
+  version: 1
   type: ESDI (5)
   disk: ESDI/IDE disk
   label: SAMSUNG SP1614C 
@@ -101,13 +102,13 @@ MBR partition table in sector 0 of jre-sibyl-wd2.img:
   partition count: 16
 
                   Start            Size Type    fsize bsize   cpg
- a:           104856192          525168 4.2BSD      0     0     1
+ a:           104856192          525168 4.2BSD   2048 16384     1
  b:           105381360         1049328 swap
  c:   X               0       312581808 unused      0     0
- d:           106430688          525168 4.2BSD      0     0     1
- e:           106955856          525168 4.2BSD      0     0     1
- f:           107481024        20972448 4.2BSD      0     0     1
- g:           128453472       184128336 4.2BSD      0     0     1
+ d:           106430688          525168 4.2BSD   2048 16384     1
+ e:           106955856          525168 4.2BSD   2048 16384     1
+ f:           107481024        20972448 4.2BSD   2048 16384     1
+ g:           128453472       184128336 4.2BSD   2048 16384     1
  h:   X               0               0 unused
  i:   X              63        36699201 unknown
  j:   X        36699264        36699264 unknown

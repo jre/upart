@@ -11,7 +11,8 @@ jre-mica-wd0.img: 149GB (312581808 sectors of 512 bytes)
 MBR partition table in sector 0 of jre-mica-wd0.img:
                  Start            Size A    C   H  S    C   H  S Type
 0:                  63        83886080      0/  1/ 1-1023/239/63 OpenBSD (0xa6)
- BSD disklabel in sector 63 (offset 1) of jre-mica-wd0.img:
+ OpenBSD disklabel in sector 63 (offset 1) of jre-mica-wd0.img:
+  version: 1
   type: ESDI (5)
   disk: ESDI/IDE disk
   label: SAMSUNG SP1614C 
@@ -32,13 +33,13 @@ MBR partition table in sector 0 of jre-mica-wd0.img:
   partition count: 16
 
                   Start            Size Type    fsize bsize   cpg
- a:                  63         1058337 4.2BSD      0     0     1
+ a:                  63         1058337 4.2BSD   2048 16384     1
  b:             1058400         5246640 swap
  c:   X               0       312581808 unused      0     0
- d:             6305040         1058400 4.2BSD      0     0     1
- e:             7363440         2101680 4.2BSD      0     0     1
- f:             9465120        31464720 4.2BSD      0     0     1
- g:            40929840        42956303 4.2BSD      0     0     1
+ d:             6305040         1058400 4.2BSD   2048 16384     1
+ e:             7363440         2101680 4.2BSD   2048 16384     1
+ f:             9465120        31464720 4.2BSD   2048 16384     1
+ g:            40929840        42956303 4.2BSD   2048 16384     1
  h:   X               0               0 unused
  i:   X               0               0 unused
  j:   X               0               0 unused

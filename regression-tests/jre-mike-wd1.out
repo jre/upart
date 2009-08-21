@@ -31,7 +31,8 @@ Apple partition map in sector 0 of jre-mike-wd1.img:
 19:          119580448        19922944 Apple_UNIX_SVR2          NetBSD root              0x40000373 
 20:          139503392         1048576 Apple_UNIX_SVR2          NetBSD swap              0x40000373 
 21:          140551968        20971520 OpenBSD                  OpenBSD                  0x40000373
- BSD disklabel in sector 140551968 (offset 0) of jre-mike-wd1.img:
+ OpenBSD disklabel in sector 140551968 (offset 0) of jre-mike-wd1.img:
+  version: 65536
   type: ESDI (5)
   disk: ESDI/IDE disk
   label: WDC WD1200JB-00R
@@ -52,13 +53,13 @@ Apple partition map in sector 0 of jre-mike-wd1.img:
   partition count: 16
 
                   Start            Size Type    fsize bsize   cpg
- a:           140551968          524688 4.2BSD      0     0    16
+ a:           140551968          524688 4.2BSD   2048 16384    16
  b:   X       139503392         1048576 swap
  c:   X               0       234441648 unused      0     0
- d:           141076656          525168 4.2BSD      0     0    16
- e:           141601824          525168 4.2BSD      0     0    16
- f:           142126992        10486224 4.2BSD      0     0    16
- g:           152613216         8910272 4.2BSD      0     0    16
+ d:           141076656          525168 4.2BSD   2048 16384    16
+ e:           141601824          525168 4.2BSD   2048 16384    16
+ f:           142126992        10486224 4.2BSD   2048 16384    16
+ g:           152613216         8910272 4.2BSD   2048 16384    16
  h:   X               0               0 unused
  i:   X           42784         2097152 HFS/raid
  j:   X         2139936         2097152 HFS/raid

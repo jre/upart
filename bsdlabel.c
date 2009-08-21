@@ -248,7 +248,7 @@ bsdlabel_load(const struct up_disk *disk, const struct up_part *parent,
     label->endian      = endian;
     assert(byteoff + sizeof(label->label) <= UP_DISK_1SECT(disk));
     memcpy(&label->label, buf + byteoff, sizeof label->label);
-    label->version = LABEL_LGETINT32(label, obsd_version);
+    label->version = LABEL_LGETINT16(label, obsd_version);
 
     /* check if the label extends past the end of the sector */
     size = LABEL_BASE_SIZE + (LABEL_PART_SIZE *

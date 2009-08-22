@@ -68,6 +68,12 @@ static int getparams_sunos(int fd, struct up_disk *disk,
                            const struct up_opts *opts);
 #endif
 
+#if defined(sun) || defined(__sun) || defined(__sun__)
+#define DEVPREFIX		"/dev/rdsk/"
+#else
+#define DEVPREFIX		"/dev/"
+#endif
+
 int
 up_os_opendisk(const char *name, const char **path, const struct up_opts *opts,
                int writable)
@@ -88,7 +94,7 @@ up_os_opendisk(const char *name, const char **path, const struct up_opts *opts,
     ret = open(name, flags);
     if(0 > ret)
     {
-        strlcpy(buf, "/dev/", sizeof buf);
+        strlcpy(buf, DEVPREFIX, sizeof buf);
         strlcat(buf, name, sizeof buf);
         ret = open(buf, flags);
     }
@@ -280,7 +286,8 @@ getparams_sunos(int fd, struct up_disk *disk, const struct up_opts *opts)
     /* XXX is there an ioctl or something to get sector size? */
     params->ud_sectsize = NBPSCTR;
 
-    if(0 == ioctl(fd, DKIOCGGEOM, &geom))
+    if(ioctl(fd, DKIOCG_PHYGEOM, &geom) == 0 ||
+	ioctl(fd, DKIOCGGEOM, &geom) == 0)
     {
         params->ud_cyls = geom.dkg_pcyl;
         params->ud_heads = geom.dkg_nhead;

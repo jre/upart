@@ -75,14 +75,13 @@ static int getparams_sunos(int fd, struct up_disk *disk,
 #endif
 
 int
-up_os_opendisk(const char *name, const char **path, const struct up_opts *opts,
-               int writable)
+up_os_opendisk(const char *name, const char **path, const struct up_opts *opts)
 {
     static char buf[MAXPATHLEN];
     int flags, ret;
 
     *path = NULL;
-    flags = OPENFLAGS(writable ? O_RDWR : O_RDONLY);
+    flags = OPENFLAGS(O_RDONLY);
 
     if(opts->plainfile || strchr(name, '/'))
         return open(name, flags);

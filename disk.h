@@ -61,8 +61,7 @@ typedef int (*up_disk_iterfunc_t)(const struct up_disk *,
                                    const struct up_disk_sectnode *, void *);
 
 /* Open the disk device, must call up_disk_setup() after this */
-struct up_disk *up_disk_open(const char *path, const struct up_opts *opts,
-                             int writable);
+struct up_disk *up_disk_open(const char *path, const struct up_opts *opts);
 
 /* Read get drive parameters and make disk ready to read from or write to */
 int up_disk_setup(struct up_disk *disk, const struct up_opts *opts);

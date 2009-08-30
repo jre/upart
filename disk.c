@@ -27,8 +27,7 @@ static int sectcmp(struct up_disk_sectnode *left,
 RB_GENERATE_STATIC(up_disk_sectmap, up_disk_sectnode, link, sectcmp)
 
 struct up_disk *
-up_disk_open(const char *name, const struct up_opts *opts,
-             int writable)
+up_disk_open(const char *name, const struct up_opts *opts)
 {
     struct up_disk *disk;
     struct up_img  *img;
@@ -38,12 +37,12 @@ up_disk_open(const char *name, const struct up_opts *opts,
     char           *newname, *newpath;
 
     /* open device */
-    fd = up_os_opendisk(name, &path, opts, writable);
+    fd = up_os_opendisk(name, &path, opts);
     if(0 > fd)
     {
         if(UP_NOISY(opts->verbosity, QUIET))
-            up_err("failed to open %s %s: %s", (path ? path : name),
-                   (writable ? "read-write" : "read-only"), strerror(errno));
+            up_err("failed to open %s for reading: %s",
+		(path ? path : name), strerror(errno));
         return NULL;
     }
 

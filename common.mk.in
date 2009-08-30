@@ -22,14 +22,13 @@ ALL_HDRS      = ${UPART_HDRSRC:=.h} bsdqueue.h
 UPART_SRCS    = ${UPART_HDRSRC:=.c} main.c
 UPART_HDRSRC  = apm bsdlabel crc32 disk gpt img map mbr os \
 		sunlabel-shared sunlabel-sparc sunlabel-x86 util
-REGRESS_DIR   = regression-tests
+REGRESS_DIR   = tests
 REGRESS_CMD   = sh ./test.sh
 
 UPART_OBJS    = ${UPART_SRCS:.c=.o}
 ALL_OBJS      = ${ALL_SRCS:.c=.o}
 
-.PHONY: all clean clean-tests cleaner cleanest test tests \
-	regress regression regen-tests
+.PHONY: all clean clean-tests cleaner cleanest check regress regen-tests
 
 all: ${ALL_PROGS}
 
@@ -54,7 +53,7 @@ cleaner: clean
 cleanest: cleaner
 	rm -f configure
 
-test tests regress regression: ${ALL_PROGS}
+check regress: ${ALL_PROGS}
 	cd ${REGRESS_DIR} && ${REGRESS_CMD}
 
 regen-tests: ${ALL_PROGS}

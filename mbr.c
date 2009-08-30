@@ -64,23 +64,19 @@ struct up_mbr
     int                 extcount;
 };
 
-static int mbr_load(const struct up_disk *disk, const struct up_part *parent,
-                    void **priv, const struct up_opts *opts);
-static int mbrext_load(const struct up_disk *disk, const struct up_part *parent,
-                       void **priv, const struct up_opts *opts);
-static int mbr_setup(struct up_disk *disk, struct up_map *map,
-                     const struct up_opts *opts);
-static int mbrext_setup(struct up_disk *disk, struct up_map *map,
-                        const struct up_opts *opts);
-static int mbr_getinfo(const struct up_map *part, int verbose,
-                       char *buf, int size);
-static int mbr_getindex(const struct up_part *part, char *buf, int size);
-static int mbr_getextra(const struct up_part *part, int verbose,
-                        char *buf, int size);
-static int mbr_addpart(struct up_map *map, const struct up_mbrpart_p *part,
-                       int index, int64_t off, const struct up_mbr_p *mbr);
-static int mbr_read(const struct up_disk *disk, int64_t start, int64_t size,
-                    const struct up_mbr_p **mbr, const struct up_opts *opts);
+static int	mbr_load(const struct up_disk *, const struct up_part *,
+    void **);
+static int	mbrext_load(const struct up_disk *, const struct up_part *,
+    void **);
+static int	mbr_setup(struct up_disk *, struct up_map *);
+static int	mbrext_setup(struct up_disk *, struct up_map *);
+static int	mbr_getinfo(const struct up_map *, char *, int);
+static int	mbr_getindex(const struct up_part *, char *, int);
+static int	mbr_getextra(const struct up_part *, char *, int);
+static int	mbr_addpart(struct up_map *, const struct up_mbrpart_p *,
+    int, int64_t, const struct up_mbr_p *);
+static int	mbr_read(const struct up_disk *, int64_t, int64_t,
+    const struct up_mbr_p **);
 static const char *mbr_name(uint8_t type);
 
 void
@@ -114,8 +110,7 @@ up_mbr_register(void)
 }
 
 static int
-mbr_load(const struct up_disk *disk, const struct up_part *parent, void **priv,
-         const struct up_opts *opts)
+mbr_load(const struct up_disk *disk, const struct up_part *parent, void **priv)
 {
     const struct up_mbr_p      *buf;
     int                         res;
@@ -130,7 +125,7 @@ mbr_load(const struct up_disk *disk, const struct up_part *parent, void **priv,
         return 0;
 
     /* load the mbr sector */
-    res = mbr_read(disk, parent->start, parent->size, &buf, opts);
+    res = mbr_read(disk, parent->start, parent->size, &buf);
     if(0 >= res)
         return res;
 
@@ -150,8 +145,8 @@ mbr_load(const struct up_disk *disk, const struct up_part *parent, void **priv,
 }
 
 static int
-mbrext_load(const struct up_disk *disk, const struct up_part *parent, void **priv,
-            const struct up_opts *opts)
+mbrext_load(const struct up_disk *disk, const struct up_part *parent,
+    void **priv)
 {
     *priv = NULL;
 
@@ -161,12 +156,12 @@ mbrext_load(const struct up_disk *disk, const struct up_part *parent, void **pri
 }
 
 static int
-mbr_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
+mbr_setup(struct up_disk *disk, struct up_map *map)
 {
     struct up_mbr              *mbr = map->priv;
     int                         ii;
 
-    if(!up_disk_save1sect(disk, map->start, map, 0, opts))
+    if(!up_disk_save1sect(disk, map->start, map, 0))
         return -1;
 
     /* add primary partitions */
@@ -178,8 +173,7 @@ mbr_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
 }
 
 static int
-mbrext_setup(struct up_disk *disk, struct up_map *map,
-             const struct up_opts *opts)
+mbrext_setup(struct up_disk *disk, struct up_map *map)
 {
     struct up_mbr              *parent;
     const struct up_mbr_p      *buf;
@@ -198,13 +192,13 @@ mbrext_setup(struct up_disk *disk, struct up_map *map,
     {
         /* load extended mbr */
         assert(absoff >= map->start && absoff + max <= map->start + map->size);
-        buf = up_disk_save1sect(disk, absoff, map, 1, opts);
+        buf = up_disk_save1sect(disk, absoff, map, 1);
         if(!buf)
             return -1;
 
         if(MBR_MAGIC != UP_LETOH16(buf->magic))
         {
-            if(UP_NOISY(opts->verbosity, QUIET))
+            if(UP_NOISY(QUIET))
                 up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
                        "extended MBR in sector %"PRId64
                        " has invalid magic number", absoff);
@@ -219,7 +213,7 @@ mbrext_setup(struct up_disk *disk, struct up_map *map,
             break;
         else if(!MBR_ID_IS_EXT(buf->part[MBR_EXTNEXT].type))
         {
-            if(UP_NOISY(opts->verbosity, QUIET))
+            if(UP_NOISY(QUIET))
                 up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
                        "extended MBR in sector %"PRId64
                        " has invalid type for partition %d 0x%02x",
@@ -237,7 +231,7 @@ mbrext_setup(struct up_disk *disk, struct up_map *map,
 
         if(0 > reloff || 0 >= max || reloff + max > map->size)
         {
-            if(UP_NOISY(opts->verbosity, QUIET))
+            if(UP_NOISY(QUIET))
                 up_warn("logical MBR partition %d out of range: "
                         "offset %"PRId64"+%"PRId64" size %"PRId64,
                         index, map->start, reloff, max);
@@ -251,9 +245,9 @@ mbrext_setup(struct up_disk *disk, struct up_map *map,
 }
 
 static int
-mbr_getinfo(const struct up_map *map, int verbose, char *buf, int size)
+mbr_getinfo(const struct up_map *map, char *buf, int size)
 {
-    if(!UP_NOISY(verbose, NORMAL))
+    if(!UP_NOISY(NORMAL))
         return 0;
     return snprintf(buf, size, "%s partition table in sector %"PRId64" of %s:",
                     up_map_label(map), map->start, UP_DISK_PATH(map->disk));
@@ -268,19 +262,19 @@ mbr_getindex(const struct up_part *part, char *buf, int size)
 }
 
 static int
-mbr_getextra(const struct up_part *part, int verbose, char *buf, int size)
+mbr_getextra(const struct up_part *part, char *buf, int size)
 {
     struct up_mbrpart  *priv;
     const char         *label;
     char                active;
     int                 firstcyl, firstsect, lastcyl, lastsect;
 
-    if(!UP_NOISY(verbose, NORMAL))
+    if(!UP_NOISY(NORMAL))
         return 0;
 
     if(!part)
     {
-        if(UP_NOISY(verbose, EXTRA))
+        if(UP_NOISY(EXTRA))
             return snprintf(buf, size, "A    C   H  S    C   H  S Type");
         else
             return snprintf(buf, size, "A Type");
@@ -294,7 +288,7 @@ mbr_getextra(const struct up_part *part, int verbose, char *buf, int size)
     lastcyl   = MBR_GETCYL(priv->part.lastsectcyl);
     lastsect  = MBR_GETSECT(priv->part.lastsectcyl);
 
-    if(UP_NOISY(verbose, EXTRA))
+    if(UP_NOISY(EXTRA))
         return snprintf(buf, size, "%c %4u/%3u/%2u-%4u/%3u/%2u %s (0x%02x)",
                         active, firstcyl, priv->part.firsthead, firstsect,
                         lastcyl, priv->part.lasthead, lastsect, label,
@@ -346,7 +340,7 @@ mbr_addpart(struct up_map *map, const struct up_mbrpart_p *part, int index,
 
 static int
 mbr_read(const struct up_disk *disk, int64_t start, int64_t size,
-        const struct up_mbr_p **mbr, const struct up_opts *opts)
+    const struct up_mbr_p **mbr)
 {
     const void *buf;
 
@@ -357,7 +351,7 @@ mbr_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     if(up_disk_check1sect(disk, start))
         return 0;
-    buf = up_disk_getsect(disk, start, opts);
+    buf = up_disk_getsect(disk, start);
     if(!buf)
         return -1;
     *mbr = buf;

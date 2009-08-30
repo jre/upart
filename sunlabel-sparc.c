@@ -118,21 +118,17 @@ struct up_sparcpart
     int                         index;
 };
 
-static int sparc_load(const struct up_disk *disk, const struct up_part *parent,
-                      void **priv, const struct up_opts *opts);
-static int sparc_setup(struct up_disk *disk, struct up_map *map,
-                       const struct up_opts *opts);
-static int sparc_info(const struct up_map *map, int verbose,
-                      char *buf, int size);
-static int sparc_index(const struct up_part *part, char *buf, int size);
-static int sparc_extrahdr(const struct up_map *map, int verbose,
-                          char *buf, int size);
-static int sparc_extra(const struct up_part *part, int verbose,
-                       char *buf, int size);
-static int sparc_read(const struct up_disk *disk, int64_t start, int64_t size,
-                      const uint8_t **ret, const struct up_opts *opts);
-static unsigned int sparc_check_vtoc(const struct up_sparcvtoc_p *vtoc);
-static unsigned int sparc_check_obsd(const struct up_sparcobsd_p *obsd);
+static int	sparc_load(const struct up_disk *, const struct up_part *,
+    void **priv);
+static int	sparc_setup(struct up_disk *, struct up_map *);
+static int	sparc_info(const struct up_map *, char *, int);
+static int	sparc_index(const struct up_part *, char *, int);
+static int	sparc_extrahdr(const struct up_map *, char *, int);
+static int	sparc_extra(const struct up_part *, char *, int);
+static int	sparc_read(const struct up_disk *, int64_t, int64_t,
+    const uint8_t **);
+static unsigned int sparc_check_vtoc(const struct up_sparcvtoc_p *);
+static unsigned int sparc_check_obsd(const struct up_sparcobsd_p *);
 
 void up_sunlabel_sparc_register(void)
 {
@@ -151,8 +147,8 @@ void up_sunlabel_sparc_register(void)
 }
 
 static int
-sparc_load(const struct up_disk *disk, const struct up_part *parent, void **priv,
-          const struct up_opts *opts)
+sparc_load(const struct up_disk *disk, const struct up_part *parent,
+    void **priv)
 {
     int                 res;
     const uint8_t      *buf;
@@ -168,7 +164,7 @@ sparc_load(const struct up_disk *disk, const struct up_part *parent, void **priv
         return 0;
 
     /* read map and check magic */
-    res = sparc_read(disk, parent->start, parent->size, &buf, opts);
+    res = sparc_read(disk, parent->start, parent->size, &buf);
     if(0 >= res)
         return res;
 
@@ -189,8 +185,7 @@ sparc_load(const struct up_disk *disk, const struct up_part *parent, void **priv
 }
 
 static int
-sparc_setup(struct up_disk *disk, struct up_map *map,
-            const struct up_opts *opts)
+sparc_setup(struct up_disk *disk, struct up_map *map)
 {
     struct up_sparc            *priv = map->priv;
     struct up_sparc_p          *packed = &priv->packed;
@@ -198,7 +193,7 @@ sparc_setup(struct up_disk *disk, struct up_map *map,
     struct up_sparcpart        *part;
     int64_t                     cylsize, start, size;
 
-    if(!up_disk_save1sect(disk, map->start, map, 0, opts))
+    if(!up_disk_save1sect(disk, map->start, map, 0))
         return -1;
 
     cylsize = (uint64_t)UP_BETOH16(packed->heads) *
@@ -232,7 +227,7 @@ sparc_setup(struct up_disk *disk, struct up_map *map,
 }
 
 static int
-sparc_info(const struct up_map *map, int verbose, char *buf, int size)
+sparc_info(const struct up_map *map, char *buf, int size)
 {
     const struct up_sparc       *priv = map->priv;
     const struct up_sparc_p     *label = &priv->packed;
@@ -250,7 +245,7 @@ sparc_info(const struct up_map *map, int verbose, char *buf, int size)
     else
         extstr = "";
 
-    if(UP_NOISY(verbose, EXTRA))
+    if(UP_NOISY(EXTRA))
     {
         res1 = snprintf(buf, size,
                         "%s%s in sector %"PRId64" of %s:\n"
@@ -295,7 +290,7 @@ sparc_info(const struct up_map *map, int verbose, char *buf, int size)
             return res2;
         return res1 + res2;
     }
-    else if(UP_NOISY(verbose, NORMAL))
+    else if(UP_NOISY(NORMAL))
         return snprintf(buf, size,
                         "%s%s in sector %"PRId64" of %s:", up_map_label(map),
                         extstr, map->start, UP_DISK_PATH(map->disk));
@@ -316,18 +311,18 @@ sparc_index(const struct up_part *part, char *buf, int size)
 }
 
 static int
-sparc_extrahdr(const struct up_map *map, int verbose, char *buf, int size)
+sparc_extrahdr(const struct up_map *map, char *buf, int size)
 {
     struct up_sparc    *priv = map->priv;
     const char         *hdr;
 
-    if(!UP_NOISY(verbose, NORMAL))
+    if(!UP_NOISY(NORMAL))
         return 0;
 
     if(SPARC_ISEXT(priv->ext, VTOC))
         hdr = UP_SUNLABEL_FMT_HDR;
     else if(SPARC_ISEXT(priv->ext, OBSD_TYPES))
-        hdr = UP_BSDLABEL_FMT_HDR(verbose);
+        hdr = UP_BSDLABEL_FMT_HDR();
     else
         hdr = NULL;
 
@@ -338,24 +333,24 @@ sparc_extrahdr(const struct up_map *map, int verbose, char *buf, int size)
 }
 
 static int
-sparc_extra(const struct up_part *part, int verbose, char *buf, int size)
+sparc_extra(const struct up_part *part, char *buf, int size)
 {
     struct up_sparc            *label = part->map->priv;
     struct up_sparcvtoc_p      *vtoc = &label->packed.ext.vtoc;
     struct up_sparcobsd_p      *obsd = &label->packed.ext.obsd;
     struct up_sparcpart        *priv = part->priv;
 
-    if(!UP_NOISY(verbose, NORMAL))
+    if(!UP_NOISY(NORMAL))
         return 0;
 
-    if(SPARC_ISEXT(label->ext, VTOC) && UP_NOISY(verbose, NORMAL))
+    if(SPARC_ISEXT(label->ext, VTOC) && UP_NOISY(NORMAL))
         return up_sunlabel_fmt(buf, size,
                                UP_BETOH16(vtoc->parts[priv->index].tag),
                                UP_BETOH16(vtoc->parts[priv->index].flag));
     else if(SPARC_ISEXT(label->ext, OBSD_TYPES)) {
 	    uint8_t bf = obsd->fragblock[priv->index];
 	    int frags = OBSDLABEL_BF_FRAG(bf);
-	    return up_bsdlabel_fmt(part, verbose, buf, size,
+	    return up_bsdlabel_fmt(part, buf, size,
 		obsd->types[priv->index],
 		(frags ? OBSDLABEL_BF_BSIZE(bf) / frags : 0),
 		frags, UP_BETOH16(obsd->cpg[priv->index]));
@@ -366,7 +361,7 @@ sparc_extra(const struct up_part *part, int verbose, char *buf, int size)
 
 static int
 sparc_read(const struct up_disk *disk, int64_t start, int64_t size,
-           const uint8_t **ret, const struct up_opts *opts)
+    const uint8_t **ret)
 {
     const uint8_t      *buf;
     uint16_t            magic, sum, calc;
@@ -377,7 +372,7 @@ sparc_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     if(up_disk_check1sect(disk, start))
         return 0;
-    buf = up_disk_getsect(disk, start, opts);
+    buf = up_disk_getsect(disk, start);
     if(!buf)
         return -1;
 
@@ -387,7 +382,7 @@ sparc_read(const struct up_disk *disk, int64_t start, int64_t size,
     if(SPARC_MAGIC != UP_BETOH16(magic))
     {
         if(SPARC_MAGIC == UP_LETOH16(magic) &&
-           UP_NOISY(opts->verbosity, QUIET))
+           UP_NOISY(QUIET))
             /* this is kind of silly but hey, why not? */
             up_err("%s in sector %"PRId64" with unknown "
                    "byte order: little endian", SPARC_LABEL, start);
@@ -402,7 +397,7 @@ sparc_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     if(calc != sum)
     {
-        if(UP_NOISY(opts->verbosity, QUIET))
+        if(UP_NOISY(QUIET))
             up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
                    "%s in sector %"PRId64" with bad checksum",
                    SPARC_LABEL, start);

@@ -27,7 +27,7 @@ static int	sectcmp(struct up_disk_sectnode *left,
 RB_GENERATE_STATIC(up_disk_sectmap, up_disk_sectnode, link, sectcmp)
 
 struct up_disk *
-up_disk_open(const char *name, const struct up_opts *opts)
+up_disk_open(const char *name)
 {
     struct up_disk *disk;
     struct up_img  *img;
@@ -37,10 +37,10 @@ up_disk_open(const char *name, const struct up_opts *opts)
     char           *newname, *newpath;
 
     /* open device */
-    fd = up_os_opendisk(name, &path, opts);
+    fd = up_os_opendisk(name, &path);
     if(0 > fd)
     {
-        if(UP_NOISY(opts->verbosity, QUIET))
+        if(UP_NOISY(QUIET))
             up_err("failed to open %s for reading: %s",
 		(path ? path : name), strerror(errno));
         return NULL;
@@ -56,7 +56,7 @@ up_disk_open(const char *name, const struct up_opts *opts)
     img = NULL;
     if(plain)
     {
-        res = up_img_load(fd, name, opts, &img);
+        res = up_img_load(fd, name, &img);
 	switch (res) {
 	case -1:
 		close(fd);
@@ -118,12 +118,11 @@ up_disk_open(const char *name, const struct up_opts *opts)
 }
 
 int
-up_disk_setup(struct up_disk *disk, const struct up_opts *opts,
-    const struct disk_params *params)
+up_disk_setup(struct up_disk *disk, const struct disk_params *params)
 {
 	if (!UP_DISK_IS_IMG(disk))
 		/* try to get drive parameters from OS */
-		up_os_getparams(disk->upd_fd, disk, opts);
+		up_os_getparams(disk->upd_fd, disk);
 	else
 		/* try to get drive parameters from image */
 		if(0 > up_img_getparams(disk->upd_img, &disk->ud_params))
@@ -131,7 +130,7 @@ up_disk_setup(struct up_disk *disk, const struct up_opts *opts,
 
 	/* try to fill in missing drive paramaters */
 	if (fixparams(disk, params) < 0) {
-		if (UP_NOISY(opts->verbosity, QUIET))
+		if (UP_NOISY(QUIET))
 			up_err("failed to determine disk parameters for %s",
 			    UP_DISK_PATH(disk));
 		return (-1);
@@ -150,7 +149,7 @@ up_disk_setup(struct up_disk *disk, const struct up_opts *opts,
 
 int64_t
 up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
-             void *buf, size_t bufsize, const struct up_opts *opts)
+    void *buf, size_t bufsize)
 {
     ssize_t res;
 
@@ -170,14 +169,14 @@ up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     /* if there's an image then read from it instead */
     if(UP_DISK_IS_IMG(disk))
-        return up_img_read(disk->upd_img, start, size, buf, opts->verbosity);
+        return up_img_read(disk->upd_img, start, size, buf);
 
     /* otherwise try to read from the disk */
     res = pread(disk->upd_fd, buf, size * UP_DISK_1SECT(disk),
                 start * UP_DISK_1SECT(disk));
     if(0 > res)
     {
-        if(UP_NOISY(opts->verbosity, QUIET))
+        if(UP_NOISY(QUIET))
             up_msg((opts->sloppyio ? UP_MSG_FWARN : UP_MSG_FERR),
                    "read from %s failed: %"PRIu64" sector(s) of %u "
                    "bytes at offset %"PRIu64": %s", UP_DISK_PATH(disk), size,
@@ -192,12 +191,10 @@ up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
 }
 
 const void *
-up_disk_getsect(const struct up_disk *disk, int64_t sect,
-                const struct up_opts *opts)
+up_disk_getsect(const struct up_disk *disk, int64_t sect)
 {
     assert(disk->upd_buf);
-    if(1 > up_disk_read(disk, sect, 1, disk->upd_buf,
-                        UP_DISK_1SECT(disk), opts))
+    if(1 > up_disk_read(disk, sect, 1, disk->upd_buf, UP_DISK_1SECT(disk)))
         return NULL;
     else
         return disk->upd_buf;
@@ -237,15 +234,14 @@ up_disk_checksectrange(const struct up_disk *disk, int64_t start, int64_t size)
 
 const void *
 up_disk_save1sect(struct up_disk *disk, int64_t sect, const struct up_map *ref,
-                  int tag, const struct up_opts *opts)
+    int tag)
 {
-    return up_disk_savesectrange(disk, sect, 1, ref, tag, opts);
+    return up_disk_savesectrange(disk, sect, 1, ref, tag);
 }
 
 const void *
 up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t size,
-                      const struct up_map *ref, int tag,
-                      const struct up_opts *opts)
+                      const struct up_map *ref, int tag)
 {
     struct up_disk_sectnode *new;
 
@@ -273,7 +269,7 @@ up_disk_savesectrange(struct up_disk *disk, int64_t first, int64_t size,
 
     /* try to read the sectors from disk */
     if(size != up_disk_read(disk, first, size, new->data,
-                            size * UP_DISK_1SECT(disk), opts))
+                            size * UP_DISK_1SECT(disk)))
     {
         free(new->data);
         free(new);
@@ -430,7 +426,7 @@ fixparams_checkone(struct disk_params *params)
 }
 
 void
-up_disk_print(const struct up_disk *disk, void *_stream, int verbose)
+up_disk_print(const struct up_disk *disk, void *_stream)
 {
     FILE *              stream = _stream;
     const char *        unit;
@@ -438,11 +434,11 @@ up_disk_print(const struct up_disk *disk, void *_stream, int verbose)
 
     assert(disk->ud_flag_setup);
     size = up_fmtsize(UP_DISK_SIZEBYTES(disk), &unit);
-    if(UP_NOISY(verbose, NORMAL))
+    if(UP_NOISY(NORMAL))
         fprintf(stream, "%s: %.*f%s (%"PRId64" sectors of %d bytes)\n",
                 UP_DISK_PATH(disk), UP_BESTDECIMAL(size), size, unit,
                 UP_DISK_SIZESECTS(disk), UP_DISK_1SECT(disk));
-    if(UP_NOISY(verbose, EXTRA))
+    if(UP_NOISY(EXTRA))
         fprintf(stream,
                 "    label:               %s\n"
                 "    device path:         %s\n"
@@ -454,7 +450,7 @@ up_disk_print(const struct up_disk *disk, void *_stream, int verbose)
                 "\n", UP_DISK_LABEL(disk),
                 UP_DISK_PATH(disk), UP_DISK_1SECT(disk), UP_DISK_SIZESECTS(disk),
                 UP_DISK_CYLS(disk), UP_DISK_HEADS(disk), UP_DISK_SPT(disk));
-    if(UP_NOISY(verbose, NORMAL))
+    if(UP_NOISY(NORMAL))
         fputc('\n', stream);
 }
 

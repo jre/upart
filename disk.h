@@ -3,7 +3,6 @@
 
 #include "bsdtree.h"
 
-struct up_opts;
 struct up_map;
 struct up_part;
 struct up_img;
@@ -70,21 +69,19 @@ typedef int (*up_disk_iterfunc_t)(const struct up_disk *,
                                    const struct up_disk_sectnode *, void *);
 
 /* Open the disk device, must call up_disk_setup() after this */
-struct up_disk *up_disk_open(const char *path, const struct up_opts *opts);
+struct up_disk	*up_disk_open(const char *);
 
 /* Read get drive parameters and make disk ready to read from or write to */
-int		up_disk_setup(struct up_disk *, const struct up_opts *,
-	const struct disk_params *);
+int		 up_disk_setup(struct up_disk *, const struct disk_params *);
 
 /* Read from disk into buffer. Note that START, SIZE, and the return
    value are in sectors but bufsize is in bytes. */
-int64_t up_disk_read(const struct up_disk *disk, int64_t start, int64_t size,
-                     void *buf, size_t bufsize, const struct up_opts *opts);
+int64_t		 up_disk_read(const struct up_disk *, int64_t, int64_t,
+    void *, size_t);
 
 /* Read a single sector. The returned pointer is valid until function
    is called again. */
-const void *up_disk_getsect(const struct up_disk *disk, int64_t sect,
-                            const struct up_opts *opts);
+const void	*up_disk_getsect(const struct up_disk *, int64_t);
 
 /* return true if a sector is marked as used, false otherwise */
 int up_disk_check1sect(const struct up_disk *disk, int64_t sect);
@@ -94,14 +91,12 @@ int up_disk_checksectrange(const struct up_disk *disk, int64_t first,
                            int64_t size);
 
 /* mark a sector as used and return 0, return -1 if already used */
-const void *up_disk_save1sect(struct up_disk *disk, int64_t sect,
-                              const struct up_map *ref, int tag,
-                              const struct up_opts *opts);
+const void	*up_disk_save1sect(struct up_disk *, int64_t,
+    const struct up_map *, int);
 
 /* mark range of sectors as used and return 0, return -1 if already used */
-const void *up_disk_savesectrange(struct up_disk *disk, int64_t first,
-                                  int64_t size, const struct up_map *ref,
-                                  int tag, const struct up_opts *opts);
+const void	*up_disk_savesectrange(struct up_disk *, int64_t, int64_t,
+    const struct up_map *, int);
 
 /* mark all sectors associated with REF unused */
 void up_disk_sectsunref(struct up_disk *disk, const void *ref);
@@ -117,7 +112,7 @@ const struct up_disk_sectnode *up_disk_nthsect(const struct up_disk *disk, int n
 void up_disk_close(struct up_disk *disk);
 
 /* Print disk info to STREAM. */
-void up_disk_print(const struct up_disk *disk, void *_stream, int verbose);
+void up_disk_print(const struct up_disk *disk, void *_stream);
 
 /* Print hexdump of sectors with partition information to STREAM. */
 void up_disk_dump(const struct up_disk *disk, void *_stream);

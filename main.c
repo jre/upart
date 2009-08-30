@@ -21,68 +21,66 @@
 #include "sunlabel-sparc.h"
 #include "sunlabel-x86.h"
 
-static char	*readargs(int, char *[], struct up_opts *,
-	struct disk_params *);
+static char	*readargs(int, char *[], struct opts *, struct disk_params *);
 static void usage(const char *fmt, ...);
-static int serialize(const struct up_disk *disk, const struct up_opts *opts);
+static int serialize(const struct up_disk *disk);
 
 int
 main(int argc, char *argv[])
 {
 	struct disk_params params;
-    struct up_opts              opts;
-    char                       *name;
-    struct up_disk             *disk;
-    int                         ret;
+	struct opts newopts;
+	char *name;
+	struct up_disk *disk;
+	int ret;
 
-    if(0 > up_savename(argv[0]) || 0 > up_getendian())
-        return EXIT_FAILURE;
-    up_mbr_register();
-    up_bsdlabel_register();
-    up_apm_register();
-    up_sunlabel_sparc_register();
-    up_sunlabel_x86_register();
-    up_gpt_register();
+	if (up_savename(argv[0]) < 0 ||
+	    up_getendian() < 0)
+		return (EXIT_FAILURE);
+	up_mbr_register();
+	up_bsdlabel_register();
+	up_apm_register();
+	up_sunlabel_sparc_register();
+	up_sunlabel_x86_register();
+	up_gpt_register();
 
-    name = readargs(argc, argv, &opts, &params);
-    if(NULL == name)
-        return EXIT_FAILURE;
+	name = readargs(argc, argv, &newopts, &params);
+	if (name == NULL)
+		return (EXIT_FAILURE);
+	set_options(&newopts);
 
-	disk = up_disk_open(name, &opts);
+	disk = up_disk_open(name);
 	if (!disk)
 		return (EXIT_FAILURE);
-	if (up_disk_setup(disk, &opts, &params) < 0 ||
-	    up_map_loadall(disk, &opts) < 0) {
+	if (up_disk_setup(disk, &params) < 0 ||
+	    up_map_loadall(disk) < 0) {
 		up_disk_close(disk);
 		return (EXIT_FAILURE);
 	}
 
-    ret = EXIT_SUCCESS;
-    if(opts.serialize)
-    {
-        if(0 > serialize(disk, &opts))
-            ret = EXIT_FAILURE;
-    }
-    else
-    {
-        up_disk_print(disk, stdout, opts.verbosity);
-        up_map_printall(disk, stdout, opts.verbosity);
-        if(UP_NOISY(opts.verbosity, SPAM))
-            up_disk_dump(disk, stdout);
-    }
+	ret = EXIT_SUCCESS;
+	if (opts->serialize) {
+		if (serialize(disk) < 0)
+			ret = (EXIT_FAILURE);
+	} else {
+		up_disk_print(disk, stdout);
+		up_map_printall(disk, stdout);
+		if (UP_NOISY(SPAM))
+			up_disk_dump(disk, stdout);
+	}
 
-    up_disk_close(disk);
+	up_disk_close(disk);
 
-    return ret;
+	return (ret);
 }
 
 static char *
-readargs(int argc, char *argv[], struct up_opts *opts,
+readargs(int argc, char *argv[], struct opts *newopts,
 	struct disk_params *params)
 {
     int opt;
 
-    memset(opts, 0, sizeof *opts);
+    memset(newopts, 0, sizeof *newopts);
     memset(params, 0, sizeof *params);
     while(0 < (opt = getopt(argc, argv, "c:fh:kl:qrs:vVw:z:")))
     {
@@ -94,7 +92,7 @@ readargs(int argc, char *argv[], struct up_opts *opts,
                     usage("illegal cylinder count: %s", optarg);
                 break;
             case 'f':
-                opts->plainfile = 1;
+                newopts->plainfile = 1;
                 break;
             case 'h':
                 params->heads = strtol(optarg, NULL, 0);
@@ -102,16 +100,16 @@ readargs(int argc, char *argv[], struct up_opts *opts,
                     usage("illegal tracks per cylinder (head) count: %s", optarg);
                 break;
             case 'k':
-                opts->sloppyio = 1;
+                newopts->sloppyio = 1;
                 break;
             case 'l':
-                opts->label = optarg;
+                newopts->label = optarg;
                 break;
             case 'q':
-                opts->verbosity--;
+                newopts->verbosity--;
                 break;
             case 'r':
-                opts->relaxed = 1;
+                newopts->relaxed = 1;
                 break;
             case 's':
                 params->sects = strtol(optarg, NULL, 0);
@@ -119,14 +117,14 @@ readargs(int argc, char *argv[], struct up_opts *opts,
                     usage("illegal sectors per track count (sectors): %s", optarg);
                 break;
             case 'v':
-                opts->verbosity++;
+                newopts->verbosity++;
                 break;
             case 'V':
                 printf("%s version %s\n", PACKAGE_NAME, PACKAGE_VERSION);
                 exit(EXIT_SUCCESS);
                 break;
             case 'w':
-                opts->serialize = optarg;
+                newopts->serialize = optarg;
                 break;
             case 'z':
                 params->sectsize = strtol(optarg, NULL, 0);
@@ -139,7 +137,7 @@ readargs(int argc, char *argv[], struct up_opts *opts,
         }
     }
 
-    if(opts->label && !opts->serialize)
+    if(newopts->label && !newopts->serialize)
         usage("-w is required for -l");
     if(optind + 1 == argc)
         return argv[optind];
@@ -179,33 +177,34 @@ usage(const char *message, ...)
 }
 
 static int
-serialize(const struct up_disk *disk, const struct up_opts *opts)
+serialize(const struct up_disk *disk)
 {
-    FILE *out;
+	FILE *out;
+	const char *label;
 
-    out = fopen(opts->serialize, "wb");
-    if(!out)
-    {
-        if(UP_NOISY(opts->verbosity, QUIET))
-            up_err("failed to open file for writing: %s: %s",
-                   opts->serialize, strerror(errno));
-        return -1;
-    }
+	out = fopen(opts->serialize, "wb");
+	if (out == NULL) {
+		if (UP_NOISY(QUIET))
+			up_err("failed to open file for writing: %s: %s",
+			    opts->serialize, strerror(errno));
+		return (-1);
+	}
 
-    if(0 > up_img_save(disk, out, (opts->label ? opts->label : UP_DISK_LABEL(disk)),
-                       opts->serialize, opts))
-    {
-        fclose(out);
-        return -1;
-    }
+	if (opts->label != NULL)
+		label = opts->label;
+	else
+		label = UP_DISK_LABEL(disk);
+	if (up_img_save(disk, out, label, opts->serialize) < 0) {
+		fclose(out);
+		return (-1);
+	}
 
-    if(fclose(out))
-    {
-        if(UP_NOISY(opts->verbosity, QUIET))
-            up_err("failed to write to file: %s: %s",
-                   opts->serialize, strerror(errno));
-        return -1;
-    }
+	if (fclose(out)) {
+		if (UP_NOISY(QUIET))
+			up_err("failed to write to file: %s: %s",
+			    opts->serialize, strerror(errno));
+		return (-1);
+	}
 
-    return 0;
+	return (0);
 }

@@ -87,21 +87,18 @@ struct up_gpt
     int                 partitions;
 };
 
-static int gpt_load(const struct up_disk *disk, const struct up_part *parent,
-                    void **priv, const struct up_opts *opts);
-static int gpt_setup(struct up_disk *disk, struct up_map *map,
-                     const struct up_opts *opts);
-static int gpt_getinfo(const struct up_map *part, int verbose,
-                       char *buf, int size);
-static int gpt_getindex(const struct up_part *part, char *buf, int size);
-static int gpt_getextra(const struct up_part *part, int verbose,
-                        char *buf, int size);
-static int gpt_findhdr(const struct up_disk *disk, int64_t start, int64_t size,
-                       struct up_gpt_p *gpt, const struct up_opts *opts);
-static int gpt_readhdr(const struct up_disk *disk, int64_t start, int64_t size,
-                       const struct up_gpt_p **gpt, const struct up_opts *opts);
-static int gpt_checkcrc(struct up_gpt_p *gpt);
-static const char *gpt_typename(const struct up_guid_p *guid);
+static int	gpt_load(const struct up_disk *, const struct up_part *,
+    void **);
+static int	gpt_setup(struct up_disk *, struct up_map *);
+static int	gpt_getinfo(const struct up_map *, char *, int);
+static int	gpt_getindex(const struct up_part *, char *, int);
+static int	gpt_getextra(const struct up_part *, char *, int);
+static int	gpt_findhdr(const struct up_disk *, int64_t, int64_t,
+    struct up_gpt_p *);
+static int	gpt_readhdr(const struct up_disk *, int64_t, int64_t,
+    const struct up_gpt_p **);
+static int	gpt_checkcrc(struct up_gpt_p *);
+static const char *gpt_typename(const struct up_guid_p *);
 
 void
 up_gpt_register(void)
@@ -121,8 +118,7 @@ up_gpt_register(void)
 }
 
 int
-gpt_load(const struct up_disk *disk, const struct up_part *parent, void **priv,
-         const struct up_opts *opts)
+gpt_load(const struct up_disk *disk, const struct up_part *parent, void **priv)
 {
     struct up_gpt_p pk;
     int             res;
@@ -134,14 +130,14 @@ gpt_load(const struct up_disk *disk, const struct up_part *parent, void **priv,
 
     /* try to load either the primary or secondary gpt headers, and
        check the magic and crc */
-    res = gpt_findhdr(disk, parent->start, parent->size, &pk, opts);
+    res = gpt_findhdr(disk, parent->start, parent->size, &pk);
     if(0 >= res)
         return res;
 
     /* check revision */
     if(GPT_REVISION != UP_LETOH32(pk.revision))
     {
-        if(UP_NOISY(opts->verbosity, QUIET))
+        if(UP_NOISY(QUIET))
             up_err("gpt with unknown revision: %u.%u",
                    (UP_LETOH32(pk.revision) >> 16) & 0xffff,
                    UP_LETOH32(pk.revision) & 0xffff);
@@ -164,7 +160,7 @@ gpt_load(const struct up_disk *disk, const struct up_part *parent, void **priv,
 }
 
 static int
-gpt_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
+gpt_setup(struct up_disk *disk, struct up_map *map)
 {
     struct up_gpt              *priv = map->priv;
     struct up_gpt_p            *gpt = &priv->gpt;
@@ -179,9 +175,9 @@ gpt_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
 
     /* save sectors from primary and secondary maps */
     data1 = up_disk_savesectrange(disk, GPT_PRIOFF(map->start, map->size),
-                                  1 + partsects, map, 0, opts);
+                                  1 + partsects, map, 0);
     data2 = up_disk_savesectrange(disk, GPT_SECOFF(map->start, map->size)
-                                  - partsects, 1 + partsects, map, 0, opts);
+                                  - partsects, 1 + partsects, map, 0);
     if(!data1 || !data2)
         return -1;
 
@@ -189,7 +185,7 @@ gpt_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
     if(UP_LETOH32(gpt->partcrc) !=
        (up_crc32(data1 + UP_DISK_1SECT(disk),  partbytes, ~0) ^ ~0))
     {
-        if(UP_NOISY(opts->verbosity, QUIET))
+        if(UP_NOISY(QUIET))
             up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
                    "bad gpt partition crc");
         if(!opts->relaxed)
@@ -223,11 +219,11 @@ gpt_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
 }
 
 static int
-gpt_getinfo(const struct up_map *map, int verbose, char *buf, int size)
+gpt_getinfo(const struct up_map *map, char *buf, int size)
 {
     const struct up_gpt *gpt = map->priv;
 
-    if(UP_NOISY(verbose, EXTRA))
+    if(UP_NOISY(EXTRA))
         return snprintf(buf, size, "%s partition table in sectors %"PRId64" "
                     "and %"PRId64" of %s:\n"
                     "  size:                 %u\n"
@@ -252,7 +248,7 @@ gpt_getinfo(const struct up_map *map, int verbose, char *buf, int size)
                     UP_LETOH64(gpt->gpt.partsect),
                     UP_LETOH32(gpt->gpt.maxpart),
                     UP_LETOH32(gpt->gpt.partsize));
-    else if(UP_NOISY(verbose, NORMAL))
+    else if(UP_NOISY(NORMAL))
         return snprintf(buf, size, "%s partition table in sectors %"PRId64
                         " and %"PRId64" of %s:",
                         up_map_label(map),
@@ -271,17 +267,17 @@ gpt_getindex(const struct up_part *part, char *buf, int size)
 }
 
 static int
-gpt_getextra(const struct up_part *part, int verbose, char *buf, int size)
+gpt_getextra(const struct up_part *part, char *buf, int size)
 {
     const struct up_gptpart    *priv;
     const char                 *label;
 
-    if(!UP_NOISY(verbose, NORMAL))
+    if(!UP_NOISY(NORMAL))
         return 0;
 
     if(!part)
     {
-        if(UP_NOISY(verbose, EXTRA))
+        if(UP_NOISY(EXTRA))
             return snprintf(buf, size, "%-36s Type", "GUID");
         else
             return snprintf(buf, size, "Type");
@@ -290,7 +286,7 @@ gpt_getextra(const struct up_part *part, int verbose, char *buf, int size)
     priv = part->priv;
     label = gpt_typename(&priv->part.type);
 
-    if(UP_NOISY(verbose, EXTRA))
+    if(UP_NOISY(EXTRA))
         return snprintf(buf, size, GPT_GUID_FMT " " GPT_GUID_FMT " %s",
                         GPT_GUID_FMT_ARGS(&priv->part.guid),
                         GPT_GUID_FMT_ARGS(&priv->part.type),
@@ -307,7 +303,7 @@ gpt_getextra(const struct up_part *part, int verbose, char *buf, int size)
 
 static int
 gpt_findhdr(const struct up_disk *disk, int64_t start, int64_t size,
-            struct up_gpt_p *gpt, const struct up_opts *opts)
+    struct up_gpt_p *gpt)
 {
     const struct up_gpt_p  *buf;
     int                     res, badcrc;
@@ -315,7 +311,7 @@ gpt_findhdr(const struct up_disk *disk, int64_t start, int64_t size,
     badcrc = 0;
 
     res = gpt_readhdr(disk, GPT_PRIOFF(start, size),
-                      GPT_PRISIZE(start, size), &buf, opts);
+                      GPT_PRISIZE(start, size), &buf);
     if(0 >= res)
         return res;
     if(GPT_MAGIC == UP_LETOH64(buf->magic))
@@ -323,14 +319,14 @@ gpt_findhdr(const struct up_disk *disk, int64_t start, int64_t size,
         *gpt = *buf;
         if(gpt_checkcrc(gpt))
             return 1;
-        if(UP_NOISY(opts->verbosity, QUIET))
+        if(UP_NOISY(QUIET))
             up_warn("bad crc on primary gpt in sector %"PRId64,
                     GPT_PRIOFF(start, size));
         badcrc = 1;
     }
 
     res = gpt_readhdr(disk, GPT_SECOFF(start, size),
-                      GPT_SECSIZE(start, size), &buf, opts);
+                      GPT_SECSIZE(start, size), &buf);
     if(0 >= res)
         return res;
     if(GPT_MAGIC == UP_LETOH64(buf->magic))
@@ -338,7 +334,7 @@ gpt_findhdr(const struct up_disk *disk, int64_t start, int64_t size,
         *gpt = *buf;
         if(gpt_checkcrc(gpt))
             return 1;
-        if(UP_NOISY(opts->verbosity, QUIET))
+        if(UP_NOISY(QUIET))
             up_err("bad crc on secondary gpt in sector %"PRId64,
                    GPT_SECOFF(start, size));
         badcrc = 1;
@@ -349,7 +345,7 @@ gpt_findhdr(const struct up_disk *disk, int64_t start, int64_t size,
 
 static int
 gpt_readhdr(const struct up_disk *disk, int64_t start, int64_t size,
-            const struct up_gpt_p **gpt, const struct up_opts *opts)
+            const struct up_gpt_p **gpt)
 {
     const void *buf;
 
@@ -360,7 +356,7 @@ gpt_readhdr(const struct up_disk *disk, int64_t start, int64_t size,
 
     if(up_disk_check1sect(disk, start))
         return 0;
-    buf = up_disk_getsect(disk, start, opts);
+    buf = up_disk_getsect(disk, start);
     if(!buf)
         return -1;
     *gpt = buf;

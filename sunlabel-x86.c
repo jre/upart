@@ -78,20 +78,15 @@ struct up_sunx86part
     int                         index;
 };
 
-static int sun_x86_load(const struct up_disk *disk,
-                        const struct up_part *parent, void **priv,
-                        const struct up_opts *opts);
-static int sun_x86_setup(struct up_disk *disk, struct up_map *map,
-                         const struct up_opts *opts);
-static int sun_x86_info(const struct up_map *map, int verbose,
-                        char *buf, int size);
-static int sun_x86_index(const struct up_part *part, char *buf, int size);
-static int sun_x86_extrahdr(const struct up_map *map, int verbose,
-                            char *buf, int size);
-static int sun_x86_extra(const struct up_part *part, int verbose,
-                         char *buf, int size);
-static int sun_x86_read(const struct up_disk *disk, int64_t start, int64_t size,
-                        const uint8_t **ret, const struct up_opts *opts);
+static int	sun_x86_load(const struct up_disk *, const struct up_part *,
+    void **priv);
+static int	sun_x86_setup(struct up_disk *, struct up_map *);
+static int	sun_x86_info(const struct up_map *, char *, int);
+static int	sun_x86_index(const struct up_part *, char *, int);
+static int	sun_x86_extrahdr(const struct up_map *, char *, int);
+static int	sun_x86_extra(const struct up_part *, char *, int);
+static int	sun_x86_read(const struct up_disk *, int64_t, int64_t,
+    const uint8_t **);
 
 void up_sunlabel_x86_register(void)
 {
@@ -111,7 +106,7 @@ void up_sunlabel_x86_register(void)
 
 static int
 sun_x86_load(const struct up_disk *disk, const struct up_part *parent,
-             void **priv, const struct up_opts *opts)
+    void **priv)
 {
     int                 res;
     const uint8_t      *buf;
@@ -124,7 +119,7 @@ sun_x86_load(const struct up_disk *disk, const struct up_part *parent,
         return 0;
 
     /* read map and check magic */
-    res = sun_x86_read(disk, parent->start, parent->size, &buf, opts);
+    res = sun_x86_read(disk, parent->start, parent->size, &buf);
     if(0 >= res)
         return res;
 
@@ -143,8 +138,7 @@ sun_x86_load(const struct up_disk *disk, const struct up_part *parent,
 }
 
 static int
-sun_x86_setup(struct up_disk *disk, struct up_map *map,
-              const struct up_opts *opts)
+sun_x86_setup(struct up_disk *disk, struct up_map *map)
 {
     struct up_sunx86           *priv = map->priv;
     struct up_sunx86_p         *packed = &priv->packed;
@@ -152,14 +146,14 @@ sun_x86_setup(struct up_disk *disk, struct up_map *map,
     struct up_sunx86part       *part;
     int64_t                     start, size;
 
-    if(!up_disk_save1sect(disk, map->start + SUNX86_OFF, map, 0, opts))
+    if(!up_disk_save1sect(disk, map->start + SUNX86_OFF, map, 0))
         return -1;
 
     max = UP_LETOH16(packed->partcount);
     /* this probably isn't worth checking for */
     if(SUNX86_MAXPARTITIONS < max)
     {
-        if(UP_NOISY(opts->verbosity, QUIET))
+        if(UP_NOISY(QUIET))
             up_warn("clamping partition count in %s from %d down to %d",
                     up_map_label(map), max, SUNX86_MAXPARTITIONS);
         max = SUNX86_MAXPARTITIONS;
@@ -191,13 +185,13 @@ sun_x86_setup(struct up_disk *disk, struct up_map *map,
 }
 
 static int
-sun_x86_info(const struct up_map *map, int verbose, char *buf, int size)
+sun_x86_info(const struct up_map *map, char *buf, int size)
 {
     const struct up_sunx86     *priv = map->priv;
     const struct up_sunx86_p   *packed = &priv->packed;
     char                        name[sizeof(packed->name)+1];
 
-    if(UP_NOISY(verbose, EXTRA))
+    if(UP_NOISY(EXTRA))
     {
         memcpy(name, packed->name, sizeof(packed->name));
         name[sizeof(name)-1] = 0;
@@ -235,7 +229,7 @@ sun_x86_info(const struct up_map *map, int verbose, char *buf, int size)
                     UP_LETOH16(packed->writeskip),
                     UP_LETOH16(packed->readskip));
     }
-    else if(UP_NOISY(verbose, NORMAL))
+    else if(UP_NOISY(NORMAL))
         return snprintf(buf, size, "%s in sector %"PRId64" of %s:",
                         up_map_label(map), map->start, UP_DISK_PATH(map->disk));
     else
@@ -251,20 +245,20 @@ sun_x86_index(const struct up_part *part, char *buf, int size)
 }
 
 static int
-sun_x86_extrahdr(const struct up_map *map, int verbose, char *buf, int size)
+sun_x86_extrahdr(const struct up_map *map, char *buf, int size)
 {
-    if(UP_NOISY(verbose, NORMAL))
+    if(UP_NOISY(NORMAL))
         return snprintf(buf, size, UP_SUNLABEL_FMT_HDR);
     else
         return 0;
 }
 
 static int
-sun_x86_extra(const struct up_part *part, int verbose, char *buf, int size)
+sun_x86_extra(const struct up_part *part, char *buf, int size)
 {
     const struct up_sunx86part *priv = part->priv;
 
-    if(UP_NOISY(verbose, NORMAL))
+    if(UP_NOISY(NORMAL))
         return up_sunlabel_fmt(buf, size,
                                UP_LETOH16(priv->part.type),
                                UP_LETOH16(priv->part.flags));
@@ -274,7 +268,7 @@ sun_x86_extra(const struct up_part *part, int verbose, char *buf, int size)
 
 static int
 sun_x86_read(const struct up_disk *disk, int64_t start, int64_t size,
-             const uint8_t **ret, const struct up_opts *opts)
+    const uint8_t **ret)
 {
     const uint8_t      *buf;
     uint32_t            magic1, vers;
@@ -286,7 +280,7 @@ sun_x86_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     if(up_disk_check1sect(disk, start + SUNX86_OFF))
         return 0;
-    buf = up_disk_getsect(disk, start + SUNX86_OFF, opts);
+    buf = up_disk_getsect(disk, start + SUNX86_OFF);
     if(!buf)
         return -1;
 
@@ -298,7 +292,7 @@ sun_x86_read(const struct up_disk *disk, int64_t start, int64_t size,
     if(SUNX86_MAGIC1 != UP_LETOH32(magic1))
     {
         if(SUNX86_MAGIC1 == UP_BETOH32(magic1) &&
-           UP_NOISY(opts->verbosity, QUIET))
+           UP_NOISY(QUIET))
             up_err("%s in sector %"PRId64" (offset %d) "
                    "with unknown byte order: big endian",
                    SUNX86_LABEL, start, SUNX86_OFF);
@@ -307,7 +301,7 @@ sun_x86_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     if(SUNX86_VERSION != UP_LETOH32(vers))
     {
-        if(UP_NOISY(opts->verbosity, QUIET))
+        if(UP_NOISY(QUIET))
             up_err("%s in sector %"PRId64" (offset %d) "
                    "with unknown version: %u",
                    SUNX86_LABEL, start, SUNX86_OFF, UP_LETOH32(vers));
@@ -316,7 +310,7 @@ sun_x86_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     if(SUNX86_MAGIC2 != UP_LETOH16(magic2))
     {
-        if(UP_NOISY(opts->verbosity, QUIET))
+        if(UP_NOISY(QUIET))
             up_err("%s in sector %"PRId64" (offset %d) "
                    "with bad secondary magic number: 0x%04x",
                    SUNX86_LABEL, start, SUNX86_OFF, UP_LETOH16(magic2));
@@ -331,7 +325,7 @@ sun_x86_read(const struct up_disk *disk, int64_t start, int64_t size,
 
     if(calc != sum)
     {
-        if(UP_NOISY(opts->verbosity, QUIET))
+        if(UP_NOISY(QUIET))
             up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
                    "%s in sector %"PRId64" (offset %d) "
                    "with bad checksum",

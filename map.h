@@ -5,7 +5,6 @@
 
 struct up_disk;
 struct up_map;
-struct up_opts;
 struct up_part;
 
 #define UP_TYPE_REGISTERED      (1<<0)
@@ -59,52 +58,47 @@ struct up_map
     SIMPLEQ_ENTRY(up_map) link;
 };
 
-void up_map_register(enum up_map_type type, const char *label, int flags,
-                     /* check if map exists and allocate private data */
-                     int (*load)(const struct up_disk *,const struct up_part *,
-                                 void **, const struct up_opts *),
-                     /* add partitions, misc setup not done in load */
-                     int (*setup)(struct up_disk *, struct up_map *,
-                                  const struct up_opts *),
-                     /* copy map header line into string */
-                     int (*getinfo)(const struct up_map *, int, char *, int),
-                     /* copy part index into string */
-                     int (*getindex)(const struct up_part *, char *, int),
-                     /* copy header for extra verbose info into string */
-                     int (*getextrahdr)(const struct up_map *, int, char *, int),
-                     /* copy extra verbose info into string */
-                     int (*getextra)(const struct up_part *, int, char *, int),
-                     /* copy extra information for sector dump into string */
-                     int (*getdumpextra)(const struct up_map *, int64_t,
-                                         const void *, int64_t, int, char *, int),
-                     /* free map private data, map may be NULL */
-                     void (*freeprivmap)(struct up_map *, void *),
-                     /* free part private data, part may be NULL */
-                     void (*freeprivpart)(struct up_part *, void *));
+void		 up_map_register(enum up_map_type, const char *, int,
+    /* check if map exists and allocate private data */
+    int (*load)(const struct up_disk *,const struct up_part *, void **),
+    /* add partitions, misc setup not done in load */
+    int (*setup)(struct up_disk *, struct up_map *),
+    /* copy map header line into string */
+    int (*getinfo)(const struct up_map *, char *, int),
+    /* copy part index into string */
+    int (*getindex)(const struct up_part *, char *, int),
+    /* copy header for extra verbose info into string */
+    int (*getextrahdr)(const struct up_map *, char *, int),
+    /* copy extra verbose info into string */
+    int (*getextra)(const struct up_part *, char *, int),
+    /* copy extra information for sector dump into string */
+    int (*getdumpextra)(const struct up_map *, int64_t,
+	const void *, int64_t, int, char *, int),
+    /* free map private data, map may be NULL */
+    void (*freeprivmap)(struct up_map *, void *),
+    /* free part private data, part may be NULL */
+    void (*freeprivpart)(struct up_part *, void *));
 
-int up_map_loadall(struct up_disk *disk, const struct up_opts *opts);
-void up_map_freeall(struct up_disk *disk);
+int		 up_map_loadall(struct up_disk *);
+void		 up_map_freeall(struct up_disk *);
 
-int up_map_load(struct up_disk *disk, struct up_part *parent,
-                enum up_map_type type, struct up_map **mapret,
-                const struct up_opts *opts);
-struct up_part *up_map_add(struct up_map *map, int64_t start, int64_t size,
-                           int flags, void *priv);
+int		 up_map_load(struct up_disk *, struct up_part *,
+    enum up_map_type, struct up_map **);
+struct up_part	*up_map_add(struct up_map *, int64_t, int64_t, int, void *);
 
-void up_map_free(struct up_disk *disk, struct up_map *map);
-void up_map_freeprivmap_def(struct up_map *map, void *priv);
-void up_map_freeprivpart_def(struct up_part *part, void *priv);
+void		 up_map_free(struct up_disk *, struct up_map *);
+void		 up_map_freeprivmap_def(struct up_map *, void *);
+void		 up_map_freeprivpart_def(struct up_part *, void *);
 
-const char *up_map_label(const struct up_map *map);
-void up_map_print(const struct up_map *map, void *stream,
-                  int verbose, int recurse);
-void up_map_dumpsect(const struct up_map *map, void *_stream, int64_t start,
-                     int64_t size, const void *data, int tag);
-void up_map_printall(const struct up_disk *disk, void *stream, int verbose);
+const char	*up_map_label(const struct up_map *);
+void		 up_map_print(const struct up_map *, void *, int);
+void		 up_map_dumpsect(const struct up_map *, void *, int64_t,
+    int64_t, const void *, int);
+void		 up_map_printall(const struct up_disk *, void *);
 
-const struct up_part *up_map_first(const struct up_map *map);
-const struct up_part *up_map_next(const struct up_part *part);
-const struct up_map  *up_map_firstmap(const struct up_part *part);
-const struct up_map  *up_map_nextmap(const struct up_map *map);
+const struct up_part *up_map_first(const struct up_map *);
+const struct up_part *up_map_next(const struct up_part *);
+const struct up_map *up_map_firstmap(const struct up_part *);
+const struct up_map *up_map_nextmap(const struct up_map *);
 
 #endif /* HDR_UPART_MAP */

@@ -122,7 +122,7 @@ void up_msg(unsigned int flags, const char *fmt, ...)
 #define UP_VERBOSITY_NORMAL     0
 #define UP_VERBOSITY_EXTRA      1
 #define UP_VERBOSITY_SPAM       2
-#define UP_NOISY(got, need) (UP_VERBOSITY_ ## need <= (got))
+#define UP_NOISY(need)		(opts->verbosity >= UP_VERBOSITY_ ## need)
 
 /* see strlcpy(3) manpage */
 #ifndef HAVE_STRLCPY
@@ -134,7 +134,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 size_t strlcat(char *dst, const char *src, size_t siz);
 #endif
 
-struct up_opts
+struct opts
 {
     const char         *serialize;
     const char         *label;
@@ -143,5 +143,9 @@ struct up_opts
     unsigned int        relaxed       : 1;
     unsigned int        sloppyio      : 1;
 };
+
+extern const struct opts *opts;
+
+void	set_options(const struct opts *);
 
 #endif /* HDR_UPART_UTIL */

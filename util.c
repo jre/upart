@@ -239,6 +239,17 @@ up_vmsg(unsigned int flags, const char *fmt, va_list ap)
         putc('\n', stderr);
 }
 
+const struct opts *opts = NULL;
+
+void
+set_options(const struct opts *new_opts)
+{
+	static struct opts static_opts = { 0 };
+
+	static_opts = *new_opts;
+	opts = &static_opts;
+}
+
 #ifndef HAVE_STRLCPY
 #include "strlcpy.c"
 #endif /* HAVE_STRLCPY */

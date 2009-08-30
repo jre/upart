@@ -97,20 +97,16 @@ static const char *bzb_types[] =
     "swap",
 };
 
-static int apm_load(const struct up_disk *disk, const struct up_part *parent,
-                    void **priv, const struct up_opts *opts);
-static int apm_setup(struct up_disk *disk, struct up_map *map,
-                     const struct up_opts *opts);
-static int apm_info(const struct up_map *map, int verbose,
-                    char *buf, int size);
-static int apm_index(const struct up_part *part, char *buf, int size);
-static int apm_extra(const struct up_part *part, int verbose,
-                     char *buf, int size);
+static int	apm_load(const struct up_disk *, const struct up_part *,
+	void **);
+static int	apm_setup(struct up_disk *, struct up_map *);
+static int	apm_info(const struct up_map *, char *, int);
+static int	apm_index(const struct up_part *, char *, int);
+static int	apm_extra(const struct up_part *, char *, int);
 static void apm_bounds(const struct up_apm_p *map,
                        int64_t *start, int64_t *size);
-static int apm_find(const struct up_disk *disk, int64_t start, int64_t size,
-                    int64_t *startret, int64_t *sizeret,
-                    const struct up_opts *opts);
+static int	apm_find(const struct up_disk *, int64_t, int64_t,
+                    int64_t *, int64_t *);
 
 void up_apm_register(void)
 {
@@ -130,7 +126,7 @@ void up_apm_register(void)
 
 static int
 apm_load(const struct up_disk *disk, const struct up_part *parent,
-         void **priv, const struct up_opts *opts)
+         void **priv)
 {
     int                 res;
     struct up_apm      *apm;
@@ -143,7 +139,7 @@ apm_load(const struct up_disk *disk, const struct up_part *parent,
         return 0;
 
     /* find partitions */
-    res = apm_find(disk, parent->start, parent->size, &start, &size, opts);
+    res = apm_find(disk, parent->start, parent->size, &start, &size);
     if(0 >= res)
         return res;
 
@@ -164,7 +160,7 @@ apm_load(const struct up_disk *disk, const struct up_part *parent,
 }
 
 static int
-apm_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
+apm_setup(struct up_disk *disk, struct up_map *map)
 {
     struct up_apm              *apm = map->priv;
     int                         ii, flags;
@@ -173,7 +169,7 @@ apm_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
     const uint8_t              *data;
 
     data = up_disk_savesectrange(disk, apm->firstsect, apm->sectcount,
-                                 map, 0, opts);
+                                 map, 0);
     if(!data)
         return -1;
     apm->tmpbuf = data;
@@ -206,9 +202,9 @@ apm_setup(struct up_disk *disk, struct up_map *map, const struct up_opts *opts)
 }
 
 static int
-apm_info(const struct up_map *map, int verbose, char *buf, int size)
+apm_info(const struct up_map *map, char *buf, int size)
 {
-    if(!UP_NOISY(verbose, NORMAL))
+    if(!UP_NOISY(NORMAL))
         return 0;
     /* XXX display driver info here like pdisk does? */
     return snprintf(buf, size, "%s in sector %"PRId64" of %s:",
@@ -224,7 +220,7 @@ apm_index(const struct up_part *part, char *buf, int size)
 }
 
 static int
-apm_extra(const struct up_part *part, int verbose, char *buf, int size)
+apm_extra(const struct up_part *part, char *buf, int size)
 {
     struct up_apmpart  *priv;
     struct up_apm_p    *raw;
@@ -232,12 +228,12 @@ apm_extra(const struct up_part *part, int verbose, char *buf, int size)
     uint32_t            flags, slice;
     int                 res;
 
-    if(!UP_NOISY(verbose, NORMAL))
+    if(!UP_NOISY(NORMAL))
         return 0;
 
     if(!part)
     {
-        if(UP_NOISY(verbose, EXTRA))
+        if(UP_NOISY(EXTRA))
             return snprintf(buf, size, "%-24s %-24s %-10s %s",
                             "Type", "Name", "Status", "A/UX boot data");
         else
@@ -251,7 +247,7 @@ apm_extra(const struct up_part *part, int verbose, char *buf, int size)
     memcpy(name, raw->name, sizeof raw->name);
     name[sizeof(name)-1] = '\0';
 
-    if(UP_NOISY(verbose, EXTRA))
+    if(UP_NOISY(EXTRA))
     {
         res = snprintf(buf, size, "%-24s %-24s 0x%08x",
                        type, name, UP_BETOH32(raw->status));
@@ -298,7 +294,7 @@ apm_bounds(const struct up_apm_p *map, int64_t *start, int64_t *size)
 
 static int
 apm_find(const struct up_disk *disk, int64_t start, int64_t size,
-         int64_t *startret, int64_t *sizeret, const struct up_opts *opts)
+         int64_t *startret, int64_t *sizeret)
 {
     int                        off;
     const struct up_apm_p     *buf;
@@ -311,12 +307,12 @@ apm_find(const struct up_disk *disk, int64_t start, int64_t size,
     {
         if(up_disk_check1sect(disk, start + off + APM_OFFSET))
             return 0;
-        buf = up_disk_getsect(disk, start + off + APM_OFFSET, opts);
+        buf = up_disk_getsect(disk, start + off + APM_OFFSET);
         if(!buf)
             return -1;
         if(APM_MAGIC != UP_BETOH16(buf->sig))
         {
-            if(off && UP_NOISY(opts->verbosity, QUIET))
+            if(off && UP_NOISY(QUIET))
                 up_err("could not find %s partition in sectors %"
                        PRId64" to %"PRId64, APM_MAP_PART_TYPE,
                        start + APM_OFFSET, start + off + APM_OFFSET);
@@ -329,7 +325,7 @@ apm_find(const struct up_disk *disk, int64_t start, int64_t size,
             if(start + APM_OFFSET != pstart || off > blocks ||
                blocks > psize || pstart + psize > start + size)
             {
-                if(UP_NOISY(opts->verbosity, QUIET))
+                if(UP_NOISY(QUIET))
                     up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
                            "invalid apple partition map in sector %"PRId64
                            "+%d, %s partition in sector %"

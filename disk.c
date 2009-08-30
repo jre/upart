@@ -30,7 +30,7 @@ struct up_disk *
 up_disk_open(const char *name)
 {
     struct up_disk *disk;
-    struct up_img  *img;
+ 	struct img  *img;
     const char     *path;
     int             fd, res, plain;
     struct stat     sb;

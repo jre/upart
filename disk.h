@@ -5,7 +5,7 @@
 
 struct up_map;
 struct up_part;
-struct up_img;
+struct img;
 struct disk_params;
 
 #define UP_SECT_OFF(sect)       ((sect)->first)
@@ -46,7 +46,7 @@ struct up_disk
     /* don't touch any of these */
     int                     upd_fd;
     uint8_t                *upd_buf;
-    struct up_img          *upd_img;
+    struct img		*upd_img;
     struct up_part         *maps;
     struct up_disk_sectmap  upd_sectsused;
     int64_t                 upd_sectsused_count;

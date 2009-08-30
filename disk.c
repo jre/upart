@@ -19,10 +19,10 @@
 
 /* #define DEBUG_SECTOR_SAVE */
 
-static int fixparams(struct up_disk *disk, const struct up_opts *opts);
-static int fixparams_checkone(struct up_diskparams *disk);
-static int sectcmp(struct up_disk_sectnode *left,
-                   struct up_disk_sectnode *right);
+static int	fixparams(struct up_disk *, const struct disk_params *);
+static int	fixparams_checkone(struct disk_params *disk);
+static int	sectcmp(struct up_disk_sectnode *left,
+			struct up_disk_sectnode *right);
 
 RB_GENERATE_STATIC(up_disk_sectmap, up_disk_sectnode, link, sectcmp)
 
@@ -118,35 +118,34 @@ up_disk_open(const char *name, const struct up_opts *opts)
 }
 
 int
-up_disk_setup(struct up_disk *disk, const struct up_opts *opts)
+up_disk_setup(struct up_disk *disk, const struct up_opts *opts,
+    const struct disk_params *params)
 {
-    if(!UP_DISK_IS_IMG(disk))
-        /* try to get drive parameters from OS */
-        up_os_getparams(disk->upd_fd, disk, opts);
-    else
-        /* try to get drive parameters from image */
-        if(0 > up_img_getparams(&disk->ud_params, disk->upd_img))
-            return -1;
+	if (!UP_DISK_IS_IMG(disk))
+		/* try to get drive parameters from OS */
+		up_os_getparams(disk->upd_fd, disk, opts);
+	else
+		/* try to get drive parameters from image */
+		if(0 > up_img_getparams(disk->upd_img, &disk->ud_params))
+			return (-1);
 
-    /* try to fill in missing drive paramaters */
-    if(0 > fixparams(disk, opts))
-    {
-        if(UP_NOISY(opts->verbosity, QUIET))
-            up_err("failed to determine disk parameters for %s",
-                   UP_DISK_PATH(disk));
-        return -1;
-    }
+	/* try to fill in missing drive paramaters */
+	if (fixparams(disk, params) < 0) {
+		if (UP_NOISY(opts->verbosity, QUIET))
+			up_err("failed to determine disk parameters for %s",
+			    UP_DISK_PATH(disk));
+		return (-1);
+	}
 
-    assert(!disk->upd_buf);
-    disk->upd_buf = malloc(UP_DISK_1SECT(disk));
-    if(!disk->upd_buf)
-    {
-        perror("malloc");
-        return -1;
-    }
+	assert(disk->upd_buf == NULL);
+	disk->upd_buf = malloc(UP_DISK_1SECT(disk));
+	if(disk->upd_buf == NULL) {
+		perror("malloc");
+		return (-1);
+	}
 
-    disk->ud_flag_setup = 1;
-    return 0;
+	disk->ud_flag_setup = 1;
+	return (0);
 }
 
 int64_t
@@ -343,89 +342,91 @@ up_disk_close(struct up_disk *disk)
 }
 
 static int
-fixparams(struct up_disk *disk, const struct up_opts *opts)
+fixparams(struct up_disk *disk, const struct disk_params *params)
 {
-    struct stat sb;
+	struct stat sb;
 
-    /* command-line options override any other values */
-    if(0 < opts->params.ud_sectsize)
-        disk->ud_params.ud_sectsize = opts->params.ud_sectsize;
-    if(0 < opts->params.ud_cyls)
-        disk->ud_params.ud_cyls = opts->params.ud_cyls;
-    if(0 < opts->params.ud_heads)
-        disk->ud_params.ud_heads = opts->params.ud_heads;
-    if(0 < opts->params.ud_sects)
-        disk->ud_params.ud_sects = opts->params.ud_sects;
+	/* command-line options override any other values */
+	if (params->sectsize > 0)
+		disk->ud_params.sectsize = params->sectsize;
+	if (params->cyls > 0)
+		disk->ud_params.cyls = params->cyls;
+	if (params->heads > 0)
+        	disk->ud_params.heads = params->heads;
+	if (params->sects > 0)
+        	disk->ud_params.sects = params->sects;
 
-    /* sector size defaults to 512 */
-    if(0 >= disk->ud_params.ud_sectsize)
-        disk->ud_params.ud_sectsize = 512;
+	/* sector size defaults to 512 */
+	if (disk->ud_params.sectsize <= 0)
+        	disk->ud_params.sectsize = 512;
 
-    /* we can get the total size for a plain file */
-    if(0 >= disk->ud_params.ud_size && !UP_DISK_IS_IMG(disk) &&
-       UP_DISK_IS_FILE(disk) && 0 == stat(UP_DISK_PATH(disk), &sb))
-        disk->ud_params.ud_size = sb.st_size / disk->ud_params.ud_sectsize;
+	/* we can get the total size for a plain file */
+	if (disk->ud_params.size <= 0 &&
+	    !UP_DISK_IS_IMG(disk) &&
+	    UP_DISK_IS_FILE(disk) &&
+	    stat(UP_DISK_PATH(disk), &sb) == 0)
+		disk->ud_params.size = sb.st_size / disk->ud_params.sectsize;
 
-    /* is that good enough? */
-    if(0 == fixparams_checkone(&disk->ud_params))
-        return 0;
+	/* is that good enough? */
+	if (fixparams_checkone(&disk->ud_params) == 0)
+		return (0);
 
-    /* apparently not, try defaulting heads and sectors to 255 and 63 */
-    if(0 >= disk->ud_params.ud_heads)
-        disk->ud_params.ud_heads = 255;
-    if(0 >= disk->ud_params.ud_sects)
-        disk->ud_params.ud_sects = 63;
+	/* apparently not, try defaulting heads and sectors to 255 and 63 */
+	if (disk->ud_params.heads <= 0)
+        	disk->ud_params.heads = 255;
+	if (disk->ud_params.sects <= 0)
+		disk->ud_params.sects = 63;
 
-    /* ok, is it good enough now? */
-    if(0 == fixparams_checkone(&disk->ud_params))
-        return 0;
+	/* ok, is it good enough now? */
+	if (fixparams_checkone(&disk->ud_params) == 0)
+		return (0);
 
-    /* guess not */
-    return -1;
+	/* guess not */
+	return (-1);
 }
 
 static int
-fixparams_checkone(struct up_diskparams *disk)
+fixparams_checkone(struct disk_params *params)
 {
-    /* if we have all 4 then we're good */
-    if(0 <  disk->ud_cyls  && 0 <  disk->ud_heads &&
-       0 <  disk->ud_sects && 0 <  disk->ud_size )
-        return 0;
+	/* if we have all 4 then we're good */
+	if (params->cyls > 0 && params->heads > 0 &&
+	    params->sects > 0 && params->size > 0)
+		return (0);
 
-    /* guess cyls from other three */
-    if(0 >= disk->ud_cyls  && 0 <  disk->ud_heads &&
-       0 <  disk->ud_sects && 0 <  disk->ud_size )
-    {
-        disk->ud_cyls = disk->ud_size / disk->ud_sects / disk->ud_heads;
-        return 0;
-    }
+	/* guess cyls from other three */
+	if (params->cyls <= 0 && params->heads > 0 &&
+	    params->sects > 0 && params->size > 0)
+	{
+		params->cyls = params->size / params->sects / params->heads;
+		return (0);
+	}
 
-    /* guess heads from other three */
-    if(0 <  disk->ud_cyls  && 0 >= disk->ud_heads &&
-       0 <  disk->ud_sects && 0 <  disk->ud_size )
-    {
-        disk->ud_heads = disk->ud_size / disk->ud_sects / disk->ud_cyls;
-        return 0;
-    }
+	/* guess heads from other three */
+	if (params->cyls > 0 && params->heads <= 0 &&
+	    params->sects > 0 && params->size > 0)
+	{
+		params->heads = params->size / params->sects / params->cyls;
+		return (0);
+	}
 
-    /* guess sects from other three */
-    if(0 <  disk->ud_cyls  && 0 <  disk->ud_heads &&
-       0 >= disk->ud_sects && 0 <  disk->ud_size )
-    {
-        disk->ud_sects = disk->ud_size / disk->ud_heads / disk->ud_cyls;
-        return 0;
-    }
+	/* guess sects from other three */
+	if (params->cyls > 0 && params->heads > 0 &&
+	    params->sects <= 0 && params->size > 0)
+	{
+		params->sects = params->size / params->heads / params->cyls;
+		return (0);
+	}
 
-    /* guess size from other three */
-    if(0 <  disk->ud_cyls  && 0 <  disk->ud_heads &&
-       0 <  disk->ud_sects && 0 >= disk->ud_size )
-    {
-        disk->ud_size = disk->ud_sects * disk->ud_heads * disk->ud_cyls;
-        return 0;
-    }
+	/* guess size from other three */
+	if (params->cyls > 0 && params->heads > 0 &&
+	    params->sects > 0 && params->size <= 0)
+	{
+		params->size = params->sects * params->heads * params->cyls;
+		return (0);
+	}
 
-    /* can only guess with one missing param */
-    return -1;
+	/* can only guess with one missing param */
+	return (-1);
 }
 
 void

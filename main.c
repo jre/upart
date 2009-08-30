@@ -21,13 +21,15 @@
 #include "sunlabel-sparc.h"
 #include "sunlabel-x86.h"
 
-static char *readargs(int argc, char *argv[], struct up_opts *opts);
+static char	*readargs(int, char *[], struct up_opts *,
+	struct disk_params *);
 static void usage(const char *fmt, ...);
 static int serialize(const struct up_disk *disk, const struct up_opts *opts);
 
 int
 main(int argc, char *argv[])
 {
+	struct disk_params params;
     struct up_opts              opts;
     char                       *name;
     struct up_disk             *disk;
@@ -42,18 +44,18 @@ main(int argc, char *argv[])
     up_sunlabel_x86_register();
     up_gpt_register();
 
-    name = readargs(argc, argv, &opts);
+    name = readargs(argc, argv, &opts, &params);
     if(NULL == name)
         return EXIT_FAILURE;
 
-    disk = up_disk_open(name, &opts);
-    if(!disk)
-        return EXIT_FAILURE;
-    if(0 > up_disk_setup(disk, &opts) || 0 > up_map_loadall(disk, &opts))
-    {
-        up_disk_close(disk);
-        return EXIT_FAILURE;
-    }
+	disk = up_disk_open(name, &opts);
+	if (!disk)
+		return (EXIT_FAILURE);
+	if (up_disk_setup(disk, &opts, &params) < 0 ||
+	    up_map_loadall(disk, &opts) < 0) {
+		up_disk_close(disk);
+		return (EXIT_FAILURE);
+	}
 
     ret = EXIT_SUCCESS;
     if(opts.serialize)
@@ -75,27 +77,28 @@ main(int argc, char *argv[])
 }
 
 static char *
-readargs(int argc, char *argv[], struct up_opts *opts)
+readargs(int argc, char *argv[], struct up_opts *opts,
+	struct disk_params *params)
 {
-    struct up_diskparams *params = &opts->params;
     int opt;
 
     memset(opts, 0, sizeof *opts);
+    memset(params, 0, sizeof *params);
     while(0 < (opt = getopt(argc, argv, "c:fh:kl:qrs:vVw:z:")))
     {
         switch(opt)
         {
             case 'c':
-                params->ud_cyls = strtol(optarg, NULL, 0);
-                if(0 >= params->ud_cyls)
+                params->cyls = strtol(optarg, NULL, 0);
+                if(0 >= params->cyls)
                     usage("illegal cylinder count: %s", optarg);
                 break;
             case 'f':
                 opts->plainfile = 1;
                 break;
             case 'h':
-                params->ud_heads = strtol(optarg, NULL, 0);
-                if(0 >= params->ud_heads)
+                params->heads = strtol(optarg, NULL, 0);
+                if(0 >= params->heads)
                     usage("illegal tracks per cylinder (head) count: %s", optarg);
                 break;
             case 'k':
@@ -111,8 +114,8 @@ readargs(int argc, char *argv[], struct up_opts *opts)
                 opts->relaxed = 1;
                 break;
             case 's':
-                params->ud_sects = strtol(optarg, NULL, 0);
-                if(0 >= params->ud_sects)
+                params->sects = strtol(optarg, NULL, 0);
+                if(0 >= params->sects)
                     usage("illegal sectors per track count (sectors): %s", optarg);
                 break;
             case 'v':
@@ -126,8 +129,8 @@ readargs(int argc, char *argv[], struct up_opts *opts)
                 opts->serialize = optarg;
                 break;
             case 'z':
-                params->ud_sectsize = strtol(optarg, NULL, 0);
-                if(0 >= params->ud_sectsize)
+                params->sectsize = strtol(optarg, NULL, 0);
+                if(0 >= params->sectsize)
                     usage("illegal sector size: %s", optarg);
                 break;
             default:

@@ -302,15 +302,15 @@ up_img_load(int fd, const char *name, const struct up_opts *opts,
 }
 
 int
-up_img_getparams(struct up_diskparams *disk, struct up_img *img)
+up_img_getparams(struct up_img *img, struct disk_params *params)
 {
-    disk->ud_sectsize = UP_BETOH32(img->hdr.sectsize);
-    disk->ud_size     = UP_BETOH64(img->hdr.size);
-    disk->ud_cyls     = UP_BETOH64(img->hdr.cyls);
-    disk->ud_heads    = UP_BETOH64(img->hdr.heads);
-    disk->ud_sects    = UP_BETOH64(img->hdr.sects);
+	params->sectsize = UP_BETOH32(img->hdr.sectsize);
+	params->size = UP_BETOH64(img->hdr.size);
+	params->cyls = UP_BETOH64(img->hdr.cyls);
+	params->heads = UP_BETOH64(img->hdr.heads);
+	params->sects = UP_BETOH64(img->hdr.sects);
     
-    return 0;
+	return (0);
 }
 
 const char *

@@ -2,17 +2,26 @@
 #define HDR_UPART_DISK
 
 #include "bsdtree.h"
-#include "util.h"
 
 struct up_opts;
 struct up_map;
 struct up_part;
 struct up_img;
+struct disk_params;
 
 #define UP_SECT_OFF(sect)       ((sect)->first)
 #define UP_SECT_COUNT(sect)     ((sect)->last - (sect)->first + 1)
 #define UP_SECT_MAP(sect)       ((sect)->ref)
 #define UP_SECT_DATA(sect)      ((sect)->data)
+
+struct disk_params
+{
+    int64_t	cyls;        /* total number of cylinders */
+    int64_t	heads;       /* number of tracks per cylinder */
+    int64_t	sects;       /* number of sectors per track */
+    int64_t	size;        /* total number of sects */
+    int		sectsize;    /* size of a sector in bytes */
+};
 
 struct up_disk_sectnode
 {
@@ -30,7 +39,7 @@ struct up_disk
 {
     char *                  ud_name;        /* disk name supplied by user */
     char *                  ud_path;        /* path to opened device node */
-    struct up_diskparams    ud_params;
+    struct disk_params	ud_params;
 
     unsigned int            ud_flag_setup     : 1;
     unsigned int            ud_flag_plainfile : 1;
@@ -46,14 +55,14 @@ struct up_disk
 
 #define UP_DISK_LABEL(disk)     ((disk)->ud_name)
 #define UP_DISK_PATH(disk)      ((disk)->ud_path)
-#define UP_DISK_1SECT(disk)     ((disk)->ud_params.ud_sectsize)
-#define UP_DISK_CYLS(disk)      ((disk)->ud_params.ud_cyls)
-#define UP_DISK_HEADS(disk)     ((disk)->ud_params.ud_heads)
-#define UP_DISK_SPT(disk)       ((disk)->ud_params.ud_sects)
-#define UP_DISK_SIZESECTS(disk) ((disk)->ud_params.ud_size)
+#define UP_DISK_1SECT(disk)     ((disk)->ud_params.sectsize)
+#define UP_DISK_CYLS(disk)      ((disk)->ud_params.cyls)
+#define UP_DISK_HEADS(disk)     ((disk)->ud_params.heads)
+#define UP_DISK_SPT(disk)       ((disk)->ud_params.sects)
+#define UP_DISK_SIZESECTS(disk) ((disk)->ud_params.size)
 /* XXX should handle overflow here and anywhere sects are converted to bytes */
 #define UP_DISK_SIZEBYTES(disk) \
-    ((disk)->ud_params.ud_size * (disk)->ud_params.ud_sectsize)
+    ((disk)->ud_params.size * (disk)->ud_params.sectsize)
 #define UP_DISK_IS_IMG(disk)    (NULL != (disk)->upd_img)
 #define UP_DISK_IS_FILE(disk)   ((disk)->ud_flag_plainfile)
 
@@ -64,7 +73,8 @@ typedef int (*up_disk_iterfunc_t)(const struct up_disk *,
 struct up_disk *up_disk_open(const char *path, const struct up_opts *opts);
 
 /* Read get drive parameters and make disk ready to read from or write to */
-int up_disk_setup(struct up_disk *disk, const struct up_opts *opts);
+int		up_disk_setup(struct up_disk *, const struct up_opts *,
+	const struct disk_params *);
 
 /* Read from disk into buffer. Note that START, SIZE, and the return
    value are in sectors but bufsize is in bytes. */

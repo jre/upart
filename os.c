@@ -77,93 +77,94 @@ static int getparams_sunos(int fd, struct up_disk *disk,
 int
 up_os_opendisk(const char *name, const char **path, const struct up_opts *opts)
 {
-    static char buf[MAXPATHLEN];
-    int flags, ret;
+	static char buf[MAXPATHLEN];
+	int flags, ret;
 
-    *path = NULL;
-    flags = OPENFLAGS(O_RDONLY);
+	*path = NULL;
+	flags = OPENFLAGS(O_RDONLY);
 
-    if(opts->plainfile || strchr(name, '/'))
-        return open(name, flags);
+	if (opts->plainfile || strchr(name, '/'))
+		return open(name, flags);
 
 #ifdef HAVE_OPENDISK
-    buf[0] = 0;
-    ret = opendisk(name, flags, buf, sizeof buf, 0);
+	buf[0] = 0;
+	ret = opendisk(name, flags, buf, sizeof buf, 0);
 #else
-    ret = open(name, flags);
-    if(0 > ret)
-    {
-        strlcpy(buf, DEVPREFIX, sizeof buf);
-        strlcat(buf, name, sizeof buf);
-        ret = open(buf, flags);
-    }
+	ret = open(name, flags);
+	if (ret < 0) {
+		strlcpy(buf, DEVPREFIX, sizeof buf);
+		strlcat(buf, name, sizeof buf);
+		ret = open(buf, flags);
+	}
 #endif
-    if(0 <= ret && buf[0])
-        *path = buf;
-    return ret;
+	if (ret >= 0 && buf[0])
+		*path = buf;
+	return (ret);
 }
 
 int
 up_os_getparams(int fd, struct up_disk *disk, const struct up_opts *opts)
 {
+	/* The order of these is significant, more than one may be defined. */
 #ifdef HAVE_GETPARAMS_FREEBSD
-    if(0 == getparams_freebsd(fd, disk, opts))
-        return 0;
+	if (getparams_freebsd(fd, disk, opts) == 0)
+		return (0);
 #endif
 #ifdef HAVE_GETPARAMS_DISKLABEL
-    if(0 == getparams_disklabel(fd, disk, opts))
-        return 0;
+	if (getparams_disklabel(fd, disk, opts) == 0)
+		return (0);
 #endif
 #ifdef HAVE_GETPARAMS_LINUX
-    if(0 == getparams_linux(fd, disk, opts))
-        return 0;
+	if (getparams_linux(fd, disk, opts) == 0)
+		return (0);
 #endif
 #ifdef HAVE_GETPARAMS_DARWIN
-    if(0 == getparams_darwin(fd, disk, opts))
-        return 0;
+	if (getparams_darwin(fd, disk, opts) == 0)
+		return (0);
 #endif
 #ifdef HAVE_GETPARAMS_SUNOS
-    if(0 == getparams_sunos(fd, disk, opts))
-        return 0;
+	if (getparams_sunos(fd, disk, opts) == 0)
+		return (0);
 #endif
-    return -1;
+	return (-1);
 }
 
 #ifdef HAVE_GETPARAMS_DISKLABEL
 static int
 getparams_disklabel(int fd, struct up_disk *disk, const struct up_opts *opts)
 {
-    struct up_diskparams *params = &disk->ud_params;
-    struct disklabel dl;
+	struct disk_params *params;
+	struct disklabel dl;
 
-    if(UP_DISK_IS_FILE(disk))
-        return -1;
+	if (UP_DISK_IS_FILE(disk))
+		return (-1);
 
-    errno = 0;
+	params = &disk->ud_params;
+	errno = 0;
 #ifdef DIOCGPDINFO
-    if(0 > ioctl(fd, DIOCGPDINFO, &dl))
+	if (ioctl(fd, DIOCGPDINFO, &dl) < 0)
 #endif
 #ifdef DIOCGDINFO
-    if(0 > ioctl(fd, DIOCGDINFO, &dl))
+	if (ioctl(fd, DIOCGDINFO, &dl) < 0)
 #endif
-    {
-        if(errno && UP_NOISY(opts->verbosity, QUIET))
-            up_err("failed to read disklabel for %s: %s",
-                   UP_DISK_PATH(disk), strerror(errno));
-        return -1;
-    }
+	{
+		if (errno && UP_NOISY(opts->verbosity, QUIET))
+			up_err("failed to get disklabel for %s: %s",
+			    UP_DISK_PATH(disk), strerror(errno));
+		return (-1);
+	}
 
-    params->ud_sectsize = dl.d_secsize;
-    params->ud_cyls     = dl.d_ncylinders;
-    params->ud_heads    = dl.d_ntracks;
-    params->ud_sects    = dl.d_nsectors;
+	params->sectsize = dl.d_secsize;
+	params->cyls = dl.d_ncylinders;
+	params->heads = dl.d_ntracks;
+	params->sects = dl.d_nsectors;
 #ifdef DL_GETDSIZE
-    params->ud_size     = DL_GETDSIZE(&dl);
+	params->size = DL_GETDSIZE(&dl);
 #else
-    params->ud_size     = dl.d_secperunit;
+	params->size = dl.d_secperunit;
 #endif
 
-    return 0;
+	return (0);
 }
 #endif /* GETPARAMS_DISKLABEL */
 
@@ -171,38 +172,39 @@ getparams_disklabel(int fd, struct up_disk *disk, const struct up_opts *opts)
 static int
 getparams_freebsd(int fd, struct up_disk *disk, const struct up_opts *opts)
 {
-    struct up_diskparams *params = &disk->ud_params;
-    u_int ival;
-    off_t oval;
+	struct disk_params *params;
+	u_int ival;
+	off_t oval;
 
-    if(UP_DISK_IS_FILE(disk))
-        return -1;
+	if (UP_DISK_IS_FILE(disk))
+		return -1;
 
-    if(0 == ioctl(fd, DIOCGSECTORSIZE, &ival))
-        params->ud_sectsize = ival;
-    else if(UP_NOISY(opts->verbosity, QUIET))
-        up_warn("failed to read disk size for %s: %s",
-                UP_DISK_PATH(disk), strerror(errno));
+	params = &disk->ud_params;
+	if (ioctl(fd, DIOCGSECTORSIZE, &ival) == 0)
+		params->sectsize = ival;
+	else if (UP_NOISY(opts->verbosity, QUIET))
+		up_warn("failed to get disk size for %s: %s",
+		    UP_DISK_PATH(disk), strerror(errno));
 
-    if(0 < params->ud_sectsize && 0 == ioctl(fd, DIOCGMEDIASIZE, &oval))
-        params->ud_size = oval / params->ud_sectsize;
-    else if(UP_NOISY(opts->verbosity, QUIET))
-        up_warn("failed to read sector size for %s: %s",
-                UP_DISK_PATH(disk), strerror(errno));
+	if (params->sectsize > 0 && ioctl(fd, DIOCGMEDIASIZE, &oval) == 0)
+		params->size = oval / params->sectsize;
+	else if (UP_NOISY(opts->verbosity, QUIET))
+		up_warn("failed to get sector size for %s: %s",
+		    UP_DISK_PATH(disk), strerror(errno));
 
-    if(0 == ioctl(fd, DIOCGFWSECTORS, &ival))
-        params->ud_sects = ival;
-    else if(UP_NOISY(opts->verbosity, QUIET))
-        up_warn("failed to read sectors per track for %s: %s",
-                UP_DISK_PATH(disk), strerror(errno));
+	if (ioctl(fd, DIOCGFWSECTORS, &ival) == 0)
+		params->sects = ival;
+	else if (UP_NOISY(opts->verbosity, QUIET))
+		up_warn("failed to get sectors per track for %s: %s",
+		    UP_DISK_PATH(disk), strerror(errno));
 
-    if(0 == ioctl(fd, DIOCGFWHEADS, &ival))
-        params->ud_heads = ival;
-    else if(UP_NOISY(opts->verbosity, QUIET))
-        up_warn("failed to read heads (tracks per cylinder) for %s: %s",
-                UP_DISK_PATH(disk), strerror(errno));
+	if (ioctl(fd, DIOCGFWHEADS, &ival) == 0)
+		params->heads = ival;
+	else if (UP_NOISY(opts->verbosity, QUIET))
+		up_warn("failed to get heads (tracks per cylinder) for %s: %s",
+		    UP_DISK_PATH(disk), strerror(errno));
 
-    return 0;
+	return (0);
 }
 #endif
 
@@ -210,39 +212,36 @@ getparams_freebsd(int fd, struct up_disk *disk, const struct up_opts *opts)
 static int
 getparams_linux(int fd, struct up_disk *disk, const struct up_opts *opts)
 {
-    struct up_diskparams *params = &disk->ud_params;
-    /* XXX rather than an ugly maze of #ifdefs I'll just assume these
-           all exist for now and fix it later if it ever breaks */
-    struct hd_geometry geom;
-    int smallsize;
-    uint64_t bigsize;
+	struct disk params *params;
+	struct hd_geometry geom;
+	int smallsize;
+	uint64_t bigsize;
 
-    if(UP_DISK_IS_FILE(disk))
-        return -1;
+	if (UP_DISK_IS_FILE(disk))
+		return (-1);
 
-    if(0 == ioctl(fd, HDIO_GETGEO, &geom))
-    {
-        params->ud_cyls  = geom.cylinders;
-        params->ud_heads = geom.heads;
-        params->ud_sects = geom.sectors;
-    }
-    if(0 == ioctl(fd, BLKSSZGET, &smallsize))
-    {
-        params->ud_sectsize = smallsize;
-        if(0 == ioctl(fd, BLKGETSIZE64, &bigsize))
-            params->ud_size = bigsize / params->ud_sectsize;
-    }
-    else if(0 == ioctl(fd, BLKGETSIZE, &smallsize))
-        params->ud_size = smallsize;
-    else
-    {
-        if(UP_NOISY(opts->verbosity, QUIET))
-            up_err("failed to read disk size for %s: %s",
-                UP_DISK_PATH(disk), strerror(errno));
-        return -1;
-    }
+	/* XXX rather than an ugly maze of #ifdefs I'll just assume these
+	   ioctls all exist for now and fix it later if it ever breaks */
+	params = &disk->ud_params;
+	if (ioctl(fd, HDIO_GETGEO, &geom) == 0) {
+		params->cyls = geom.cylinders;
+		params->heads = geom.heads;
+		params->sects = geom.sectors;
+	}
+	if (ioctl(fd, BLKSSZGET, &smallsize) == 0) {
+		params->sectsize = smallsize;
+	if (ioctl(fd, BLKGETSIZE64, &bigsize) == 0)
+		params->size = bigsize / params->sectsize;
+	} else if (ioctl(fd, BLKGETSIZE, &smallsize) == 0)
+		params->size = smallsize;
+	else {
+		if (UP_NOISY(opts->verbosity, QUIET))
+			up_err("failed to get disk size for %s: %s",
+			    UP_DISK_PATH(disk), strerror(errno));
+		return (-1);
+	}
 
-    return 0;
+	return (0);
 }
 #endif
 
@@ -250,25 +249,26 @@ getparams_linux(int fd, struct up_disk *disk, const struct up_opts *opts)
 static int
 getparams_darwin(int fd, struct up_disk *disk, const struct up_opts *opts)
 {
-    struct up_diskparams *params = &disk->ud_params;
-    uint32_t smallsize;
-    uint64_t bigsize;
+	struct disk_params *params;
+	uint32_t smallsize;
+	uint64_t bigsize;
 
-    if(UP_DISK_IS_FILE(disk))
-        return -1;
+	if (UP_DISK_IS_FILE(disk))
+		return (-1);
 
-    if(0 == ioctl(fd, DKIOCGETBLOCKSIZE, &smallsize))
-        params->ud_sectsize = smallsize;
-    else if(UP_NOISY(opts->verbosity, QUIET))
-        up_warn("failed to read sector size for %s: %s",
-                UP_DISK_PATH(disk), strerror(errno));
-    if(0 == ioctl(fd, DKIOCGETBLOCKCOUNT, &bigsize))
-        params->ud_size = bigsize;
-    else if(UP_NOISY(opts->verbosity, QUIET))
-        up_warn("failed to read block count for %s: %s",
-                UP_DISK_PATH(disk), strerror(errno));
+	params = &disk->ud_params;
+	if (ioctl(fd, DKIOCGETBLOCKSIZE, &smallsize) == 0)
+		params->sectsize = smallsize;
+	else if (UP_NOISY(opts->verbosity, QUIET))
+		up_warn("failed to get sector size for %s: %s",
+		    UP_DISK_PATH(disk), strerror(errno));
+	if (ioctl(fd, DKIOCGETBLOCKCOUNT, &bigsize) == 0)
+		params->size = bigsize;
+	else if (UP_NOISY(opts->verbosity, QUIET))
+		up_warn("failed to get block count for %s: %s",
+		    UP_DISK_PATH(disk), strerror(errno));
 
-    return 0;
+	return (0);
 }
 #endif /* HAVE_GETPARAMS_DARWIN */
 
@@ -276,26 +276,25 @@ getparams_darwin(int fd, struct up_disk *disk, const struct up_opts *opts)
 static int
 getparams_sunos(int fd, struct up_disk *disk, const struct up_opts *opts)
 {
-    struct up_diskparams *params = &disk->ud_params;
-    struct dk_geom geom;
+	struct disk_params *params;
+	struct dk_geom geom;
 
-    if(UP_DISK_IS_FILE(disk))
-        return -1;
+	if (UP_DISK_IS_FILE(disk))
+        	return (-1);
 
-    /* XXX is there an ioctl or something to get sector size? */
-    params->ud_sectsize = NBPSCTR;
+	params = &disk->ud_params;
+	/* XXX is there an ioctl or something to get sector size? */
+	params->sectsize = NBPSCTR;
 
-    if(ioctl(fd, DKIOCG_PHYGEOM, &geom) == 0 ||
-	ioctl(fd, DKIOCGGEOM, &geom) == 0)
-    {
-        params->ud_cyls = geom.dkg_pcyl;
-        params->ud_heads = geom.dkg_nhead;
-        params->ud_sects = geom.dkg_nsect;
-    }
-    else if(UP_NOISY(opts->verbosity, QUIET))
-        up_warn("failed to read disk geometry for %s: %s",
-                UP_DISK_PATH(disk), strerror(errno));
+	if (ioctl(fd, DKIOCG_PHYGEOM, &geom) == 0 ||
+	    ioctl(fd, DKIOCGGEOM, &geom) == 0) {
+		params->cyls = geom.dkg_pcyl;
+		params->heads = geom.dkg_nhead;
+		params->sects = geom.dkg_nsect;
+	} else if (UP_NOISY(opts->verbosity, QUIET))
+		up_warn("failed to read disk geometry for %s: %s",
+		    UP_DISK_PATH(disk), strerror(errno));
 
-    return 0;
+	return (0);
 }
 #endif /* HAVE_GETPARAMS_SUNOS */

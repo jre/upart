@@ -134,18 +134,8 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 size_t strlcat(char *dst, const char *src, size_t siz);
 #endif
 
-struct up_diskparams
-{
-    int64_t                 ud_cyls;        /* total number of cylinders */
-    int64_t                 ud_heads;       /* number of tracks per cylinder */
-    int64_t                 ud_sects;       /* number of sectors per track */
-    int64_t                 ud_size;        /* total number of sects */
-    int                     ud_sectsize;    /* size of a sector in bytes */
-};
-
 struct up_opts
 {
-    struct up_diskparams params;
     const char         *serialize;
     const char         *label;
     int                 verbosity;

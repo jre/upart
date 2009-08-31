@@ -97,15 +97,15 @@ static const char *bzb_types[] =
     "swap",
 };
 
-static int	apm_load(const struct up_disk *, const struct up_part *,
+static int	apm_load(const struct disk *, const struct up_part *,
 	void **);
-static int	apm_setup(struct up_disk *, struct up_map *);
+static int	apm_setup(struct disk *, struct up_map *);
 static int	apm_info(const struct up_map *, char *, int);
 static int	apm_index(const struct up_part *, char *, int);
 static int	apm_extra(const struct up_part *, char *, int);
 static void apm_bounds(const struct up_apm_p *map,
                        int64_t *start, int64_t *size);
-static int	apm_find(const struct up_disk *, int64_t, int64_t,
+static int	apm_find(const struct disk *, int64_t, int64_t,
                     int64_t *, int64_t *);
 
 void up_apm_register(void)
@@ -125,7 +125,7 @@ void up_apm_register(void)
 }
 
 static int
-apm_load(const struct up_disk *disk, const struct up_part *parent,
+apm_load(const struct disk *disk, const struct up_part *parent,
          void **priv)
 {
     int                 res;
@@ -160,7 +160,7 @@ apm_load(const struct up_disk *disk, const struct up_part *parent,
 }
 
 static int
-apm_setup(struct up_disk *disk, struct up_map *map)
+apm_setup(struct disk *disk, struct up_map *map)
 {
     struct up_apm              *apm = map->priv;
     int                         ii, flags;
@@ -293,7 +293,7 @@ apm_bounds(const struct up_apm_p *map, int64_t *start, int64_t *size)
 }
 
 static int
-apm_find(const struct up_disk *disk, int64_t start, int64_t size,
+apm_find(const struct disk *disk, int64_t start, int64_t size,
          int64_t *startret, int64_t *sizeret)
 {
     int                        off;

@@ -1,7 +1,6 @@
 #ifndef HDR_UPART_BSDLABEL
 #define HDR_UPART_BSDLABEL
 
-struct up_disk;
 struct up_part;
 
 /* register BSD disklabel partition map type */

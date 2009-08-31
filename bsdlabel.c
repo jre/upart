@@ -170,9 +170,9 @@ static char *up_fstypes[] =
     "ZFS"
 };
 
-static int	bsdlabel_load(const struct up_disk *, const struct up_part *,
+static int	bsdlabel_load(const struct disk *, const struct up_part *,
     void **);
-static int	bsdlabel_setup(struct up_disk *, struct up_map *);
+static int	bsdlabel_setup(struct disk *, struct up_map *);
 static int bsdlabel_getpart_v0(struct up_map *, struct up_bsdpart *,
     const uint8_t *);
 static int bsdlabel_getpart_v1(struct up_map *, struct up_bsdpart *,
@@ -184,9 +184,9 @@ static int	bsdlabel_extra(const struct up_part *, char *, int);
 static int bsdlabel_dump(const struct up_map *map, int64_t start,
                          const void *data, int64_t size, int tag, char *buf,
                          int buflen);
-static int	bsdlabel_scan(const struct up_disk *, int64_t,
+static int	bsdlabel_scan(const struct disk *, int64_t,
     int64_t, const uint8_t **, int *, int *, int *);
-static int	bsdlabel_read(const struct up_disk *, int64_t,
+static int	bsdlabel_read(const struct disk *, int64_t,
     int64_t, const uint8_t **, int *, int *);
 static uint16_t bsdlabel_cksum(struct up_bsd_p *hdr,
                                const uint8_t *partitions, int size);
@@ -208,7 +208,7 @@ void up_bsdlabel_register(void)
 }
 
 static int
-bsdlabel_load(const struct up_disk *disk, const struct up_part *parent,
+bsdlabel_load(const struct disk *disk, const struct up_part *parent,
     void **priv)
 {
     int                 res, sectoff, byteoff, endian, size;
@@ -261,7 +261,7 @@ bsdlabel_load(const struct up_disk *disk, const struct up_part *parent,
 }
 
 static int
-bsdlabel_setup(struct up_disk *disk, struct up_map *map)
+bsdlabel_setup(struct disk *disk, struct up_map *map)
 {
     struct up_bsd              *label = map->priv;
     int                         ii, max;
@@ -477,7 +477,7 @@ bsdlabel_dump(const struct up_map *map, int64_t start, const void *data,
 }
 
 static int
-bsdlabel_scan(const struct up_disk *disk, int64_t start, int64_t size,
+bsdlabel_scan(const struct disk *disk, int64_t start, int64_t size,
               const uint8_t **ret, int *sectoff, int *byteoff, int *endian)
 {
     int                 ii, off;
@@ -512,7 +512,7 @@ bsdlabel_scan(const struct up_disk *disk, int64_t start, int64_t size,
 }
 
 static int
-bsdlabel_read(const struct up_disk *disk, int64_t start, int64_t size,
+bsdlabel_read(const struct disk *disk, int64_t start, int64_t size,
               const uint8_t **ret, int *off, int *endian)
 {
     int                 ii;

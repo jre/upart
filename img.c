@@ -54,7 +54,7 @@ struct img {
 static int	img_checkcrc(struct imghdr *, int, const char *, uint32_t *);
 
 static int
-img_save_iter(const struct up_disk *disk, const struct disk_sect *node,
+img_save_iter(const struct disk *disk, const struct disk_sect *node,
     void *arg)
 {
 	struct imgsect hdr;
@@ -79,7 +79,7 @@ img_save_iter(const struct up_disk *disk, const struct disk_sect *node,
 }
 
 int
-up_img_save(const struct up_disk *disk, void *_stream, const char *label,
+up_img_save(const struct disk *disk, void *_stream, const char *label,
     const char *file)
 {
 	FILE *stream;
@@ -92,12 +92,12 @@ up_img_save(const struct up_disk *disk, void *_stream, const char *label,
 	stream = _stream;
 
 	/* allocate the data buffer */
-	datalen = disk->upd_sectsused_count *
+	datalen = disk->sectsused_count *
 	    (UP_DISK_1SECT(disk) + IMG_SECT_LEN);
-	if (disk->upd_sectsused_count == 0)
+	if (disk->sectsused_count == 0)
 		data = NULL;
 	else {
-		data = up_malloc(disk->upd_sectsused_count,
+		data = up_malloc(disk->sectsused_count,
 		    UP_DISK_1SECT(disk) + IMG_SECT_LEN);
 		if (data == NULL) {
 			perror("malloc");
@@ -293,7 +293,7 @@ up_img_load(int fd, const char *name, struct img **ret)
 	return (1);
 }
 
-int
+void
 up_img_getparams(struct img *img, struct disk_params *params)
 {
 	params->sectsize = UP_BETOH32(img->hdr.sectsize);
@@ -301,8 +301,6 @@ up_img_getparams(struct img *img, struct disk_params *params)
 	params->cyls = UP_BETOH64(img->hdr.cyls);
 	params->heads = UP_BETOH64(img->hdr.heads);
 	params->sects = UP_BETOH64(img->hdr.sects);
-    
-	return (0);
 }
 
 const char *

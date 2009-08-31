@@ -31,6 +31,7 @@
 #include <util.h>
 #endif
 
+#define MINIMAL_NAMESPACE_POLLUTION_PLEASE
 #include "disk.h"
 #include "os.h"
 #include "util.h"
@@ -44,23 +45,23 @@
 #if defined(HAVE_SYS_DISKLABEL_H) && \
     (defined(DIOCGPDINFO) || defined(DIOCGDINFO))
 #define HAVE_GETPARAMS_DISKLABEL
-static int	getparams_disklabel(int, struct up_disk *);
+static int	getparams_disklabel(int, struct disk_params *, const char *);
 #endif
 #if defined(HAVE_SYS_DISK_H) && defined(DIOCGSECTORSIZE)
 #define HAVE_GETPARAMS_FREEBSD
-static int	getparams_freebsd(int, struct up_disk *);
+static int	getparams_freebsd(int, struct disk_params *, const char *);
 #endif
 #if defined(HAVE_LINUX_FS_H) || defined(HAVE_LINUX_HDREG_H)
 #define HAVE_GETPARAMS_LINUX
-static int	getparams_linux(int, struct up_disk *);
+static int	getparams_linux(int, struct disk_params *, const char *);
 #endif
 #if defined(HAVE_SYS_DISK_H) && defined(DKIOCGETBLOCKSIZE)
 #define HAVE_GETPARAMS_DARWIN
-static int	getparams_darwin(int, struct up_disk *);
+static int	getparams_darwin(int, struct disk_params *, const char *);
 #endif
 #if defined(HAVE_SYS_DKIO_H) && defined(DKIOCGGEOM)
 #define HAVE_GETPARAMS_SUNOS
-static int	getparams_sunos(int, struct up_disk *);
+static int	getparams_sunos(int, struct disk_params *, const char *);
 #endif
 
 #if defined(sun) || defined(__sun) || defined(__sun__)
@@ -98,27 +99,27 @@ up_os_opendisk(const char *name, const char **path)
 }
 
 int
-up_os_getparams(int fd, struct up_disk *disk)
+up_os_getparams(int fd, struct disk_params *params, const char *name)
 {
 	/* The order of these is significant, more than one may be defined. */
 #ifdef HAVE_GETPARAMS_FREEBSD
-	if (getparams_freebsd(fd, disk) == 0)
+	if (getparams_freebsd(fd, params, name) == 0)
 		return (0);
 #endif
 #ifdef HAVE_GETPARAMS_DISKLABEL
-	if (getparams_disklabel(fd, disk) == 0)
+	if (getparams_disklabel(fd, params, name) == 0)
 		return (0);
 #endif
 #ifdef HAVE_GETPARAMS_LINUX
-	if (getparams_linux(fd, disk) == 0)
+	if (getparams_linux(fd, params, name) == 0)
 		return (0);
 #endif
 #ifdef HAVE_GETPARAMS_DARWIN
-	if (getparams_darwin(fd, disk) == 0)
+	if (getparams_darwin(fd, params, name) == 0)
 		return (0);
 #endif
 #ifdef HAVE_GETPARAMS_SUNOS
-	if (getparams_sunos(fd, disk) == 0)
+	if (getparams_sunos(fd, params, name) == 0)
 		return (0);
 #endif
 	return (-1);
@@ -126,15 +127,10 @@ up_os_getparams(int fd, struct up_disk *disk)
 
 #ifdef HAVE_GETPARAMS_DISKLABEL
 static int
-getparams_disklabel(int fd, struct up_disk *disk)
+getparams_disklabel(int fd, struct disk_params *params, const char *name)
 {
-	struct disk_params *params;
 	struct disklabel dl;
 
-	if (UP_DISK_IS_FILE(disk))
-		return (-1);
-
-	params = &disk->ud_params;
 	errno = 0;
 #ifdef DIOCGPDINFO
 	if (ioctl(fd, DIOCGPDINFO, &dl) < 0)
@@ -145,7 +141,7 @@ getparams_disklabel(int fd, struct up_disk *disk)
 	{
 		if (errno && UP_NOISY(QUIET))
 			up_err("failed to get disklabel for %s: %s",
-			    UP_DISK_PATH(disk), strerror(errno));
+			    name, strerror(errno));
 		return (-1);
 	}
 
@@ -165,39 +161,34 @@ getparams_disklabel(int fd, struct up_disk *disk)
 
 #ifdef HAVE_GETPARAMS_FREEBSD
 static int
-getparams_freebsd(int fd, struct up_disk *disk)
+getparams_freebsd(int fd, struct disk_params *params, const char *name)
 {
-	struct disk_params *params;
 	u_int ival;
 	off_t oval;
 
-	if (UP_DISK_IS_FILE(disk))
-		return -1;
-
-	params = &disk->ud_params;
 	if (ioctl(fd, DIOCGSECTORSIZE, &ival) == 0)
 		params->sectsize = ival;
 	else if (UP_NOISY(QUIET))
 		up_warn("failed to get disk size for %s: %s",
-		    UP_DISK_PATH(disk), strerror(errno));
+		    name, strerror(errno));
 
 	if (params->sectsize > 0 && ioctl(fd, DIOCGMEDIASIZE, &oval) == 0)
 		params->size = oval / params->sectsize;
 	else if (UP_NOISY(QUIET))
 		up_warn("failed to get sector size for %s: %s",
-		    UP_DISK_PATH(disk), strerror(errno));
+		    name, strerror(errno));
 
 	if (ioctl(fd, DIOCGFWSECTORS, &ival) == 0)
 		params->sects = ival;
 	else if (UP_NOISY(QUIET))
 		up_warn("failed to get sectors per track for %s: %s",
-		    UP_DISK_PATH(disk), strerror(errno));
+		    name, strerror(errno));
 
 	if (ioctl(fd, DIOCGFWHEADS, &ival) == 0)
 		params->heads = ival;
 	else if (UP_NOISY(QUIET))
 		up_warn("failed to get heads (tracks per cylinder) for %s: %s",
-		    UP_DISK_PATH(disk), strerror(errno));
+		    name, strerror(errno));
 
 	return (0);
 }
@@ -205,19 +196,14 @@ getparams_freebsd(int fd, struct up_disk *disk)
 
 #ifdef HAVE_GETPARAMS_LINUX
 static int
-getparams_linux(int fd, struct up_disk *disk)
+getparams_linux(int fd, struct disk_params *params, const char *name)
 {
-	struct disk params *params;
 	struct hd_geometry geom;
 	int smallsize;
 	uint64_t bigsize;
 
-	if (UP_DISK_IS_FILE(disk))
-		return (-1);
-
 	/* XXX rather than an ugly maze of #ifdefs I'll just assume these
 	   ioctls all exist for now and fix it later if it ever breaks */
-	params = &disk->ud_params;
 	if (ioctl(fd, HDIO_GETGEO, &geom) == 0) {
 		params->cyls = geom.cylinders;
 		params->heads = geom.heads;
@@ -232,7 +218,7 @@ getparams_linux(int fd, struct up_disk *disk)
 	else {
 		if (UP_NOISY(QUIET))
 			up_err("failed to get disk size for %s: %s",
-			    UP_DISK_PATH(disk), strerror(errno));
+			    name, strerror(errno));
 		return (-1);
 	}
 
@@ -242,26 +228,21 @@ getparams_linux(int fd, struct up_disk *disk)
 
 #ifdef HAVE_GETPARAMS_DARWIN
 static int
-getparams_darwin(int fd, struct up_disk *disk)
+getparams_darwin(int fd, struct disk_params *params, const char *name)
 {
-	struct disk_params *params;
 	uint32_t smallsize;
 	uint64_t bigsize;
 
-	if (UP_DISK_IS_FILE(disk))
-		return (-1);
-
-	params = &disk->ud_params;
 	if (ioctl(fd, DKIOCGETBLOCKSIZE, &smallsize) == 0)
 		params->sectsize = smallsize;
 	else if (UP_NOISY(QUIET))
 		up_warn("failed to get sector size for %s: %s",
-		    UP_DISK_PATH(disk), strerror(errno));
+		    name, strerror(errno));
 	if (ioctl(fd, DKIOCGETBLOCKCOUNT, &bigsize) == 0)
 		params->size = bigsize;
 	else if (UP_NOISY(QUIET))
 		up_warn("failed to get block count for %s: %s",
-		    UP_DISK_PATH(disk), strerror(errno));
+		    name, strerror(errno));
 
 	return (0);
 }
@@ -269,15 +250,10 @@ getparams_darwin(int fd, struct up_disk *disk)
 
 #ifdef HAVE_GETPARAMS_SUNOS
 static int
-getparams_sunos(int fd, struct up_disk *disk)
+getparams_sunos(int fd, struct disk_params *params, const char *name)
 {
-	struct disk_params *params;
 	struct dk_geom geom;
 
-	if (UP_DISK_IS_FILE(disk))
-        	return (-1);
-
-	params = &disk->ud_params;
 	/* XXX is there an ioctl or something to get sector size? */
 	params->sectsize = NBPSCTR;
 
@@ -288,7 +264,7 @@ getparams_sunos(int fd, struct up_disk *disk)
 		params->sects = geom.dkg_nsect;
 	} else if (UP_NOISY(QUIET))
 		up_warn("failed to read disk geometry for %s: %s",
-		    UP_DISK_PATH(disk), strerror(errno));
+		    name, strerror(errno));
 
 	return (0);
 }

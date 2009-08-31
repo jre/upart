@@ -3,7 +3,7 @@
 
 #include "bsdqueue.h"
 
-struct up_disk;
+struct disk;
 struct up_map;
 struct up_part;
 
@@ -47,7 +47,7 @@ enum up_map_type
 
 struct up_map
 {
-    const struct up_disk *disk;
+    const struct disk *disk;
     enum up_map_type    type;
     int64_t             start;
     int64_t             size;
@@ -60,9 +60,9 @@ struct up_map
 
 void		 up_map_register(enum up_map_type, const char *, int,
     /* check if map exists and allocate private data */
-    int (*load)(const struct up_disk *,const struct up_part *, void **),
+    int (*load)(const struct disk *, const struct up_part *, void **),
     /* add partitions, misc setup not done in load */
-    int (*setup)(struct up_disk *, struct up_map *),
+    int (*setup)(struct disk *, struct up_map *),
     /* copy map header line into string */
     int (*getinfo)(const struct up_map *, char *, int),
     /* copy part index into string */
@@ -79,14 +79,14 @@ void		 up_map_register(enum up_map_type, const char *, int,
     /* free part private data, part may be NULL */
     void (*freeprivpart)(struct up_part *, void *));
 
-int		 up_map_loadall(struct up_disk *);
-void		 up_map_freeall(struct up_disk *);
+int		 up_map_loadall(struct disk *);
+void		 up_map_freeall(struct disk *);
 
-int		 up_map_load(struct up_disk *, struct up_part *,
+int		 up_map_load(struct disk *, struct up_part *,
     enum up_map_type, struct up_map **);
 struct up_part	*up_map_add(struct up_map *, int64_t, int64_t, int, void *);
 
-void		 up_map_free(struct up_disk *, struct up_map *);
+void		 up_map_free(struct disk *, struct up_map *);
 void		 up_map_freeprivmap_def(struct up_map *, void *);
 void		 up_map_freeprivpart_def(struct up_part *, void *);
 
@@ -94,7 +94,7 @@ const char	*up_map_label(const struct up_map *);
 void		 up_map_print(const struct up_map *, void *, int);
 void		 up_map_dumpsect(const struct up_map *, void *, int64_t,
     int64_t, const void *, int);
-void		 up_map_printall(const struct up_disk *, void *);
+void		 up_map_printall(const struct disk *, void *);
 
 const struct up_part *up_map_first(const struct up_map *);
 const struct up_part *up_map_next(const struct up_part *);

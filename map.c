@@ -22,8 +22,8 @@ struct up_map_funcs
 {
     char *label;
     int flags;
-    int (*load)(const struct up_disk *, const struct up_part *, void **);
-    int (*setup)(struct up_disk *, struct up_map *);
+    int (*load)(const struct disk *, const struct up_part *, void **);
+    int (*setup)(struct disk *, struct up_map *);
     int (*getinfo)(const struct up_map *, char *, int);
     int (*getindex)(const struct up_part *, char *, int);
     int (*getextrahdr)(const struct up_map *, char *, int);
@@ -34,10 +34,10 @@ struct up_map_funcs
     void (*freeprivpart)(struct up_part *, void *);
 };
 
-static int		 map_loadall(struct up_disk *, struct up_part *);
+static int		 map_loadall(struct disk *, struct up_part *);
 static struct up_part *map_newcontainer(int64_t size);
-static void map_freecontainer(struct up_disk *disk, struct up_part *container);
-static struct up_map *map_new(struct up_disk *disk, struct up_part *parent,
+static void map_freecontainer(struct disk *disk, struct up_part *container);
+static struct up_map *map_new(struct disk *disk, struct up_part *parent,
                               enum up_map_type type, void *priv);
 static void		 map_printcontainer(const struct up_part *, FILE *);
 static void map_indent(int depth, FILE *stream);
@@ -46,8 +46,8 @@ static struct up_map_funcs st_types[UP_MAP_TYPE_COUNT];
 
 void
 up_map_register(enum up_map_type type, const char *label, int flags,
-    int (*load)(const struct up_disk *, const struct up_part *, void **),
-    int (*setup)(struct up_disk *, struct up_map *),
+    int (*load)(const struct disk *, const struct up_part *, void **),
+    int (*setup)(struct disk *, struct up_map *),
     int (*getinfo)(const struct up_map *, char *, int),
     int (*getindex)(const struct up_part *, char *, int),
     int (*getextrahdr)(const struct up_map *, char *, int),
@@ -78,7 +78,7 @@ up_map_register(enum up_map_type type, const char *label, int flags,
 }
 
 int
-up_map_load(struct up_disk *disk, struct up_part *parent,
+up_map_load(struct disk *disk, struct up_part *parent,
     enum up_map_type type, struct up_map **mapret)
 {
     struct up_map_funcs*funcs;
@@ -140,7 +140,7 @@ up_map_load(struct up_disk *disk, struct up_part *parent,
 }
 
 int
-up_map_loadall(struct up_disk *disk)
+up_map_loadall(struct disk *disk)
 {
     assert(!disk->maps);
 
@@ -158,7 +158,7 @@ up_map_loadall(struct up_disk *disk)
 }
 
 static int
-map_loadall(struct up_disk *disk, struct up_part *container)
+map_loadall(struct disk *disk, struct up_part *container)
 {
     enum up_map_type    type;
     struct up_map      *map;
@@ -186,7 +186,7 @@ map_loadall(struct up_disk *disk, struct up_part *container)
 }
 
 void
-up_map_freeall(struct up_disk *disk)
+up_map_freeall(struct disk *disk)
 {
     if(!disk->maps)
         return;
@@ -197,7 +197,7 @@ up_map_freeall(struct up_disk *disk)
 }
 
 static struct up_map *
-map_new(struct up_disk *disk, struct up_part *parent,
+map_new(struct disk *disk, struct up_part *parent,
         enum up_map_type type, void *priv)
 {
     struct up_map *map;
@@ -240,7 +240,7 @@ map_newcontainer(int64_t size)
 }
 
 static void
-map_freecontainer(struct up_disk *disk, struct up_part *container)
+map_freecontainer(struct disk *disk, struct up_part *container)
 {
     struct up_map *ii;
 
@@ -282,7 +282,7 @@ up_map_add(struct up_map *map, int64_t start, int64_t size,
 }
 
 void
-up_map_free(struct up_disk *disk, struct up_map *map)
+up_map_free(struct disk *disk, struct up_map *map)
 {
     struct up_part *ii;
 
@@ -427,7 +427,7 @@ up_map_print(const struct up_map *map, void *_stream, int recurse)
 }
 
 void
-up_map_printall(const struct up_disk *disk, void *stream)
+up_map_printall(const struct disk *disk, void *stream)
 {
 	map_printcontainer(disk->maps, stream);
 }

@@ -78,14 +78,14 @@ struct up_sunx86part
     int                         index;
 };
 
-static int	sun_x86_load(const struct up_disk *, const struct up_part *,
+static int	sun_x86_load(const struct disk *, const struct up_part *,
     void **priv);
-static int	sun_x86_setup(struct up_disk *, struct up_map *);
+static int	sun_x86_setup(struct disk *, struct up_map *);
 static int	sun_x86_info(const struct up_map *, char *, int);
 static int	sun_x86_index(const struct up_part *, char *, int);
 static int	sun_x86_extrahdr(const struct up_map *, char *, int);
 static int	sun_x86_extra(const struct up_part *, char *, int);
-static int	sun_x86_read(const struct up_disk *, int64_t, int64_t,
+static int	sun_x86_read(const struct disk *, int64_t, int64_t,
     const uint8_t **);
 
 void up_sunlabel_x86_register(void)
@@ -105,7 +105,7 @@ void up_sunlabel_x86_register(void)
 }
 
 static int
-sun_x86_load(const struct up_disk *disk, const struct up_part *parent,
+sun_x86_load(const struct disk *disk, const struct up_part *parent,
     void **priv)
 {
     int                 res;
@@ -138,7 +138,7 @@ sun_x86_load(const struct up_disk *disk, const struct up_part *parent,
 }
 
 static int
-sun_x86_setup(struct up_disk *disk, struct up_map *map)
+sun_x86_setup(struct disk *disk, struct up_map *map)
 {
     struct up_sunx86           *priv = map->priv;
     struct up_sunx86_p         *packed = &priv->packed;
@@ -267,7 +267,7 @@ sun_x86_extra(const struct up_part *part, char *buf, int size)
 }
 
 static int
-sun_x86_read(const struct up_disk *disk, int64_t start, int64_t size,
+sun_x86_read(const struct disk *disk, int64_t start, int64_t size,
     const uint8_t **ret)
 {
     const uint8_t      *buf;

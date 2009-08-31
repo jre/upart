@@ -87,15 +87,15 @@ struct up_gpt
     int                 partitions;
 };
 
-static int	gpt_load(const struct up_disk *, const struct up_part *,
+static int	gpt_load(const struct disk *, const struct up_part *,
     void **);
-static int	gpt_setup(struct up_disk *, struct up_map *);
+static int	gpt_setup(struct disk *, struct up_map *);
 static int	gpt_getinfo(const struct up_map *, char *, int);
 static int	gpt_getindex(const struct up_part *, char *, int);
 static int	gpt_getextra(const struct up_part *, char *, int);
-static int	gpt_findhdr(const struct up_disk *, int64_t, int64_t,
+static int	gpt_findhdr(const struct disk *, int64_t, int64_t,
     struct up_gpt_p *);
-static int	gpt_readhdr(const struct up_disk *, int64_t, int64_t,
+static int	gpt_readhdr(const struct disk *, int64_t, int64_t,
     const struct up_gpt_p **);
 static int	gpt_checkcrc(struct up_gpt_p *);
 static const char *gpt_typename(const struct up_guid_p *);
@@ -118,7 +118,7 @@ up_gpt_register(void)
 }
 
 int
-gpt_load(const struct up_disk *disk, const struct up_part *parent, void **priv)
+gpt_load(const struct disk *disk, const struct up_part *parent, void **priv)
 {
     struct up_gpt_p pk;
     int             res;
@@ -160,7 +160,7 @@ gpt_load(const struct up_disk *disk, const struct up_part *parent, void **priv)
 }
 
 static int
-gpt_setup(struct up_disk *disk, struct up_map *map)
+gpt_setup(struct disk *disk, struct up_map *map)
 {
     struct up_gpt              *priv = map->priv;
     struct up_gpt_p            *gpt = &priv->gpt;
@@ -302,7 +302,7 @@ gpt_getextra(const struct up_part *part, char *buf, int size)
 }
 
 static int
-gpt_findhdr(const struct up_disk *disk, int64_t start, int64_t size,
+gpt_findhdr(const struct disk *disk, int64_t start, int64_t size,
     struct up_gpt_p *gpt)
 {
     const struct up_gpt_p  *buf;
@@ -344,7 +344,7 @@ gpt_findhdr(const struct up_disk *disk, int64_t start, int64_t size,
 }
 
 static int
-gpt_readhdr(const struct up_disk *disk, int64_t start, int64_t size,
+gpt_readhdr(const struct disk *disk, int64_t start, int64_t size,
             const struct up_gpt_p **gpt)
 {
     const void *buf;

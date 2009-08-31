@@ -118,14 +118,14 @@ struct up_sparcpart
     int                         index;
 };
 
-static int	sparc_load(const struct up_disk *, const struct up_part *,
+static int	sparc_load(const struct disk *, const struct up_part *,
     void **priv);
-static int	sparc_setup(struct up_disk *, struct up_map *);
+static int	sparc_setup(struct disk *, struct up_map *);
 static int	sparc_info(const struct up_map *, char *, int);
 static int	sparc_index(const struct up_part *, char *, int);
 static int	sparc_extrahdr(const struct up_map *, char *, int);
 static int	sparc_extra(const struct up_part *, char *, int);
-static int	sparc_read(const struct up_disk *, int64_t, int64_t,
+static int	sparc_read(const struct disk *, int64_t, int64_t,
     const uint8_t **);
 static unsigned int sparc_check_vtoc(const struct up_sparcvtoc_p *);
 static unsigned int sparc_check_obsd(const struct up_sparcobsd_p *);
@@ -147,7 +147,7 @@ void up_sunlabel_sparc_register(void)
 }
 
 static int
-sparc_load(const struct up_disk *disk, const struct up_part *parent,
+sparc_load(const struct disk *disk, const struct up_part *parent,
     void **priv)
 {
     int                 res;
@@ -185,7 +185,7 @@ sparc_load(const struct up_disk *disk, const struct up_part *parent,
 }
 
 static int
-sparc_setup(struct up_disk *disk, struct up_map *map)
+sparc_setup(struct disk *disk, struct up_map *map)
 {
     struct up_sparc            *priv = map->priv;
     struct up_sparc_p          *packed = &priv->packed;
@@ -360,7 +360,7 @@ sparc_extra(const struct up_part *part, char *buf, int size)
 }
 
 static int
-sparc_read(const struct up_disk *disk, int64_t start, int64_t size,
+sparc_read(const struct disk *disk, int64_t start, int64_t size,
     const uint8_t **ret)
 {
     const uint8_t      *buf;

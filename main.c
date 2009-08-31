@@ -23,7 +23,7 @@
 
 static char	*readargs(int, char *[], struct opts *, struct disk_params *);
 static void usage(const char *fmt, ...);
-static int serialize(const struct up_disk *disk);
+static int serialize(const struct disk *disk);
 
 int
 main(int argc, char *argv[])
@@ -31,7 +31,7 @@ main(int argc, char *argv[])
 	struct disk_params params;
 	struct opts newopts;
 	char *name;
-	struct up_disk *disk;
+	struct disk *disk;
 	int ret;
 
 	if (up_savename(argv[0]) < 0 ||
@@ -177,7 +177,7 @@ usage(const char *message, ...)
 }
 
 static int
-serialize(const struct up_disk *disk)
+serialize(const struct disk *disk)
 {
 	FILE *out;
 	const char *label;

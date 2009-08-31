@@ -13,32 +13,30 @@ struct disk_params;
 #define UP_SECT_MAP(sect)       ((sect)->ref)
 #define UP_SECT_DATA(sect)      ((sect)->data)
 
-struct disk_params
-{
-    int64_t	cyls;        /* total number of cylinders */
-    int64_t	heads;       /* number of tracks per cylinder */
-    int64_t	sects;       /* number of sectors per track */
-    int64_t	size;        /* total number of sects */
-    int		sectsize;    /* size of a sector in bytes */
+struct disk_params {
+	int64_t cyls;		/* total number of cylinders */
+	int64_t heads;		/* number of tracks per cylinder */
+	int64_t sects;		/* number of sectors per track */
+	int64_t size;		/* total number of sects */
+	int sectsize;		/* size of a sector in bytes */
 };
 
-struct up_disk_sectnode
-{
-    int64_t                     first;
-    int64_t                     last;
-    const struct up_map        *ref;
-    void                       *data;
-    int                         tag;
-    RB_ENTRY(up_disk_sectnode)  link;
+struct disk_sect {
+	int64_t first;
+	int64_t last;
+	const struct up_map *ref;
+	void *data;
+	int tag;
+	RB_ENTRY(disk_sect) link;
 };
 
-RB_HEAD(up_disk_sectmap, up_disk_sectnode);
+RB_HEAD(disk_sect_map, disk_sect);
 
 struct up_disk
 {
     char *                  ud_name;        /* disk name supplied by user */
     char *                  ud_path;        /* path to opened device node */
-    struct disk_params	ud_params;
+    struct disk_params ud_params;
 
     unsigned int            ud_flag_setup     : 1;
     unsigned int            ud_flag_plainfile : 1;
@@ -46,9 +44,9 @@ struct up_disk
     /* don't touch any of these */
     int                     upd_fd;
     uint8_t                *upd_buf;
-    struct img		*upd_img;
+    struct img *upd_img;
     struct up_part         *maps;
-    struct up_disk_sectmap  upd_sectsused;
+    struct disk_sect_map upd_sectsused;
     int64_t                 upd_sectsused_count;
 };
 
@@ -66,7 +64,7 @@ struct up_disk
 #define UP_DISK_IS_FILE(disk)   ((disk)->ud_flag_plainfile)
 
 typedef int (*up_disk_iterfunc_t)(const struct up_disk *,
-                                   const struct up_disk_sectnode *, void *);
+    const struct disk_sect *, void *);
 
 /* Open the disk device, must call up_disk_setup() after this */
 struct up_disk	*up_disk_open(const char *);
@@ -106,7 +104,7 @@ void up_disk_sectsunref(struct up_disk *disk, const void *ref);
 void up_disk_sectsiter(const struct up_disk *disk,
                        up_disk_iterfunc_t func, void *arg);
 /* return the nth sector */
-const struct up_disk_sectnode *up_disk_nthsect(const struct up_disk *disk, int n);
+const struct disk_sect	*up_disk_nthsect(const struct up_disk *, int);
 
 /* Close disk and free struct. */
 void up_disk_close(struct up_disk *disk);

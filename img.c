@@ -54,7 +54,7 @@ struct img {
 static int	img_checkcrc(struct imghdr *, int, const char *, uint32_t *);
 
 static int
-img_save_iter(const struct up_disk *disk, const struct up_disk_sectnode *node,
+img_save_iter(const struct up_disk *disk, const struct disk_sect *node,
     void *arg)
 {
 	struct imgsect hdr;

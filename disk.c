@@ -224,7 +224,7 @@ up_disk_checksectrange(const struct disk *disk, int64_t start, int64_t size)
 }
 
 const void *
-up_disk_save1sect(struct disk *disk, int64_t sect, const struct up_map *ref,
+up_disk_save1sect(struct disk *disk, int64_t sect, const struct map *ref,
     int tag)
 {
     return up_disk_savesectrange(disk, sect, 1, ref, tag);
@@ -232,7 +232,7 @@ up_disk_save1sect(struct disk *disk, int64_t sect, const struct up_map *ref,
 
 const void *
 up_disk_savesectrange(struct disk *disk, int64_t first, int64_t size,
-    const struct up_map *ref, int tag)
+    const struct map *ref, int tag)
 {
 	struct disk_sect *new;
 

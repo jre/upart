@@ -64,16 +64,16 @@ struct up_mbr
     int                 extcount;
 };
 
-static int	mbr_load(const struct disk *, const struct up_part *,
+static int	mbr_load(const struct disk *, const struct part *,
     void **);
-static int	mbrext_load(const struct disk *, const struct up_part *,
+static int	mbrext_load(const struct disk *, const struct part *,
     void **);
-static int	mbr_setup(struct disk *, struct up_map *);
-static int	mbrext_setup(struct disk *, struct up_map *);
-static int	mbr_getinfo(const struct up_map *, char *, int);
-static int	mbr_getindex(const struct up_part *, char *, int);
-static int	mbr_getextra(const struct up_part *, char *, int);
-static int	mbr_addpart(struct up_map *, const struct up_mbrpart_p *,
+static int	mbr_setup(struct disk *, struct map *);
+static int	mbrext_setup(struct disk *, struct map *);
+static int	mbr_getinfo(const struct map *, char *, int);
+static int	mbr_getindex(const struct part *, char *, int);
+static int	mbr_getextra(const struct part *, char *, int);
+static int	mbr_addpart(struct map *, const struct up_mbrpart_p *,
     int, int64_t, const struct up_mbr_p *);
 static int	mbr_read(const struct disk *, int64_t, int64_t,
     const struct up_mbr_p **);
@@ -110,7 +110,7 @@ up_mbr_register(void)
 }
 
 static int
-mbr_load(const struct disk *disk, const struct up_part *parent, void **priv)
+mbr_load(const struct disk *disk, const struct part *parent, void **priv)
 {
     const struct up_mbr_p      *buf;
     int                         res;
@@ -145,7 +145,7 @@ mbr_load(const struct disk *disk, const struct up_part *parent, void **priv)
 }
 
 static int
-mbrext_load(const struct disk *disk, const struct up_part *parent,
+mbrext_load(const struct disk *disk, const struct part *parent,
     void **priv)
 {
     *priv = NULL;
@@ -156,7 +156,7 @@ mbrext_load(const struct disk *disk, const struct up_part *parent,
 }
 
 static int
-mbr_setup(struct disk *disk, struct up_map *map)
+mbr_setup(struct disk *disk, struct map *map)
 {
     struct up_mbr              *mbr = map->priv;
     int                         ii;
@@ -173,7 +173,7 @@ mbr_setup(struct disk *disk, struct up_map *map)
 }
 
 static int
-mbrext_setup(struct disk *disk, struct up_map *map)
+mbrext_setup(struct disk *disk, struct map *map)
 {
     struct up_mbr              *parent;
     const struct up_mbr_p      *buf;
@@ -245,7 +245,7 @@ mbrext_setup(struct disk *disk, struct up_map *map)
 }
 
 static int
-mbr_getinfo(const struct up_map *map, char *buf, int size)
+mbr_getinfo(const struct map *map, char *buf, int size)
 {
     if(!UP_NOISY(NORMAL))
         return 0;
@@ -254,7 +254,7 @@ mbr_getinfo(const struct up_map *map, char *buf, int size)
 }
 
 static int
-mbr_getindex(const struct up_part *part, char *buf, int size)
+mbr_getindex(const struct part *part, char *buf, int size)
 {
     struct up_mbrpart *priv = part->priv;
 
@@ -262,7 +262,7 @@ mbr_getindex(const struct up_part *part, char *buf, int size)
 }
 
 static int
-mbr_getextra(const struct up_part *part, char *buf, int size)
+mbr_getextra(const struct part *part, char *buf, int size)
 {
     struct up_mbrpart  *priv;
     const char         *label;
@@ -299,7 +299,7 @@ mbr_getextra(const struct up_part *part, char *buf, int size)
 }
 
 static int
-mbr_addpart(struct up_map *map, const struct up_mbrpart_p *part, int index,
+mbr_addpart(struct map *map, const struct up_mbrpart_p *part, int index,
             int64_t extoff, const struct up_mbr_p *extmbr)
 {
     struct up_mbrpart  *priv;

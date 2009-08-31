@@ -87,12 +87,12 @@ struct up_gpt
     int                 partitions;
 };
 
-static int	gpt_load(const struct disk *, const struct up_part *,
+static int	gpt_load(const struct disk *, const struct part *,
     void **);
-static int	gpt_setup(struct disk *, struct up_map *);
-static int	gpt_getinfo(const struct up_map *, char *, int);
-static int	gpt_getindex(const struct up_part *, char *, int);
-static int	gpt_getextra(const struct up_part *, char *, int);
+static int	gpt_setup(struct disk *, struct map *);
+static int	gpt_getinfo(const struct map *, char *, int);
+static int	gpt_getindex(const struct part *, char *, int);
+static int	gpt_getextra(const struct part *, char *, int);
 static int	gpt_findhdr(const struct disk *, int64_t, int64_t,
     struct up_gpt_p *);
 static int	gpt_readhdr(const struct disk *, int64_t, int64_t,
@@ -118,7 +118,7 @@ up_gpt_register(void)
 }
 
 int
-gpt_load(const struct disk *disk, const struct up_part *parent, void **priv)
+gpt_load(const struct disk *disk, const struct part *parent, void **priv)
 {
     struct up_gpt_p pk;
     int             res;
@@ -160,7 +160,7 @@ gpt_load(const struct disk *disk, const struct up_part *parent, void **priv)
 }
 
 static int
-gpt_setup(struct disk *disk, struct up_map *map)
+gpt_setup(struct disk *disk, struct map *map)
 {
     struct up_gpt              *priv = map->priv;
     struct up_gpt_p            *gpt = &priv->gpt;
@@ -219,7 +219,7 @@ gpt_setup(struct disk *disk, struct up_map *map)
 }
 
 static int
-gpt_getinfo(const struct up_map *map, char *buf, int size)
+gpt_getinfo(const struct map *map, char *buf, int size)
 {
     const struct up_gpt *gpt = map->priv;
 
@@ -259,7 +259,7 @@ gpt_getinfo(const struct up_map *map, char *buf, int size)
 }
 
 static int
-gpt_getindex(const struct up_part *part, char *buf, int size)
+gpt_getindex(const struct part *part, char *buf, int size)
 {
     const struct up_gptpart *priv = part->priv;
 
@@ -267,7 +267,7 @@ gpt_getindex(const struct up_part *part, char *buf, int size)
 }
 
 static int
-gpt_getextra(const struct up_part *part, char *buf, int size)
+gpt_getextra(const struct part *part, char *buf, int size)
 {
     const struct up_gptpart    *priv;
     const char                 *label;

@@ -1,7 +1,7 @@
 #ifndef HDR_UPART_BSDLABEL
 #define HDR_UPART_BSDLABEL
 
-struct up_part;
+struct part;
 
 /* register BSD disklabel partition map type */
 void up_bsdlabel_register(void);
@@ -17,7 +17,7 @@ void up_bsdlabel_register(void);
      (UP_NOISY(NORMAL) ? "Type" :  NULL))
 
 const char *up_bsdlabel_fstype(int type);
-int up_bsdlabel_fmt(const struct up_part *part, char *buf, int size,
+int up_bsdlabel_fmt(const struct part *part, char *buf, int size,
                     int type, uint32_t fsize, int frags, int cpg);
 
 #endif /* HDR_UPART_BSDLABEL */

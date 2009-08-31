@@ -13,8 +13,8 @@ struct disk_params {
 
 #include "bsdtree.h"
 
-struct up_map;
-struct up_part;
+struct map;
+struct part;
 struct img;
 
 #define UP_SECT_OFF(sect)       ((sect)->first)
@@ -25,7 +25,7 @@ struct img;
 struct disk_sect {
 	int64_t first;
 	int64_t last;
-	const struct up_map *ref;
+	const struct map *ref;
 	void *data;
 	int tag;
 	RB_ENTRY(disk_sect) link;
@@ -45,7 +45,7 @@ struct disk {
 	int fd;
 	uint8_t *buf;
 	struct img *img;
-	struct up_part *maps;
+	struct part *maps;
 	struct disk_sect_map sectsused;
 	int64_t sectsused_count;
 };
@@ -90,11 +90,11 @@ int up_disk_checksectrange(const struct disk *disk, int64_t first,
 
 /* mark a sector as used and return 0, return -1 if already used */
 const void	*up_disk_save1sect(struct disk *, int64_t,
-    const struct up_map *, int);
+    const struct map *, int);
 
 /* mark range of sectors as used and return 0, return -1 if already used */
 const void	*up_disk_savesectrange(struct disk *, int64_t, int64_t,
-    const struct up_map *, int);
+    const struct map *, int);
 
 /* mark all sectors associated with REF unused */
 void up_disk_sectsunref(struct disk *disk, const void *ref);

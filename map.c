@@ -15,157 +15,152 @@
 /* #define MAP_PROBE_DEBUG */
 
 #define CHECKTYPE(typ) \
-    assert(UP_MAP_NONE < (typ) && UP_MAP_TYPE_COUNT > (typ) && \
+    assert(UP_MAP_NONE < (typ) && UP_MAP_ID_COUNT > (typ) && \
            UP_TYPE_REGISTERED & st_types[(typ)].flags)
 
-struct up_map_funcs
-{
-    char *label;
-    int flags;
-    int (*load)(const struct disk *, const struct up_part *, void **);
-    int (*setup)(struct disk *, struct up_map *);
-    int (*getinfo)(const struct up_map *, char *, int);
-    int (*getindex)(const struct up_part *, char *, int);
-    int (*getextrahdr)(const struct up_map *, char *, int);
-    int (*getextra)(const struct up_part *, char *, int);
-    int (*getdump)(const struct up_map *, int64_t, const void *, int64_t,
-                   int, char *, int);
-    void (*freeprivmap)(struct up_map *, void *);
-    void (*freeprivpart)(struct up_part *, void *);
+struct map_funcs {
+	char *label;
+	int flags;
+	int (*load)(const struct disk *, const struct part *, void **);
+	int (*setup)(struct disk *, struct map *);
+	int (*getinfo)(const struct map *, char *, int);
+	int (*getindex)(const struct part *, char *, int);
+	int (*getextrahdr)(const struct map *, char *, int);
+	int (*getextra)(const struct part *, char *, int);
+	int (*getdump)(const struct map *, int64_t, const void *, int64_t, int,
+	    char *, int);
+	void (*freeprivmap)(struct map *, void *);
+	void (*freeprivpart)(struct part *, void *);
 };
 
-static int		 map_loadall(struct disk *, struct up_part *);
-static struct up_part *map_newcontainer(int64_t size);
-static void map_freecontainer(struct disk *disk, struct up_part *container);
-static struct up_map *map_new(struct disk *disk, struct up_part *parent,
-                              enum up_map_type type, void *priv);
-static void		 map_printcontainer(const struct up_part *, FILE *);
-static void map_indent(int depth, FILE *stream);
+static int		 map_loadall(struct disk *, struct part *);
+static struct part	*map_newcontainer(int64_t);
+static void		 map_freecontainer(struct disk *, struct part *);
+static struct map	*map_new(struct disk *, struct part *, enum mapid,
+    void *);
+static void		 map_printcontainer(const struct part *, FILE *);
+static void		 map_indent(int, FILE *);
 
-static struct up_map_funcs st_types[UP_MAP_TYPE_COUNT];
+static struct map_funcs st_types[UP_MAP_ID_COUNT];
 
 void
-up_map_register(enum up_map_type type, const char *label, int flags,
-    int (*load)(const struct disk *, const struct up_part *, void **),
-    int (*setup)(struct disk *, struct up_map *),
-    int (*getinfo)(const struct up_map *, char *, int),
-    int (*getindex)(const struct up_part *, char *, int),
-    int (*getextrahdr)(const struct up_map *, char *, int),
-    int (*getextra)(const struct up_part *, char *, int),
-    int (*getdumpextra)(const struct up_map *, int64_t, const void *,
-	int64_t, int, char *, int),
-    void (*freeprivmap)(struct up_map *, void *),
-    void (*freeprivpart)(struct up_part *, void *))
+up_map_register(enum mapid type, const char *label, int flags,
+    int (*load)(const struct disk *, const struct part *, void **),
+    int (*setup)(struct disk *, struct map *),
+    int (*getinfo)(const struct map *, char *, int),
+    int (*getindex)(const struct part *, char *, int),
+    int (*getextrahdr)(const struct map *, char *, int),
+    int (*getextra)(const struct part *, char *, int),
+    int (*getdumpextra)(const struct map *, int64_t, const void *, int64_t,
+	int, char *, int),
+    void (*freeprivmap)(struct map *, void *),
+    void (*freeprivpart)(struct part *, void *))
 {
-    struct up_map_funcs *funcs;
+	struct map_funcs *funcs;
 
-    assert(UP_MAP_NONE < type && UP_MAP_TYPE_COUNT > type);
-    assert(!(UP_TYPE_REGISTERED & st_types[type].flags));
-    assert(!(UP_TYPE_REGISTERED & flags));
+	assert(type > UP_MAP_NONE && type < UP_MAP_ID_COUNT);
+	assert(!(UP_TYPE_REGISTERED & st_types[type].flags));
+	assert(!(UP_TYPE_REGISTERED & flags));
 
-    funcs                     = &st_types[type];
-    funcs->label              = strdup(label);
-    funcs->flags              = UP_TYPE_REGISTERED | flags;
-    funcs->load               = load;
-    funcs->setup              = setup;
-    funcs->getinfo            = getinfo;
-    funcs->getindex           = getindex;
-    funcs->getextrahdr        = getextrahdr;
-    funcs->getextra           = getextra;
-    funcs->getdump            = getdumpextra;
-    funcs->freeprivmap        = freeprivmap;
-    funcs->freeprivpart       = freeprivpart;
+	funcs = &st_types[type];
+	funcs->label = strdup(label);
+	funcs->flags = UP_TYPE_REGISTERED | flags;
+	funcs->load = load;
+	funcs->setup = setup;
+	funcs->getinfo = getinfo;
+	funcs->getindex = getindex;
+	funcs->getextrahdr = getextrahdr;
+	funcs->getextra = getextra;
+	funcs->getdump = getdumpextra;
+	funcs->freeprivmap = freeprivmap;
+	funcs->freeprivpart = freeprivpart;
 }
 
 int
-up_map_load(struct disk *disk, struct up_part *parent,
-    enum up_map_type type, struct up_map **mapret)
+up_map_load(struct disk *disk, struct part *parent, enum mapid type,
+    struct map **ret)
 {
-    struct up_map_funcs*funcs;
-    void               *priv;
-    struct up_map      *map;
-    int                 res;
+	struct map_funcs *funcs;
+	void *priv;
+	struct map *map;
+	int res;
 
-    CHECKTYPE(type);
-    assert(0 <= parent->start && 0 <= parent->size &&
-           parent->start + parent->size <= UP_DISK_SIZESECTS(disk));
+	CHECKTYPE(type);
+	assert(parent->start >= 0 && parent->size >= 0 &&
+	    parent->start + parent->size <= UP_DISK_SIZESECTS(disk));
 
-    funcs     = &st_types[type];
-    *mapret   = NULL;
-    priv      = NULL;
+	funcs = &st_types[type];
+	*ret = NULL;
+	priv = NULL;
 
 #ifdef MAP_PROBE_DEBUG
-    fprintf(stderr, "probe %"PRId64" %s\n", parent->start, funcs->label);
+	fprintf(stderr, "probe %"PRId64" %s\n", parent->start, funcs->label);
 #endif
-    switch(funcs->load(disk, parent, &priv))
-    {
-        case 1:
+	switch (funcs->load(disk, parent, &priv)) {
+	case 1:
 #ifdef MAP_PROBE_DEBUG
-            fprintf(stderr, "matched %"PRId64" %s\n",
-                    parent->start, funcs->label);
+		fprintf(stderr, "matched %"PRId64" %s\n",
+		    parent->start, funcs->label);
 #endif
-            map = map_new(disk, parent, type, priv);
-            if(!map)
-            {
-                if(funcs->freeprivmap && priv)
-                    funcs->freeprivmap(NULL, priv);
-                return -1;
-            }
-            map->parent = parent; /* XXX this is so broken */
-            res = funcs->setup(disk, map);
-            if(0 >= res)
-            {
+		map = map_new(disk, parent, type, priv);
+		if (map == NULL) {
+			if (funcs->freeprivmap && priv)
+				funcs->freeprivmap(NULL, priv);
+			return (-1);
+		}
+		map->parent = parent; /* XXX this is so broken */
+		res = funcs->setup(disk, map);
+		if (res <= 0) {
 #ifdef MAP_PROBE_DEBUG
-                fprintf(stderr, "setup failed\n");
+			fprintf(stderr, "setup failed\n");
 #endif
-                map->parent = NULL;
-                up_map_free(disk, map);
-                return res;
-            }
-            SIMPLEQ_INSERT_TAIL(&parent->submap, map, link);
-            *mapret = map;
-            return 1;
+			map->parent = NULL;
+			up_map_free(disk, map);
+			return (res);
+		}
+		SIMPLEQ_INSERT_TAIL(&parent->submap, map, link);
+		*ret = map;
+		return (1);
 
-        case 0:
-            assert(NULL == priv);
-            return 0;
+	case 0:
+		assert(priv == NULL);
+		return (0);
 
-        default:
+	default:
 #ifdef MAP_PROBE_DEBUG
-            fprintf(stderr, "error\n");
+		fprintf(stderr, "error\n");
 #endif
-            assert(NULL == priv);
-            return -1;
-    }
+		assert(priv == NULL);
+		return (-1);
+	}
 }
 
 int
 up_map_loadall(struct disk *disk)
 {
-    assert(!disk->maps);
+	assert(disk->maps == NULL);
 
-    disk->maps = map_newcontainer(UP_DISK_SIZESECTS(disk));
-    if(!disk->maps)
-        return -1;
+	disk->maps = map_newcontainer(UP_DISK_SIZESECTS(disk));
+	if(disk->maps == NULL)
+		return (-1);
 
-    if(0 > map_loadall(disk, disk->maps))
-    {
-        up_map_freeall(disk);
-        return -1;
-    }
+	if(map_loadall(disk, disk->maps) < 0) {
+		up_map_freeall(disk);
+		return (-1);
+	}
 
-    return 0;
+	return (0);
 }
 
 static int
-map_loadall(struct disk *disk, struct up_part *container)
+map_loadall(struct disk *disk, struct part *container)
 {
-    enum up_map_type    type;
-    struct up_map      *map;
-    struct up_part     *ii;
+    enum mapid    type;
+    struct map      *map;
+    struct part     *ii;
 
     /* iterate through all partition types */
-    for(type = UP_MAP_NONE + 1; UP_MAP_TYPE_COUNT > type; type++)
+    for(type = UP_MAP_NONE + 1; UP_MAP_ID_COUNT > type; type++)
     {
         CHECKTYPE(type);
 
@@ -196,11 +191,11 @@ up_map_freeall(struct disk *disk)
     disk->maps = NULL;
 }
 
-static struct up_map *
-map_new(struct disk *disk, struct up_part *parent,
-        enum up_map_type type, void *priv)
+static struct map *
+map_new(struct disk *disk, struct part *parent,
+        enum mapid type, void *priv)
 {
-    struct up_map *map;
+    struct map *map;
 
     map = calloc(1, sizeof *map);
     if(!map)
@@ -220,10 +215,10 @@ map_new(struct disk *disk, struct up_part *parent,
     return map;
 }
 
-static struct up_part *
+static struct part *
 map_newcontainer(int64_t size)
 {
-    struct up_part *container;
+    struct part *container;
 
     container = calloc(1, sizeof *container);
     if(!container)
@@ -240,9 +235,9 @@ map_newcontainer(int64_t size)
 }
 
 static void
-map_freecontainer(struct disk *disk, struct up_part *container)
+map_freecontainer(struct disk *disk, struct part *container)
 {
-    struct up_map *ii;
+    struct map *ii;
 
     while((ii = SIMPLEQ_FIRST(&container->submap)))
     {
@@ -252,11 +247,11 @@ map_freecontainer(struct disk *disk, struct up_part *container)
     }
 }
 
-struct up_part *
-up_map_add(struct up_map *map, int64_t start, int64_t size,
+struct part *
+up_map_add(struct map *map, int64_t start, int64_t size,
            int flags, void *priv)
 {
-    struct up_part *part;
+    struct part *part;
 
     part = calloc(1, sizeof *part);
     if(!part)
@@ -282,9 +277,9 @@ up_map_add(struct up_map *map, int64_t start, int64_t size,
 }
 
 void
-up_map_free(struct disk *disk, struct up_map *map)
+up_map_free(struct disk *disk, struct map *map)
 {
-    struct up_part *ii;
+    struct part *ii;
 
     if(!map)
         return;
@@ -315,19 +310,19 @@ up_map_free(struct disk *disk, struct up_map *map)
 }
 
 void
-up_map_freeprivmap_def(struct up_map *map, void *priv)
+up_map_freeprivmap_def(struct map *map, void *priv)
 {
     free(priv);
 }
 
 void
-up_map_freeprivpart_def(struct up_part *part, void *priv)
+up_map_freeprivpart_def(struct part *part, void *priv)
 {
     free(priv);
 }
 
 const char *
-up_map_label(const struct up_map *map)
+up_map_label(const struct map *map)
 {
     CHECKTYPE(map->type);
 
@@ -335,12 +330,12 @@ up_map_label(const struct up_map *map)
 }
 
 void
-up_map_print(const struct up_map *map, void *_stream, int recurse)
+up_map_print(const struct map *map, void *_stream, int recurse)
 {
     FILE                       *stream = _stream;
-    struct up_map_funcs        *funcs;
+    struct map_funcs        *funcs;
     char                        buf[512], idx[5], flag;
-    const struct up_part       *ii;
+    const struct part       *ii;
     int                         len;
 
     CHECKTYPE(map->type);
@@ -433,9 +428,9 @@ up_map_printall(const struct disk *disk, void *stream)
 }
 
 static void
-map_printcontainer(const struct up_part *container, FILE *stream)
+map_printcontainer(const struct part *container, FILE *stream)
 {
-	const struct up_map *ii;
+	const struct map *ii;
 
 	for (ii = up_map_firstmap(container); ii; ii = up_map_nextmap(ii))
 		up_map_print(ii, stream, 1);
@@ -451,7 +446,7 @@ map_indent(int depth, FILE *stream)
 }
 
 void
-up_map_dumpsect(const struct up_map *map, void *_stream, int64_t start,
+up_map_dumpsect(const struct map *map, void *_stream, int64_t start,
                 int64_t size, const void *data, int tag)
 {
     FILE   *stream = _stream;
@@ -472,26 +467,26 @@ up_map_dumpsect(const struct up_map *map, void *_stream, int64_t start,
                UP_DISK_1SECT(map->disk) * start, stream);
 }
 
-const struct up_part *
-up_map_first(const struct up_map *map)
+const struct part *
+up_map_first(const struct map *map)
 {
     return SIMPLEQ_FIRST(&map->list);
 }
 
-const struct up_part *
-up_map_next(const struct up_part *part)
+const struct part *
+up_map_next(const struct part *part)
 {
     return SIMPLEQ_NEXT(part, link);
 }
 
-const struct up_map *
-up_map_firstmap(const struct up_part *part)
+const struct map *
+up_map_firstmap(const struct part *part)
 {
     return SIMPLEQ_FIRST(&part->submap);
 }
 
-const struct up_map *
-up_map_nextmap(const struct up_map *map)
+const struct map *
+up_map_nextmap(const struct map *map)
 {
     return SIMPLEQ_NEXT(map, link);
 }

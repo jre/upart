@@ -118,13 +118,13 @@ struct up_sparcpart
     int                         index;
 };
 
-static int	sparc_load(const struct disk *, const struct up_part *,
+static int	sparc_load(const struct disk *, const struct part *,
     void **priv);
-static int	sparc_setup(struct disk *, struct up_map *);
-static int	sparc_info(const struct up_map *, char *, int);
-static int	sparc_index(const struct up_part *, char *, int);
-static int	sparc_extrahdr(const struct up_map *, char *, int);
-static int	sparc_extra(const struct up_part *, char *, int);
+static int	sparc_setup(struct disk *, struct map *);
+static int	sparc_info(const struct map *, char *, int);
+static int	sparc_index(const struct part *, char *, int);
+static int	sparc_extrahdr(const struct map *, char *, int);
+static int	sparc_extra(const struct part *, char *, int);
 static int	sparc_read(const struct disk *, int64_t, int64_t,
     const uint8_t **);
 static unsigned int sparc_check_vtoc(const struct up_sparcvtoc_p *);
@@ -147,7 +147,7 @@ void up_sunlabel_sparc_register(void)
 }
 
 static int
-sparc_load(const struct disk *disk, const struct up_part *parent,
+sparc_load(const struct disk *disk, const struct part *parent,
     void **priv)
 {
     int                 res;
@@ -185,7 +185,7 @@ sparc_load(const struct disk *disk, const struct up_part *parent,
 }
 
 static int
-sparc_setup(struct disk *disk, struct up_map *map)
+sparc_setup(struct disk *disk, struct map *map)
 {
     struct up_sparc            *priv = map->priv;
     struct up_sparc_p          *packed = &priv->packed;
@@ -227,7 +227,7 @@ sparc_setup(struct disk *disk, struct up_map *map)
 }
 
 static int
-sparc_info(const struct up_map *map, char *buf, int size)
+sparc_info(const struct map *map, char *buf, int size)
 {
     const struct up_sparc       *priv = map->priv;
     const struct up_sparc_p     *label = &priv->packed;
@@ -299,7 +299,7 @@ sparc_info(const struct up_map *map, char *buf, int size)
 }
 
 static int
-sparc_index(const struct up_part *part, char *buf, int size)
+sparc_index(const struct part *part, char *buf, int size)
 {
     struct up_sparc            *label = part->map->priv;
     struct up_sparcpart        *priv = part->priv;
@@ -311,7 +311,7 @@ sparc_index(const struct up_part *part, char *buf, int size)
 }
 
 static int
-sparc_extrahdr(const struct up_map *map, char *buf, int size)
+sparc_extrahdr(const struct map *map, char *buf, int size)
 {
     struct up_sparc    *priv = map->priv;
     const char         *hdr;
@@ -333,7 +333,7 @@ sparc_extrahdr(const struct up_map *map, char *buf, int size)
 }
 
 static int
-sparc_extra(const struct up_part *part, char *buf, int size)
+sparc_extra(const struct part *part, char *buf, int size)
 {
     struct up_sparc            *label = part->map->priv;
     struct up_sparcvtoc_p      *vtoc = &label->packed.ext.vtoc;

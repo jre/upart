@@ -170,18 +170,18 @@ static char *up_fstypes[] =
     "ZFS"
 };
 
-static int	bsdlabel_load(const struct disk *, const struct up_part *,
+static int	bsdlabel_load(const struct disk *, const struct part *,
     void **);
-static int	bsdlabel_setup(struct disk *, struct up_map *);
-static int bsdlabel_getpart_v0(struct up_map *, struct up_bsdpart *,
+static int	bsdlabel_setup(struct disk *, struct map *);
+static int bsdlabel_getpart_v0(struct map *, struct up_bsdpart *,
     const uint8_t *);
-static int bsdlabel_getpart_v1(struct up_map *, struct up_bsdpart *,
+static int bsdlabel_getpart_v1(struct map *, struct up_bsdpart *,
     const uint8_t *);
-static int	bsdlabel_info(const struct up_map *, char *, int);
-static int	bsdlabel_index(const struct up_part *, char *, int);
-static int	bsdlabel_extrahdr(const struct up_map *, char *, int);
-static int	bsdlabel_extra(const struct up_part *, char *, int);
-static int bsdlabel_dump(const struct up_map *map, int64_t start,
+static int	bsdlabel_info(const struct map *, char *, int);
+static int	bsdlabel_index(const struct part *, char *, int);
+static int	bsdlabel_extrahdr(const struct map *, char *, int);
+static int	bsdlabel_extra(const struct part *, char *, int);
+static int bsdlabel_dump(const struct map *map, int64_t start,
                          const void *data, int64_t size, int tag, char *buf,
                          int buflen);
 static int	bsdlabel_scan(const struct disk *, int64_t,
@@ -208,7 +208,7 @@ void up_bsdlabel_register(void)
 }
 
 static int
-bsdlabel_load(const struct disk *disk, const struct up_part *parent,
+bsdlabel_load(const struct disk *disk, const struct part *parent,
     void **priv)
 {
     int                 res, sectoff, byteoff, endian, size;
@@ -261,13 +261,13 @@ bsdlabel_load(const struct disk *disk, const struct up_part *parent,
 }
 
 static int
-bsdlabel_setup(struct disk *disk, struct up_map *map)
+bsdlabel_setup(struct disk *disk, struct map *map)
 {
     struct up_bsd              *label = map->priv;
     int                         ii, max;
     struct up_bsdpart          *part;
     const uint8_t              *buf;
-    int (*getpart)(struct up_map *, struct up_bsdpart *, const uint8_t *);
+    int (*getpart)(struct map *, struct up_bsdpart *, const uint8_t *);
 
     buf = up_disk_save1sect(disk, map->start + label->sectoff, map, 0);
     if(!buf)
@@ -311,7 +311,7 @@ bsdlabel_setup(struct disk *disk, struct up_map *map)
 }
 
 static int
-bsdlabel_getpart_v0(struct up_map *map, struct up_bsdpart *part, const uint8_t *buf)
+bsdlabel_getpart_v0(struct map *map, struct up_bsdpart *part, const uint8_t *buf)
 {
     struct up_bsd *label = map->priv;
     struct up_bsdpart0_p raw;
@@ -329,7 +329,7 @@ bsdlabel_getpart_v0(struct up_map *map, struct up_bsdpart *part, const uint8_t *
 }
 
 static int
-bsdlabel_getpart_v1(struct up_map *map, struct up_bsdpart *part, const uint8_t *buf)
+bsdlabel_getpart_v1(struct map *map, struct up_bsdpart *part, const uint8_t *buf)
 {
     struct up_bsd *label = map->priv;
     struct up_bsdpart1_p raw;
@@ -350,7 +350,7 @@ bsdlabel_getpart_v1(struct up_map *map, struct up_bsdpart *part, const uint8_t *
 }
 
 static int
-bsdlabel_info(const struct up_map *map, char *buf, int size)
+bsdlabel_info(const struct map *map, char *buf, int size)
 {
     struct up_bsd      *priv = map->priv;
     uint16_t            disktype;
@@ -439,7 +439,7 @@ bsdlabel_info(const struct up_map *map, char *buf, int size)
 }
 
 static int
-bsdlabel_index(const struct up_part *part, char *buf, int size)
+bsdlabel_index(const struct part *part, char *buf, int size)
 {
     struct up_bsdpart *priv = part->priv;
 
@@ -447,7 +447,7 @@ bsdlabel_index(const struct up_part *part, char *buf, int size)
 }
 
 static int
-bsdlabel_extrahdr(const struct up_map *map, char *buf, int size)
+bsdlabel_extrahdr(const struct map *map, char *buf, int size)
 {
     const char *hdr = UP_BSDLABEL_FMT_HDR();
 
@@ -458,7 +458,7 @@ bsdlabel_extrahdr(const struct up_map *map, char *buf, int size)
 }
 
 static int
-bsdlabel_extra(const struct up_part *part, char *buf, int size)
+bsdlabel_extra(const struct part *part, char *buf, int size)
 {
 	struct up_bsdpart *priv = part->priv;
 
@@ -467,7 +467,7 @@ bsdlabel_extra(const struct up_part *part, char *buf, int size)
 }
 
 static int
-bsdlabel_dump(const struct up_map *map, int64_t start, const void *data,
+bsdlabel_dump(const struct map *map, int64_t start, const void *data,
               int64_t size, int tag, char *buf, int buflen)
 {
     struct up_bsd *priv = map->priv;
@@ -596,7 +596,7 @@ up_bsdlabel_fstype(int type)
 }
 
 int
-up_bsdlabel_fmt(const struct up_part *part, char *buf, int size,
+up_bsdlabel_fmt(const struct part *part, char *buf, int size,
     int type, uint32_t fsize, int frags, int cpg)
 {
     const char *typestr;

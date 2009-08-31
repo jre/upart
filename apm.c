@@ -97,12 +97,12 @@ static const char *bzb_types[] =
     "swap",
 };
 
-static int	apm_load(const struct disk *, const struct up_part *,
+static int	apm_load(const struct disk *, const struct part *,
 	void **);
-static int	apm_setup(struct disk *, struct up_map *);
-static int	apm_info(const struct up_map *, char *, int);
-static int	apm_index(const struct up_part *, char *, int);
-static int	apm_extra(const struct up_part *, char *, int);
+static int	apm_setup(struct disk *, struct map *);
+static int	apm_info(const struct map *, char *, int);
+static int	apm_index(const struct part *, char *, int);
+static int	apm_extra(const struct part *, char *, int);
 static void apm_bounds(const struct up_apm_p *map,
                        int64_t *start, int64_t *size);
 static int	apm_find(const struct disk *, int64_t, int64_t,
@@ -125,7 +125,7 @@ void up_apm_register(void)
 }
 
 static int
-apm_load(const struct disk *disk, const struct up_part *parent,
+apm_load(const struct disk *disk, const struct part *parent,
          void **priv)
 {
     int                 res;
@@ -160,7 +160,7 @@ apm_load(const struct disk *disk, const struct up_part *parent,
 }
 
 static int
-apm_setup(struct disk *disk, struct up_map *map)
+apm_setup(struct disk *disk, struct map *map)
 {
     struct up_apm              *apm = map->priv;
     int                         ii, flags;
@@ -202,7 +202,7 @@ apm_setup(struct disk *disk, struct up_map *map)
 }
 
 static int
-apm_info(const struct up_map *map, char *buf, int size)
+apm_info(const struct map *map, char *buf, int size)
 {
     if(!UP_NOISY(NORMAL))
         return 0;
@@ -212,7 +212,7 @@ apm_info(const struct up_map *map, char *buf, int size)
 }
 
 static int
-apm_index(const struct up_part *part, char *buf, int size)
+apm_index(const struct part *part, char *buf, int size)
 {
     struct up_apmpart *priv = part->priv;
 
@@ -220,7 +220,7 @@ apm_index(const struct up_part *part, char *buf, int size)
 }
 
 static int
-apm_extra(const struct up_part *part, char *buf, int size)
+apm_extra(const struct part *part, char *buf, int size)
 {
     struct up_apmpart  *priv;
     struct up_apm_p    *raw;

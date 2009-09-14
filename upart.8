@@ -7,10 +7,10 @@
 .Sh SYNOPSIS
 .Bk -words
 .Nm upart
-.Op Fl fqrvV
+.Op Fl flqrvV
 .Op Fl c Ar cylinders
 .Op Fl h Ar heads
-.Op Fl l Ar label
+.Op Fl L Ar label
 .Op Fl s Ar sectors
 .Op Fl w Ar file
 .Op Fl z Ar size
@@ -47,7 +47,9 @@ geometry could not be determined automatically, or is incorrect.
 Indicate that
 .Ar path
 is a plain file, and not a device node.
-.It Fl l Ar label
+.It Fl l
+List available disk device names and exit.
+.It Fl L Ar label
 A text label to save with an image created with
 .Ar w ,
 the default is the full device path. The label will be truncated to

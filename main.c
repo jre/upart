@@ -17,6 +17,7 @@
 #include "img.h"
 #include "map.h"
 #include "mbr.h"
+#include "os.h"
 #include "util.h"
 #include "sunlabel-sparc.h"
 #include "sunlabel-x86.h"
@@ -82,7 +83,7 @@ readargs(int argc, char *argv[], struct opts *newopts,
 
     memset(newopts, 0, sizeof *newopts);
     memset(params, 0, sizeof *params);
-    while(0 < (opt = getopt(argc, argv, "c:fh:kl:qrs:vVw:z:")))
+    while(0 < (opt = getopt(argc, argv, "c:fh:klL:qrs:vVw:z:")))
     {
         switch(opt)
         {
@@ -102,7 +103,11 @@ readargs(int argc, char *argv[], struct opts *newopts,
             case 'k':
                 newopts->sloppyio = 1;
                 break;
-            case 'l':
+		case 'l':
+			os_list_devices(stdout);
+			exit(EXIT_SUCCESS);
+			break;
+            case 'L':
                 newopts->label = optarg;
                 break;
             case 'q':
@@ -164,7 +169,8 @@ usage(const char *message, ...)
            "  -f        path is a plain file and not a device\n"
            "  -h heads  number of tracks per cylinder (heads)\n"
            "  -k        keep going after I/O errors\n"
-           "  -l label  label to use with -w option\n"
+           "  -l        list valid disk devices and exit\n"
+           "  -L label  label to use with -w option\n"
            "  -q        lower verbosity level when printing maps\n"
            "  -r        relax some checks when reading maps\n"
            "  -s sects  number of sectors per track (sectors)\n"

@@ -115,6 +115,8 @@ static int	getparams_sunos(int, struct disk_params *, const char *);
 #endif
 #if defined(__HAIKU__)
 #define HAVE_GETPARAMS_HAIKU
+#define HAVE_LISTDEV_HAIKU
+static int	listdev_haiku(FILE *);
 static int	getparams_haiku(int, struct disk_params *, const char *);
 #endif
 
@@ -123,6 +125,28 @@ static int	getparams_haiku(int, struct disk_params *, const char *);
 #else
 #define DEVPREFIX		"/dev/"
 #endif
+
+int
+os_list_devices(void *stream)
+{
+	int (*funcs[])(FILE *) = {
+	/* The order of these is significant, more than one may be defined. */
+#ifdef HAVE_LISTDEV_HAIKU
+		listdev_haiku,
+#endif
+	};
+	int i;
+
+	if (NITEMS(funcs) == 0) {
+		up_err("don't know how to list devices on this platform");
+		return (-1);
+	}
+	for (i = 0; i < NITEMS(funcs); i++)
+		if ((funcs[i])(stream) == 0)
+			return (0);
+
+	return (-1);
+}
 
 int
 up_os_opendisk(const char *name, const char **path)
@@ -363,6 +387,34 @@ stat_disk_id(partition_id id, size_t size)
 			free(data);
 			return (NULL);
 		}
+	}
+}
+
+static int
+listdev_haiku(FILE *stream)
+{
+	int32 cookie;
+	partition_id id;
+	size_t size;
+	struct user_disk_device_data *dev;
+
+	cookie = 0;
+	for (;;) {
+		size = 0;
+		id = _kern_get_next_disk_device_id(&cookie, &size);
+		if (id < 0) {
+			fputc('\n', stream);
+			return (0);
+		}
+		dev = stat_disk_id(id, size);
+		if (dev == NULL) {
+			up_warn("failed to get device parameters for %ld: %s",
+			    id, strerror(errno));
+			return (-1);
+		}
+		if (dev->device_flags & B_DISK_DEVICE_HAS_MEDIA)
+		    fprintf(stream, "%ld ", id);
+		free(dev);
 	}
 }
 

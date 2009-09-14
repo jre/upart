@@ -9,6 +9,10 @@
 #define MAX(aa, bb)             ((aa) > (bb) ? (aa) : (bb))
 #endif
 
+#ifndef NITEMS
+#define NITEMS(ary)		(sizeof(ary) / sizeof((ary)[0]))
+#endif
+
 #define UP_ENDIAN_BIG           (4321)
 #define UP_ENDIAN_LITTLE        (1234)
 extern int up_endian;

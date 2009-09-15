@@ -1,4 +1,4 @@
-AC_INIT([upart], [0.1.6])
+AC_INIT([upart], [0.1.7])
 dnl need 2.60 for AC_PROG_MKDIR_P
 AC_PREREQ([2.60])
 AC_CONFIG_HEADERS([config.h])
@@ -38,6 +38,13 @@ AC_DEFINE([HAVE_OPENDISK])])
 
 dnl some linux headers
 AC_CHECK_HEADERS([linux/fs.h linux/hdreg.h])
+
+dnl sysctl to list disks on bsd systems
+AC_CHECK_HEADERS([sys/sysctl.h],,,
+[#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif])
+AC_CHECK_FUNCS([sysctl])
 
 dnl look for sane string functions
 AC_CHECK_FUNCS([strlcpy strlcat])

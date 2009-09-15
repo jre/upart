@@ -31,6 +31,10 @@
 #undef HAVE_LINUX_FS_H
 #undef HAVE_LINUX_HDREG_H
 
+/* sysctl */
+#undef HAVE_SYS_SYSCTL_H
+#undef HAVE_SYSCTL
+
 /* sane string functions */
 #undef HAVE_STRLCPY
 #undef HAVE_STRLCAT

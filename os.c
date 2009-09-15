@@ -16,6 +16,9 @@
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
+#ifdef HAVE_SYS_SYSCTL_H
+#include <sys/sysctl.h>
+#endif
 #ifdef HAVE_LINUX_FS_H
 #include <linux/fs.h>
 #endif
@@ -92,6 +95,11 @@ static int	opendisk(const char *, int, char *, size_t, int);
 #define OPENFLAGS(flags)        (flags)
 #endif
 
+#if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYSCTL)
+#define HAVE_LISTDEV_SYSCTL
+static int	listdev_sysctl(FILE *);
+#endif
+
 #if defined(HAVE_SYS_DISKLABEL_H) && \
     (defined(DIOCGPDINFO) || defined(DIOCGDINFO))
 #define HAVE_GETPARAMS_DISKLABEL
@@ -131,6 +139,9 @@ os_list_devices(void *stream)
 {
 	int (*funcs[])(FILE *) = {
 	/* The order of these is significant, more than one may be defined. */
+#ifdef HAVE_LISTDEV_SYSCTL
+		listdev_sysctl,
+#endif
 #ifdef HAVE_LISTDEV_HAIKU
 		listdev_haiku,
 #endif
@@ -213,6 +224,42 @@ up_os_getparams(int fd, struct disk_params *params, const char *name)
 
 	return (-1);
 }
+
+#ifdef HAVE_LISTDEV_SYSCTL
+static int
+listdev_sysctl(FILE *stream)
+{
+	int mib[2];
+	size_t size, i;
+	char *names;
+
+	mib[0] = CTL_HW;
+	mib[1] = HW_DISKNAMES;
+	size = 0;
+	if (sysctl(mib, 2, NULL, &size, NULL, 0) < 0) {
+		up_warn("failed to retrieve hw.disknames sysctl: %s",
+		    strerror(errno));
+		return (-1);
+	}
+	names = malloc(size);
+	if (names == NULL) {
+		perror("malloc");
+		return (-1);
+	}
+	if (sysctl(mib, 2, names, &size, NULL, 0) < 0) {
+		up_warn("failed to retrieve hw.disknames sysctl: %s",
+		    strerror(errno));
+		return (-1);
+	}
+
+	for (i = 0; i < size; i++)
+		if (names[i] == ',')
+			names[i] = ' ';
+	fprintf(stdout, "%s\n", names);
+	free(names);
+	return (0);
+}
+#endif
 
 #ifdef HAVE_GETPARAMS_DISKLABEL
 static int

@@ -33,8 +33,8 @@ static const char *up_stdtypes[] =
 
 static const struct { uint16_t type; const char *label; } up_exttypes[] =
 {
-    {0x82, "Linux swap"},
-    {0x82, "Linux ext2"},
+    {0x82, "Linux Swap"},
+    {0x83, "Linux Filesystem"},
 };
 
 const char *

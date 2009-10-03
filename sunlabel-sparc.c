@@ -127,7 +127,7 @@ static int	sparc_extrahdr(const struct map *, char *, int);
 static int	sparc_extra(const struct part *, char *, int);
 static int	sparc_read(const struct disk *, int64_t, int64_t,
     const uint8_t **);
-static unsigned int sparc_check_vtoc(const struct up_sparcvtoc_p *);
+static unsigned int sparc_check_vtoc(const struct up_sparc_p *);
 static unsigned int sparc_check_obsd(const struct up_sparcobsd_p *);
 
 void up_sunlabel_sparc_register(void)
@@ -176,8 +176,9 @@ sparc_load(const struct disk *disk, const struct part *parent,
         return -1;
     }
     memcpy(&label->packed, buf, sizeof label->packed);
-    label->ext = sparc_check_vtoc(&label->packed.ext.vtoc) |
-                 sparc_check_obsd(&label->packed.ext.obsd);
+    label->ext = sparc_check_obsd(&label->packed.ext.obsd);
+    if (label->ext == 0)
+	    label->ext = sparc_check_vtoc(&label->packed);
 
     *priv = label;
 
@@ -410,13 +411,26 @@ sparc_read(const struct disk *disk, int64_t start, int64_t size,
 }
 
 static unsigned int
-sparc_check_vtoc(const struct up_sparcvtoc_p *vtoc)
+sparc_check_vtoc(const struct up_sparc_p *sparc)
 {
-    if(VTOC_VERSION == UP_BETOH32(vtoc->version) &&
-       VTOC_MAGIC   == UP_BETOH32(vtoc->magic))
-        return SPARC_EXTFL_VTOC;
-    else
-        return 0;
+	const struct up_sparcvtoc_p *vtoc;
+	int i;
+
+	vtoc = &sparc->ext.vtoc;
+
+	if (UP_BETOH32(vtoc->version) == VTOC_VERSION &&
+	    UP_BETOH32(vtoc->magic) == VTOC_MAGIC)
+		return (SPARC_EXTFL_VTOC);
+
+	if (vtoc->magic != 0 || vtoc->version != 0 || vtoc->partcount != 0)
+		return (0);
+
+	/* what the fuck linux, seriously? */
+	for (i = 0; i < SPARC_MAXPART; i++)
+		if ((sparc->parts[i].cyl != 0 || sparc->parts[i].size != 0) &&
+		    vtoc->parts[i].tag == 0)
+			return (0);
+	return (SPARC_EXTFL_VTOC);
 }
 
 static unsigned int

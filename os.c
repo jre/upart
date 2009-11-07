@@ -25,6 +25,7 @@
 #ifdef HAVE_LINUX_HDREG_H
 #include <linux/hdreg.h>
 #endif
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -95,9 +96,14 @@ static int	opendisk(const char *, int, char *, size_t, int);
 #define OPENFLAGS(flags)        (flags)
 #endif
 
-#if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYSCTL)
+#if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYSCTL) && \
+    defined(CTL_HW) && defined(HW_DISKNAMES)
 #define HAVE_LISTDEV_SYSCTL
 static int	listdev_sysctl(FILE *);
+#endif
+#if defined(linux) || defined(__linux) || defined(__linux__)
+#define HAVE_LISTDEV_LINUX
+static int	listdev_linux(FILE *);
 #endif
 
 #if defined(HAVE_SYS_DISKLABEL_H) && \
@@ -141,6 +147,9 @@ os_list_devices(void *stream)
 	/* The order of these is significant, more than one may be defined. */
 #ifdef HAVE_LISTDEV_SYSCTL
 		listdev_sysctl,
+#endif
+#ifdef HAVE_LISTDEV_LINUX
+		listdev_linux,
 #endif
 #ifdef HAVE_LISTDEV_HAIKU
 		listdev_haiku,
@@ -255,8 +264,53 @@ listdev_sysctl(FILE *stream)
 	for (i = 0; i < size; i++)
 		if (names[i] == ',')
 			names[i] = ' ';
-	fprintf(stdout, "%s\n", names);
+	fprintf(stream, "%s\n", names);
 	free(names);
+	return (0);
+}
+#endif
+
+#ifdef HAVE_LISTDEV_LINUX
+static int
+listdev_linux(FILE *stream)
+{
+	struct dirent *ent;
+	DIR *dir;
+	int once, i;
+
+	/* XXX ugh, there has to be a better way to do this */
+
+	if ((dir = opendir("/dev")) == NULL) {
+		up_warn("failed to list /dev: %s", strerror(errno));
+		return (-1);
+	}
+	once = 0;
+	while ((ent = readdir(dir)) != NULL) {
+		if (ent->d_type != DT_BLK ||
+		    strlen(ent->d_name) < 3 ||
+		    ent->d_name[1] != 'd')
+			continue;
+		switch (ent->d_name[0]) {
+		case 'h':
+		case 's':
+			break;
+		default:
+			continue;
+		}
+		for (i = 2; ent->d_name[i] != '\0'; i++)
+			if (ent->d_name[i] < 'a' ||
+			    ent->d_name[i] > 'z')
+				break;
+		if (ent->d_name[i] == '\0') {
+			if (once)
+				putc(' ', stream);
+			fputs(ent->d_name, stream);
+			once = 1;
+		}
+	}
+	closedir(dir);
+	if (once)
+		putc('\n', stream);
 	return (0);
 }
 #endif

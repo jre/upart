@@ -411,12 +411,12 @@ sparc_read(const struct disk *disk, int64_t start, int64_t size,
 }
 
 static unsigned int
-sparc_check_vtoc(const struct up_sparc_p *sparc)
+sparc_check_vtoc(const struct up_sparc_p *sparcpart)
 {
 	const struct up_sparcvtoc_p *vtoc;
 	int i;
 
-	vtoc = &sparc->ext.vtoc;
+	vtoc = &sparcpart->ext.vtoc;
 
 	if (UP_BETOH32(vtoc->version) == VTOC_VERSION &&
 	    UP_BETOH32(vtoc->magic) == VTOC_MAGIC)
@@ -427,7 +427,8 @@ sparc_check_vtoc(const struct up_sparc_p *sparc)
 
 	/* what the fuck linux, seriously? */
 	for (i = 0; i < SPARC_MAXPART; i++)
-		if ((sparc->parts[i].cyl != 0 || sparc->parts[i].size != 0) &&
+		if ((sparcpart->parts[i].cyl != 0 ||
+			sparcpart->parts[i].size != 0) &&
 		    vtoc->parts[i].tag == 0)
 			return (0);
 	return (SPARC_EXTFL_VTOC);

@@ -17,7 +17,9 @@
 
 #ifdef __HAIKU__
 
-/* XXX begin suckage */
+/* XXX copy/pasting from private headers sucks */
+
+/* begin paste from headers/private/system/ddm_userland_interface_defs.h */
 
 // userland partition representation
 struct user_partition_data {
@@ -50,13 +52,20 @@ struct user_disk_device_data {
 	struct user_partition_data	device_partition_data;
 };
 
+/* end paste from headers/private/system/ddm_userland_interface_defs.h */
+
+/* begin paste from headers/private/system/syscalls.h */
+
 /* Disk Device Manager syscalls */
 partition_id	_kern_get_next_disk_device_id(int32 *, size_t *);
 partition_id	_kern_find_disk_device(const char *, size_t *);
 status_t	_kern_get_disk_device_data(partition_id, bool,
     struct user_disk_device_data *, size_t , size_t *);
 
-/* XXX end suckage */
+/* end paste from headers/private/system/syscalls.h */
+
+#define DEV_PREFIX		"/dev/disk/"
+#define DEV_SUFFIX		"/raw"
 
 static struct user_disk_device_data *
 stat_disk_id(partition_id id, size_t size)
@@ -94,13 +103,16 @@ os_listdev_haiku(FILE *stream)
 	partition_id id;
 	size_t size;
 	struct user_disk_device_data *dev;
+	int once;
 
+	once = 0;
 	cookie = 0;
 	for (;;) {
 		size = 0;
 		id = _kern_get_next_disk_device_id(&cookie, &size);
 		if (id < 0) {
-			fputc('\n', stream);
+			if (once)
+				putc('\n', stream);
 			return (0);
 		}
 		dev = stat_disk_id(id, size);
@@ -109,34 +121,106 @@ os_listdev_haiku(FILE *stream)
 			    id, strerror(errno));
 			return (-1);
 		}
-		if (dev->device_flags & B_DISK_DEVICE_HAS_MEDIA)
-		    fprintf(stream, "%ld ", id);
+		if (dev->device_flags & B_DISK_DEVICE_HAS_MEDIA) {
+			char *start, *end;
+			size_t plen;
+
+			if (once)
+				putc(' ', stream);
+			once = 1;
+			plen = strlen(DEV_PREFIX);
+			start = dev->path + plen;
+			if (strncmp(dev->path, DEV_PREFIX, plen) != 0 ||
+			    (end = strrchr(start, '/')) == NULL ||
+			    end == start ||
+			    strcmp(end, DEV_SUFFIX) != 0)
+				fprintf(stream, "%ld", id);
+			else {
+				*end = '\0';
+				fputs(start, stream);
+				*end = '/';
+			}
+		}
 		free(dev);
 	}
 }
 
+static int
+maybe_open_disk(const char *path, int flags, int *ret)
+{
+	struct stat sb;
+	int fd;
+
+
+	*ret = -1;
+	fd = open(path, flags);
+	if (fd < 0) {
+		if (errno == ENOENT || errno == ENOTDIR)
+			return (0);
+		return (1);
+	}
+	if (fstat(fd, &sb) != 0) {
+		int save = errno;
+		close(fd);
+		errno = save;
+		return (1);
+	}
+	if (!S_ISBLK(sb.st_mode) && !S_ISCHR(sb.st_mode)) {
+		close(fd);
+		return (0);
+	}
+	*ret = fd;
+	return (1);
+}
+
 int
-os_opendisk_haiku(const char *name, int flags, char *path, size_t pathlen,
+os_opendisk_haiku(const char *name, int flags, char *buf, size_t buflen,
     int ignored)
 {
 	long id;
 	char *end;
-	struct user_disk_device_data *data;
+	int ret;
 
 	end = NULL;
 	id = strtol(name, &end, 10);
-	if (end == NULL || *end != '\0' || id < 0) {
-		errno = ENOENT;
-		return (-1);
+	if (end != NULL && *end == '\0' && id >= 0) {
+		struct user_disk_device_data *data;
+		data = stat_disk_id(id, 0);
+		if (data == NULL)
+			return (-1);
+		if (strlcpy(buf, data->path, buflen) >= buflen) {
+			errno = ENOMEM;
+			free(data);
+			return (-1);
+		}
+		free(data);
+		return (open(buf, flags));
 	}
 
-	data = stat_disk_id(id, 0);
-	if (data == NULL)
-		return (-1);
-	strlcpy(path, data->path, pathlen);
-	free(data);
+	strlcpy(buf, name, buflen);
+	if (maybe_open_disk(name, flags, &ret))
+		return (ret);
 
-	return (open(path, flags));
+	if (strlcat(buf, DEV_SUFFIX, buflen) >= buflen) {
+		errno = ENOMEM;
+		return (-1);
+	}
+	if (maybe_open_disk(buf, flags, &ret))
+		return (ret);
+
+	if (strlcpy(buf, DEV_PREFIX, buflen) >= buflen ||
+	    strlcat(buf, name, buflen) >= buflen) {
+		errno = ENOMEM;
+		return (-1);
+	}
+	if (maybe_open_disk(buf, flags, &ret))
+		return (ret);
+
+	if (strlcat(buf, DEV_SUFFIX, buflen) >= buflen) {
+		errno = ENOMEM;
+		return (-1);
+	}
+	return (open(buf, flags));
 }
 
 int

@@ -101,6 +101,7 @@ static int	opendisk(const char *, int, char *, size_t, int);
 #define MINIMAL_NAMESPACE_POLLUTION_PLEASE
 #include "disk.h"
 #include "os.h"
+#include "os-solaris.h"
 #include "util.h"
 
 #ifdef O_LARGEFILE
@@ -142,10 +143,6 @@ static int	getparams_linux(int, struct disk_params *, const char *);
 #define HAVE_GETPARAMS_DARWIN
 static int	getparams_darwin(int, struct disk_params *, const char *);
 #endif
-#if defined(HAVE_SYS_DKIO_H) && defined(DKIOCGGEOM)
-#define HAVE_GETPARAMS_SUNOS
-static int	getparams_sunos(int, struct disk_params *, const char *);
-#endif
 #if defined(__HAIKU__)
 #define HAVE_GETPARAMS_HAIKU
 #define HAVE_LISTDEV_HAIKU
@@ -153,11 +150,15 @@ static int	listdev_haiku(FILE *);
 static int	getparams_haiku(int, struct disk_params *, const char *);
 #endif
 
-#if defined(sun) || defined(__sun) || defined(__sun__)
-#define DEVPREFIX		"/dev/rdsk/"
+#ifdef HAVE_OPENDISK
+#define OS_OPENDISK_OPENDISK	(opendisk_opendisk)
+static int	opendisk_opendisk(const char *, int, char *, size_t, int);
 #else
-#define DEVPREFIX		"/dev/"
+#define OS_OPENDISK_OPENDISK	(0)
 #endif
+static int	opendisk_generic(const char *, int, char *, size_t, int);
+
+#define DEVPREFIX		"/dev/"
 
 int
 os_list_devices(void *stream)
@@ -173,19 +174,23 @@ os_list_devices(void *stream)
 #ifdef HAVE_LISTDEV_HAIKU
 		listdev_haiku,
 #endif
+		OS_LISTDEV_SOLARIS,
 #ifdef HAVE_LISTDEV_SYSCTL
 		listdev_sysctl,
 #endif
 	};
-	int i;
+	int once, i;
 
-	if (NITEMS(funcs) == 0) {
-		up_err("don't know how to list devices on this platform");
-		return (-1);
+	once = 0;
+	for (i = 0; i < NITEMS(funcs); i++) {
+		if (funcs[i] != NULL) {
+			once = 1;
+			if ((funcs[i])(stream) == 0)
+				return (0);
+		}
 	}
-	for (i = 0; i < NITEMS(funcs); i++)
-		if ((funcs[i])(stream) == 0)
-			return (0);
+	if (!once)
+		up_err("don't know how to list devices on this platform");
 
 	return (-1);
 }
@@ -193,29 +198,33 @@ os_list_devices(void *stream)
 int
 up_os_opendisk(const char *name, const char **path)
 {
+	int (*funcs[])(const char *, int, char *, size_t, int) = {
+	/* The order of these is significant, more than one may be defined. */
+		OS_OPENDISK_OPENDISK,
+		OS_OPENDISK_SOLARIS,
+		opendisk_generic,
+	};
 	static char buf[MAXPATHLEN];
-	int flags, ret;
+	int flags, i, ret;
 
 	*path = NULL;
 	flags = OPENFLAGS(O_RDONLY);
 
-	if (opts->plainfile || strchr(name, '/'))
+	if (opts->plainfile)
 		return open(name, flags);
 
-#ifdef HAVE_OPENDISK
-	buf[0] = 0;
-	ret = opendisk(name, flags, buf, sizeof buf, 0);
-#else
-	ret = open(name, flags);
-	if (ret < 0) {
-		strlcpy(buf, DEVPREFIX, sizeof buf);
-		strlcat(buf, name, sizeof buf);
-		ret = open(buf, flags);
+	for (i = 0; i < NITEMS(funcs); i++) {
+		if (funcs[i] == NULL)
+			continue;
+		ret = (funcs[i])(name, flags, buf, sizeof(buf), 0);
+		if (ret >= 0) {
+			if (buf[0] != '\0')
+				*path = buf;
+			return (ret);
+		}
 	}
-#endif
-	if (ret >= 0 && buf[0])
-		*path = buf;
-	return (ret);
+
+	return (-1);
 }
 
 int
@@ -235,23 +244,24 @@ up_os_getparams(int fd, struct disk_params *params, const char *name)
 #ifdef HAVE_GETPARAMS_DARWIN
 	    getparams_darwin,
 #endif
-#ifdef HAVE_GETPARAMS_SUNOS
-	    getparams_sunos,
-#endif
+	    OS_GETPARAMS_SOLARIS,
 #ifdef HAVE_GETPARAMS_HAIKU
 	    getparams_haiku,
 #endif
 	};
-	int i;
+	int once, i;
 
-	if (NITEMS(funcs) == 0) {
+	once = 0;
+	for (i = 0; i < NITEMS(funcs); i++) {
+		if (funcs[i] != NULL) {
+			once = 1;
+			if ((funcs[i])(fd, params, name) == 0)
+				return (0);
+		}
+	}
+	if (!once)
 		up_err("don't know how to get disk parameters "
 		    "on this platform");
-		return (-1);
-	}
-	for (i = 0; i < NITEMS(funcs); i++)
-		if ((funcs[i])(fd, params, name) == 0)
-			return (0);
 
 	return (-1);
 }
@@ -522,28 +532,6 @@ getparams_darwin(int fd, struct disk_params *params, const char *name)
 }
 #endif /* HAVE_GETPARAMS_DARWIN */
 
-#ifdef HAVE_GETPARAMS_SUNOS
-static int
-getparams_sunos(int fd, struct disk_params *params, const char *name)
-{
-	struct dk_geom geom;
-
-	/* XXX is there an ioctl or something to get sector size? */
-	params->sectsize = NBPSCTR;
-
-	if (ioctl(fd, DKIOCG_PHYGEOM, &geom) == 0 ||
-	    ioctl(fd, DKIOCGGEOM, &geom) == 0) {
-		params->cyls = geom.dkg_pcyl;
-		params->heads = geom.dkg_nhead;
-		params->sects = geom.dkg_nsect;
-	} else if (UP_NOISY(QUIET))
-		up_warn("failed to read disk geometry for %s: %s",
-		    name, strerror(errno));
-
-	return (0);
-}
-#endif /* HAVE_GETPARAMS_SUNOS */
-
 #ifdef HAVE_GETPARAMS_HAIKU
 
 static struct user_disk_device_data *
@@ -659,3 +647,32 @@ getparams_haiku(int fd, struct disk_params *params, const char *name)
 }
 
 #endif /* HAVE_GETPARAMS_HAIKU */
+
+#if HAVE_OPENDISK
+static int
+opendisk_opendisk(const char *name, int flags, char *buf, size_t buflen,
+    int cooked)
+{
+	buf[0] = '\0';
+	return (opendisk(name, flags, buf, buflen, cooked));
+}
+#endif /* HAVE_OPENDISK */
+
+static int
+opendisk_generic(const char *name, int flags, char *buf, size_t buflen,
+    int cooked)
+{
+	int ret;
+
+	strlcpy(buf, name, buflen);
+	if ((ret = open(name, flags)) < 0 ||
+	    strchr(name, '/') != NULL)
+		return (ret);
+
+	if (strlcpy(buf, DEVPREFIX, buflen) >= buflen ||
+	    strlcat(buf, name, buflen) >= buflen) {
+		errno = ENOMEM;
+		return (-1);
+	}
+	return (open(buf, flags));
+}

@@ -22,11 +22,16 @@ AC_CHECK_HEADERS([sys/types.h sys/param.h stdint.h inttypes.h])
 
 dnl bsd disklabel headers
 AC_CHECK_HEADERS([sys/disklabel.h])
+
+dnl bsd and solaris disk ioctls
 AC_CHECK_HEADERS([sys/dkio.h],,,
 [#include <sys/types.h>
 #ifdef HAVE_SYS_DISKLABEL_H
 #include <sys/disklabel.h>
 #endif])
+
+dnl solaris vtoc
+AC_CHECK_HEADERS([sys/vtoc.h])
 
 dnl freebsd headers
 AC_CHECK_HEADERS([sys/disk.h])

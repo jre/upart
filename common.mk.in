@@ -21,6 +21,7 @@ ALL_SRCS      = ${UPART_SRCS}
 ALL_HDRS      = ${UPART_HDRSRC:=.h} bsdqueue.h
 UPART_SRCS    = ${UPART_HDRSRC:=.c} main.c
 UPART_HDRSRC  = apm bsdlabel crc32 disk gpt img map mbr os \
+		os-solaris \
 		sunlabel-shared sunlabel-sparc sunlabel-x86 util
 REGRESS_DIR   = tests
 REGRESS_CMD   = sh ./test.sh

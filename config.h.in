@@ -16,26 +16,31 @@
 #undef HAVE_STDINT_H
 #undef HAVE_INTTYPES_H
 
-/* BSD disklabel headers */
+/* bsd disklabel */
 #undef HAVE_SYS_DISKLABEL_H
+
+/* bsd and solaris disk ioctls */
 #undef HAVE_SYS_DKIO_H
 
-/* freebsd headers */
+/* solaris vtoc */
+#undef HAVE_SYS_VTOC_H
+
+/* freebsd disk ioctls */
 #undef HAVE_SYS_DISK_H
 
 /* libutil, for opendisk() */
 #undef HAVE_UTIL_H
 #undef HAVE_OPENDISK
 
-/* linux headers */
+/* linux disk ioctls */
 #undef HAVE_LINUX_FS_H
 #undef HAVE_LINUX_HDREG_H
 
-/* sysctl */
+/* sysctl, for listing disks on bsd */
 #undef HAVE_SYS_SYSCTL_H
 #undef HAVE_SYSCTL
 
-/* osx */
+/* osx iokit stuff for listing disks */
 #undef HAVE_COREFOUNDATION_COREFOUNDATION_H
 #undef HAVE_IOKIT_IOKITLIB_H
 #undef HAVE_IOKIT_IOBSD_H

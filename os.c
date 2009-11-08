@@ -217,11 +217,9 @@ up_os_opendisk(const char *name, const char **path)
 		if (funcs[i] == NULL)
 			continue;
 		ret = (funcs[i])(name, flags, buf, sizeof(buf), 0);
-		if (ret >= 0) {
-			if (buf[0] != '\0')
-				*path = buf;
-			return (ret);
-		}
+		if (ret >= 0 && buf[0] != '\0')
+			*path = buf;
+		return (ret);
 	}
 
 	return (-1);
@@ -665,7 +663,7 @@ opendisk_generic(const char *name, int flags, char *buf, size_t buflen,
 	int ret;
 
 	strlcpy(buf, name, buflen);
-	if ((ret = open(name, flags)) < 0 ||
+	if ((ret = open(name, flags)) >= 0 ||
 	    strchr(name, '/') != NULL)
 		return (ret);
 

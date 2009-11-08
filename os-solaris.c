@@ -12,8 +12,11 @@
 #ifdef HAVE_SYS_VTOC_H
 #include <sys/vtoc.h>
 #endif
+#include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -22,19 +25,96 @@
 #include "os-solaris.h"
 #include "util.h"
 
+#define DEVPATH_COOKED		"/dev/dsk/"
+#define DEVPATH_RAW		"/dev/rdsk/"
+#define WHOLE_PART		"s2"
+
 #ifdef OS_HAVE_SOLARIS
 
 int
 os_listdev_solaris(FILE *stream)
 {
-	return (-1);
+	static const char hex[] = "0123456789ABCDEF";
+	static const char num[] = "0123456789";
+	struct dirent *ent;
+	DIR *dir;
+	int once;
+
+	/* XXX this sucks */
+
+	if ((dir = opendir(DEVPATH_COOKED)) == NULL) {
+		up_warn("failed to list %s: %s",
+		    DEVPATH_COOKED, strerror(errno));
+		return (-1);
+	}
+
+	once = 0;
+	while ((ent = readdir(dir)) != NULL) {
+		size_t off, inc;
+		if (ent->d_name[0] != 'c' ||
+		    (inc = strspn(ent->d_name + 1, num)) == 0)
+			continue;
+		off = 1 + inc;
+		if (ent->d_name[off] == 't') {
+			if ((inc = strspn(ent->d_name + off + 1, hex)) == 0)
+				continue;
+			off += 1 + inc;
+		}
+		if (ent->d_name[off] != 'd' ||
+		    (inc = strspn(ent->d_name + off + 1, num)) == 0)
+			continue;
+		off += 1 + inc;
+		if (strcmp(ent->d_name + off, WHOLE_PART) != 0)
+			continue;
+		if (once)
+			putc(' ', stream);
+		once = 1;
+		ent->d_name[off] = '\0';
+		fputs(ent->d_name, stream);
+		ent->d_name[off] = 's';
+	}
+	closedir(dir);
+	if (once)
+		putc('\n', stream);
+
+	return (0);
 }
 
 int
 os_opendisk_solaris(const char *name, int flags, char *buf, size_t buflen,
     int iscooked)
 {
-	return (-1);
+	const char *dir;
+	int ret;
+
+	strlcpy(buf, name, buflen);
+	if ((ret = open(name, flags)) >= 0)
+		return (ret);
+
+	if(strlcat(buf, WHOLE_PART, buflen) >= buflen) {
+		errno = ENOMEM;
+		return (-1);
+	}
+	if ((ret = open(buf, flags)) >= 0)
+		return (ret);
+
+	if (strchr(name, '/') != NULL)
+		return (ret);
+
+	dir = (iscooked ? DEVPATH_COOKED : DEVPATH_RAW);
+	if (strlcpy(buf, dir, buflen) >= buflen ||
+	    strlcat(buf, name, buflen) >= buflen) {
+		errno = ENOMEM;
+		return (-1);
+	}
+	if ((ret = open(buf, flags)) >= 0)
+		return (ret);
+
+	if(strlcat(buf, WHOLE_PART, buflen) >= buflen) {
+		errno = ENOMEM;
+		return (-1);
+	}
+	return (open(buf, flags));
 }
 
 #endif /* OS_HAVE_SOLARIS */

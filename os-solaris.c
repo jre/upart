@@ -37,8 +37,8 @@ os_listdev_solaris(FILE *stream)
 	static const char hex[] = "0123456789ABCDEF";
 	static const char num[] = "0123456789";
 	struct dirent *ent;
+	int once, fd;
 	DIR *dir;
-	int once;
 
 	/* XXX this sucks */
 
@@ -66,6 +66,11 @@ os_listdev_solaris(FILE *stream)
 		off += 1 + inc;
 		if (strcmp(ent->d_name + off, WHOLE_PART) != 0)
 			continue;
+		fd = os_opendisk_solaris(ent->d_name, O_RDONLY, NULL, 0, 0);
+		if (fd >= 0)
+			close(fd);
+		else if (errno == ENOENT)
+			continue;
 		if (once)
 			putc(' ', stream);
 		once = 1;
@@ -84,18 +89,24 @@ int
 os_opendisk_solaris(const char *name, int flags, char *buf, size_t buflen,
     int iscooked)
 {
+	static char mybuf[MAXPATHLEN];
 	const char *dir;
 	int ret;
 
+	if (NULL == buf) {
+		buf = mybuf;
+		buflen = sizeof(mybuf);
+	}
+
 	strlcpy(buf, name, buflen);
-	if ((ret = open(name, flags)) >= 0)
+	if ((ret = open(name, flags)) >= 0 || errno != ENOENT)
 		return (ret);
 
 	if(strlcat(buf, WHOLE_PART, buflen) >= buflen) {
 		errno = ENOMEM;
 		return (-1);
 	}
-	if ((ret = open(buf, flags)) >= 0)
+	if ((ret = open(buf, flags)) >= 0 || errno != ENOENT)
 		return (ret);
 
 	if (strchr(name, '/') != NULL)
@@ -107,7 +118,7 @@ os_opendisk_solaris(const char *name, int flags, char *buf, size_t buflen,
 		errno = ENOMEM;
 		return (-1);
 	}
-	if ((ret = open(buf, flags)) >= 0)
+	if ((ret = open(buf, flags)) >= 0 || errno != ENOENT)
 		return (ret);
 
 	if(strlcat(buf, WHOLE_PART, buflen) >= buflen) {

@@ -664,6 +664,7 @@ opendisk_generic(const char *name, int flags, char *buf, size_t buflen,
 
 	strlcpy(buf, name, buflen);
 	if ((ret = open(name, flags)) >= 0 ||
+	    errno != ENOENT ||
 	    strchr(name, '/') != NULL)
 		return (ret);
 

@@ -36,6 +36,19 @@
 #include <util.h>
 #endif
 
+#ifdef HAVE_COREFOUNDATION_COREFOUNDATION_H
+#include <CoreFoundation/CoreFoundation.h>
+#endif
+#ifdef HAVE_IOKIT_IOKITLIB_H
+#include <IOKit/IOKitLib.h>
+#endif
+#ifdef HAVE_IOKIT_IOBSD_H
+#include <IOKit/IOBSD.h>
+#endif
+#ifdef HAVE_IOKIT_STORAGE_IOMEDIA_H
+#include <IOKit/storage/IOMedia.h>
+#endif
+
 #ifdef __HAIKU__
 
 #include <DiskDeviceDefs.h>
@@ -105,6 +118,12 @@ static int	listdev_sysctl(FILE *);
 #define HAVE_LISTDEV_LINUX
 static int	listdev_linux(FILE *);
 #endif
+#if defined(HAVE_COREFOUNDATION_COREFOUNDATION_H) && \
+    defined(HAVE_IOKIT_IOKITLIB_H) && \
+    defined(kIOMediaClass) && defined(kIOBSDNameKey)
+#define HAVE_LISTDEV_IOKIT
+static int	listdev_iokit(FILE *);
+#endif
 
 #if defined(HAVE_SYS_DISKLABEL_H) && \
     (defined(DIOCGPDINFO) || defined(DIOCGDINFO))
@@ -145,14 +164,17 @@ os_list_devices(void *stream)
 {
 	int (*funcs[])(FILE *) = {
 	/* The order of these is significant, more than one may be defined. */
-#ifdef HAVE_LISTDEV_SYSCTL
-		listdev_sysctl,
+#ifdef HAVE_LISTDEV_IOKIT
+		listdev_iokit,
 #endif
 #ifdef HAVE_LISTDEV_LINUX
 		listdev_linux,
 #endif
 #ifdef HAVE_LISTDEV_HAIKU
 		listdev_haiku,
+#endif
+#ifdef HAVE_LISTDEV_SYSCTL
+		listdev_sysctl,
 #endif
 	};
 	int i;
@@ -311,6 +333,68 @@ listdev_linux(FILE *stream)
 	closedir(dir);
 	if (once)
 		putc('\n', stream);
+	return (0);
+}
+#endif
+
+#ifdef HAVE_LISTDEV_IOKIT
+static int
+listdev_iokit(FILE *stream)
+{
+	CFMutableDictionaryRef dict;
+	io_iterator_t iter;
+	io_object_t serv;
+	CFStringRef name;
+	int once;
+
+	if ((dict = IOServiceMatching(kIOMediaClass)) == NULL) {
+		/* XXX */
+		return (-1);
+	}
+	CFDictionarySetValue(dict, CFSTR(kIOMediaWholeKey), kCFBooleanTrue);
+
+	if (IOServiceGetMatchingServices(kIOMasterPortDefault, dict, &iter) !=
+	    KERN_SUCCESS) {
+		/* XXX */
+		return (-1);
+	}
+	once = 0;
+	while ((serv = IOIteratorNext(iter))) {
+		char *suchAFuckingPainInTheAss;
+		CFIndex len;
+
+		if ((name = IORegistryEntryCreateCFProperty(serv,
+			    CFSTR(kIOBSDNameKey),
+			    kCFAllocatorDefault,
+			    0)) == NULL) {
+			/* XXX */
+			IOObjectRelease(serv);
+			continue;
+		}
+
+		if (once)
+			putc(' ', stream);
+		len = CFStringGetLength(name) + 1;
+		if ((suchAFuckingPainInTheAss = malloc(len)) == NULL) {
+			perror("malloc");
+			IOObjectRelease(serv);
+			CFRelease(name);
+			break;
+		}
+		if (!CFStringGetCString(name, suchAFuckingPainInTheAss, len,
+			kCFStringEncodingASCII)) {
+			/* XXX */
+		} else {
+			fputs(suchAFuckingPainInTheAss, stream);
+			once = 1;
+		}
+		free(suchAFuckingPainInTheAss);
+		IOObjectRelease(serv);
+	}
+	IOObjectRelease(iter);
+	if (once)
+		putc('\n', stream);
+
 	return (0);
 }
 #endif

@@ -46,6 +46,19 @@ AC_CHECK_HEADERS([sys/sysctl.h],,,
 #endif])
 AC_CHECK_FUNCS([sysctl])
 
+dnl osx headers and frameworks
+AC_CHECK_HEADERS([CoreFoundation/CoreFoundation.h],
+    [up_have_cf=yes], [up_have_cf=no])
+if test x"$ac_cv_header_CoreFoundation_CoreFoundation_h" = xyes
+then
+    UP_CHECK_FRAMEWORK([CFRelease], [CoreFoundation])
+fi
+AC_CHECK_HEADERS([IOKit/IOKitLib.h IOKit/IOBSD.h IOKit/storage/IOMedia.h])
+if test x"$ac_cv_header_IOKit_IOKitLib_h" = xyes
+then
+    UP_CHECK_FRAMEWORK([IOObjectRelease], [IOKit])
+fi
+
 dnl look for sane string functions
 AC_CHECK_FUNCS([strlcpy strlcat])
 

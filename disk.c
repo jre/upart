@@ -338,8 +338,11 @@ fixparams(struct disk *disk, const struct disk_params *params)
         	disk->params.sects = params->sects;
 
 	/* sector size defaults to 512 */
-	if (disk->params.sectsize <= 0)
+	if (disk->params.sectsize <= 0) {
+		up_warn("couldn't determine sector size for %s, "
+		    "assuming 512 bytes", UP_DISK_PATH(disk));
         	disk->params.sectsize = 512;
+	}
 
 	/* we can get the total size for a plain file */
 	if (disk->params.size <= 0 &&
@@ -353,10 +356,16 @@ fixparams(struct disk *disk, const struct disk_params *params)
 		return (0);
 
 	/* apparently not, try defaulting heads and sectors to 255 and 63 */
-	if (disk->params.heads <= 0)
+	if (disk->params.heads <= 0) {
+		up_warn("couldn't determine number of heads for %s, "
+		    "assuming 255", UP_DISK_PATH(disk));
         	disk->params.heads = 255;
-	if (disk->params.sects <= 0)
+	}
+	if (disk->params.sects <= 0) {
+		up_warn("couldn't determine number of sectors/track for %s, "
+		    "assuming 63", UP_DISK_PATH(disk));
 		disk->params.sects = 63;
+	}
 
 	/* ok, is it good enough now? */
 	if (fixparams_checkone(&disk->params) == 0)

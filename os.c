@@ -4,21 +4,6 @@
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
-#ifdef HAVE_SYS_DISKLABEL_H
-#include <sys/disklabel.h>
-#endif
-#ifdef HAVE_SYS_DKIO_H
-#include <sys/dkio.h>
-#endif
-#ifdef HAVE_SYS_DISK_H
-#include <sys/disk.h>
-#endif
-#ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h>
-#endif
-#ifdef HAVE_SYS_SYSCTL_H
-#include <sys/sysctl.h>
-#endif
 #ifdef HAVE_LINUX_FS_H
 #include <linux/fs.h>
 #endif
@@ -39,6 +24,7 @@
 #define MINIMAL_NAMESPACE_POLLUTION_PLEASE
 #include "disk.h"
 #include "os.h"
+#include "os-bsd.h"
 #include "os-darwin.h"
 #include "os-haiku.h"
 #include "os-solaris.h"
@@ -50,25 +36,11 @@
 #define OPENFLAGS(flags)        (flags)
 #endif
 
-#if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYSCTL) && \
-    defined(CTL_HW) && defined(HW_DISKNAMES)
-#define HAVE_LISTDEV_SYSCTL
-static int	listdev_sysctl(FILE *);
-#endif
 #if defined(linux) || defined(__linux) || defined(__linux__)
 #define HAVE_LISTDEV_LINUX
 static int	listdev_linux(FILE *);
 #endif
 
-#if defined(HAVE_SYS_DISKLABEL_H) && \
-    (defined(DIOCGPDINFO) || defined(DIOCGDINFO))
-#define HAVE_GETPARAMS_DISKLABEL
-static int	getparams_disklabel(int, struct disk_params *, const char *);
-#endif
-#if defined(HAVE_SYS_DISK_H) && defined(DIOCGSECTORSIZE)
-#define HAVE_GETPARAMS_FREEBSD
-static int	getparams_freebsd(int, struct disk_params *, const char *);
-#endif
 #if defined(HAVE_LINUX_FS_H) || defined(HAVE_LINUX_HDREG_H)
 #define HAVE_GETPARAMS_LINUX
 static int	getparams_linux(int, struct disk_params *, const char *);
@@ -95,9 +67,7 @@ os_list_devices(void *stream)
 #endif
 		OS_LISTDEV_HAIKU,
 		OS_LISTDEV_SOLARIS,
-#ifdef HAVE_LISTDEV_SYSCTL
-		listdev_sysctl,
-#endif
+		OS_LISTDEV_SYSCTL,
 	};
 	int once, i;
 
@@ -151,12 +121,8 @@ up_os_getparams(int fd, struct disk_params *params, const char *name)
 {
 	int (*funcs[])(int, struct disk_params *, const char *) = {
 	/* The order of these is significant, more than one may be defined. */
-#ifdef HAVE_GETPARAMS_FREEBSD
-	    getparams_freebsd,
-#endif
-#ifdef HAVE_GETPARAMS_DISKLABEL
-	    getparams_disklabel,
-#endif
+	    OS_GETPARAMS_FREEBSD,
+	    OS_GETPARAMS_DISKLABEL,
 #ifdef HAVE_GETPARAMS_LINUX
 	    getparams_linux,
 #endif
@@ -180,42 +146,6 @@ up_os_getparams(int fd, struct disk_params *params, const char *name)
 
 	return (-1);
 }
-
-#ifdef HAVE_LISTDEV_SYSCTL
-static int
-listdev_sysctl(FILE *stream)
-{
-	int mib[2];
-	size_t size, i;
-	char *names;
-
-	mib[0] = CTL_HW;
-	mib[1] = HW_DISKNAMES;
-	size = 0;
-	if (sysctl(mib, 2, NULL, &size, NULL, 0) < 0) {
-		up_warn("failed to retrieve hw.disknames sysctl: %s",
-		    strerror(errno));
-		return (-1);
-	}
-	names = malloc(size);
-	if (names == NULL) {
-		perror("malloc");
-		return (-1);
-	}
-	if (sysctl(mib, 2, names, &size, NULL, 0) < 0) {
-		up_warn("failed to retrieve hw.disknames sysctl: %s",
-		    strerror(errno));
-		return (-1);
-	}
-
-	for (i = 0; i < size; i++)
-		if (names[i] == ',')
-			names[i] = ' ';
-	fprintf(stream, "%s\n", names);
-	free(names);
-	return (0);
-}
-#endif
 
 #ifdef HAVE_LISTDEV_LINUX
 static int
@@ -258,75 +188,6 @@ listdev_linux(FILE *stream)
 	closedir(dir);
 	if (once)
 		putc('\n', stream);
-	return (0);
-}
-#endif
-
-#ifdef HAVE_GETPARAMS_DISKLABEL
-static int
-getparams_disklabel(int fd, struct disk_params *params, const char *name)
-{
-	struct disklabel dl;
-
-	errno = 0;
-#ifdef DIOCGPDINFO
-	if (ioctl(fd, DIOCGPDINFO, &dl) < 0)
-#endif
-#ifdef DIOCGDINFO
-	if (ioctl(fd, DIOCGDINFO, &dl) < 0)
-#endif
-	{
-		if (errno && UP_NOISY(QUIET))
-			up_err("failed to get disklabel for %s: %s",
-			    name, strerror(errno));
-		return (-1);
-	}
-
-	params->sectsize = dl.d_secsize;
-	params->cyls = dl.d_ncylinders;
-	params->heads = dl.d_ntracks;
-	params->sects = dl.d_nsectors;
-#ifdef DL_GETDSIZE
-	params->size = DL_GETDSIZE(&dl);
-#else
-	params->size = dl.d_secperunit;
-#endif
-
-	return (0);
-}
-#endif /* GETPARAMS_DISKLABEL */
-
-#ifdef HAVE_GETPARAMS_FREEBSD
-static int
-getparams_freebsd(int fd, struct disk_params *params, const char *name)
-{
-	u_int ival;
-	off_t oval;
-
-	if (ioctl(fd, DIOCGSECTORSIZE, &ival) == 0)
-		params->sectsize = ival;
-	else if (UP_NOISY(QUIET))
-		up_warn("failed to get disk size for %s: %s",
-		    name, strerror(errno));
-
-	if (params->sectsize > 0 && ioctl(fd, DIOCGMEDIASIZE, &oval) == 0)
-		params->size = oval / params->sectsize;
-	else if (UP_NOISY(QUIET))
-		up_warn("failed to get sector size for %s: %s",
-		    name, strerror(errno));
-
-	if (ioctl(fd, DIOCGFWSECTORS, &ival) == 0)
-		params->sects = ival;
-	else if (UP_NOISY(QUIET))
-		up_warn("failed to get sectors per track for %s: %s",
-		    name, strerror(errno));
-
-	if (ioctl(fd, DIOCGFWHEADS, &ival) == 0)
-		params->heads = ival;
-	else if (UP_NOISY(QUIET))
-		up_warn("failed to get heads (tracks per cylinder) for %s: %s",
-		    name, strerror(errno));
-
 	return (0);
 }
 #endif

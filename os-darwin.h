@@ -5,7 +5,8 @@
 #include "config.h"
 #endif
 
-#ifdef HAVE_SYS_DISK_H
+#if defined(HAVE_SYS_DISK_H) && !defined(UPART_INCLUDED_SYS_DISK)
+#define UPART_INCLUDED_SYS_DISK
 #include <sys/disk.h>
 #endif
 #ifdef HAVE_COREFOUNDATION_COREFOUNDATION_H

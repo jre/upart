@@ -197,30 +197,29 @@ os_opendisk_haiku(const char *name, int flags, char *buf, size_t buflen,
 		return (open(buf, flags));
 	}
 
-	strlcpy(buf, name, buflen);
+	if (strlcpy(buf, name, buflen) >= buflen)
+		goto trunc;
 	if (maybe_open_disk(name, flags, &ret))
 		return (ret);
 
-	if (strlcat(buf, DEV_SUFFIX, buflen) >= buflen) {
-		errno = ENOMEM;
-		return (-1);
-	}
+	if (strlcat(buf, DEV_SUFFIX, buflen) >= buflen)
+		goto trunc;
 	if (maybe_open_disk(buf, flags, &ret))
 		return (ret);
 
 	if (strlcpy(buf, DEV_PREFIX, buflen) >= buflen ||
-	    strlcat(buf, name, buflen) >= buflen) {
-		errno = ENOMEM;
-		return (-1);
-	}
+	    strlcat(buf, name, buflen) >= buflen)
+		goto trunc;
 	if (maybe_open_disk(buf, flags, &ret))
 		return (ret);
 
-	if (strlcat(buf, DEV_SUFFIX, buflen) >= buflen) {
-		errno = ENOMEM;
-		return (-1);
-	}
+	if (strlcat(buf, DEV_SUFFIX, buflen) >= buflen)
+		goto trunc;
 	return (open(buf, flags));
+
+trunc:
+	errno = ENOMEM;
+	return (-1);
 }
 
 int

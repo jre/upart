@@ -41,7 +41,7 @@ int
 os_listdev_sysctl(FILE *stream)
 {
 	char *names;
-	int mib[5];
+	int mib[2];
 	size_t i;
 
 	names = NULL;
@@ -65,7 +65,7 @@ os_listdev_sysctl(FILE *stream)
 
 #ifdef HAVE_SYSCTLNAMETOMIB
 	if (names == NULL) {
-		i = 5;
+		i = 2;
 		if (sysctlnametomib("kern.disks", mib, &i) < 0 ||
 		    (names = sysctl_disk_names(mib, i)) == NULL) {
 			if (errno == ENOMEM)

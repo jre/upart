@@ -98,14 +98,13 @@ os_opendisk_solaris(const char *name, int flags, char *buf, size_t buflen,
 		buflen = sizeof(mybuf);
 	}
 
-	strlcpy(buf, name, buflen);
+	if (strlcpy(buf, name, buflen) >= buflen)
+		goto trunc;
 	if ((ret = open(name, flags)) >= 0 || errno != ENOENT)
 		return (ret);
 
-	if(strlcat(buf, WHOLE_PART, buflen) >= buflen) {
-		errno = ENOMEM;
-		return (-1);
-	}
+	if(strlcat(buf, WHOLE_PART, buflen) >= buflen)
+		goto trunc;
 	if ((ret = open(buf, flags)) >= 0 || errno != ENOENT)
 		return (ret);
 
@@ -114,18 +113,18 @@ os_opendisk_solaris(const char *name, int flags, char *buf, size_t buflen,
 
 	dir = (iscooked ? DEVPATH_COOKED : DEVPATH_RAW);
 	if (strlcpy(buf, dir, buflen) >= buflen ||
-	    strlcat(buf, name, buflen) >= buflen) {
-		errno = ENOMEM;
-		return (-1);
-	}
+	    strlcat(buf, name, buflen) >= buflen)
+		goto trunc;
 	if ((ret = open(buf, flags)) >= 0 || errno != ENOENT)
 		return (ret);
 
-	if(strlcat(buf, WHOLE_PART, buflen) >= buflen) {
-		errno = ENOMEM;
-		return (-1);
-	}
+	if(strlcat(buf, WHOLE_PART, buflen) >= buflen)
+		goto trunc;
 	return (open(buf, flags));
+
+trunc:
+	errno = ENOMEM;
+	return (-1);
 }
 
 #endif /* OS_HAVE_SOLARIS */

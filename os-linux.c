@@ -17,9 +17,10 @@
 int
 os_listdev_linux(FILE *stream)
 {
+	static const char letters[] = "abcdefghijklmnopqrstuvwxyz";
 	struct dirent *ent;
 	DIR *dir;
-	int once, i;
+	int once;
 
 	/* XXX ugh, there has to be a better way to do this */
 
@@ -29,6 +30,7 @@ os_listdev_linux(FILE *stream)
 	}
 	once = 0;
 	while ((ent = readdir(dir)) != NULL) {
+		size_t end;
 		if (ent->d_type != DT_BLK ||
 		    strlen(ent->d_name) < 3 ||
 		    ent->d_name[1] != 'd')
@@ -40,11 +42,8 @@ os_listdev_linux(FILE *stream)
 		default:
 			continue;
 		}
-		for (i = 2; ent->d_name[i] != '\0'; i++)
-			if (ent->d_name[i] < 'a' ||
-			    ent->d_name[i] > 'z')
-				break;
-		if (ent->d_name[i] == '\0') {
+		if ((end = strcpn(ent->d_name + 2, letters)) > 0 &&
+		    ent->d_name[2+off] == '\0') {
 			if (once)
 				putc(' ', stream);
 			fputs(ent->d_name, stream);
@@ -75,8 +74,8 @@ os_getparams_linux(int fd, struct disk_params *params, const char *name)
 	}
 	if (ioctl(fd, BLKSSZGET, &smallsize) == 0) {
 		params->sectsize = smallsize;
-	if (ioctl(fd, BLKGETSIZE64, &bigsize) == 0)
-		params->size = bigsize / params->sectsize;
+		if (ioctl(fd, BLKGETSIZE64, &bigsize) == 0)
+			params->size = bigsize / params->sectsize;
 	} else if (ioctl(fd, BLKGETSIZE, &smallsize) == 0)
 		params->size = smallsize;
 	else {

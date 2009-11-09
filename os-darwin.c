@@ -38,10 +38,9 @@ os_listdev_iokit(FILE *stream)
 		char *suchAFuckingPainInTheAss;
 		CFIndex len;
 
-		if ((name = IORegistryEntryCreateCFProperty(serv,
-			    CFSTR(kIOBSDNameKey),
-			    kCFAllocatorDefault,
-			    0)) == NULL) {
+		name = IORegistryEntryCreateCFProperty(serv, 
+		    CFSTR(kIOBSDNameKey), kCFAllocatorDefault, 0);
+		if (name == NULL) {
 			/* XXX does this set errno? */
 			up_warn("failed to get service property: %s",
 			    strerror(errno));
@@ -69,6 +68,7 @@ os_listdev_iokit(FILE *stream)
 		}
 		free(suchAFuckingPainInTheAss);
 		IOObjectRelease(serv);
+		CFRelease(name);
 	}
 	IOObjectRelease(iter);
 	if (once)

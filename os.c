@@ -32,12 +32,12 @@ static int	opendisk_generic(const char *, int, char *, size_t, int);
 int
 os_list_devices(void *stream)
 {
-	int (*funcs[])(FILE *) = {
-	/* The order of these is significant, more than one may be defined. */
+	static int (*funcs[])(FILE *) = {
 		OS_LISTDEV_IOKIT,
 		OS_LISTDEV_LINUX,
 		OS_LISTDEV_HAIKU,
 		OS_LISTDEV_SOLARIS,
+		/* sysctl compiles but doesn't work on linux and darwin */
 		OS_LISTDEV_SYSCTL,
 	};
 	int once, i;
@@ -59,8 +59,7 @@ os_list_devices(void *stream)
 int
 up_os_opendisk(const char *name, const char **path)
 {
-	int (*funcs[])(const char *, int, char *, size_t, int) = {
-	/* The order of these is significant, more than one may be defined. */
+	static int (*funcs[])(const char *, int, char *, size_t, int) = {
 		OS_OPENDISK_OPENDISK,
 		OS_OPENDISK_HAIKU,
 		OS_OPENDISK_SOLARIS,
@@ -90,9 +89,9 @@ up_os_opendisk(const char *name, const char **path)
 int
 up_os_getparams(int fd, struct disk_params *params, const char *name)
 {
-	int (*funcs[])(int, struct disk_params *, const char *) = {
-	/* The order of these is significant, more than one may be defined. */
+	static int (*funcs[])(int, struct disk_params *, const char *) = {
 	    OS_GETPARAMS_FREEBSD,
+	    /* disklabel compiles but doesn't work on freebsd */
 	    OS_GETPARAMS_DISKLABEL,
 	    OS_GETPARAMS_LINUX,
 	    OS_GETPARAMS_DARWIN,
@@ -122,7 +121,10 @@ opendisk_generic(const char *name, int flags, char *buf, size_t buflen,
 {
 	int ret;
 
-	strlcpy(buf, name, buflen);
+	if (strlcpy(buf, name, buflen) >= buflen) {
+		errno = ENOMEM;
+		return (-1);
+	}
 	if ((ret = open(name, flags)) >= 0 ||
 	    errno != ENOENT ||
 	    strchr(name, '/') != NULL)

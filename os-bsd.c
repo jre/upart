@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef HAVE_UTIL_H
+#include <util.h>
+#endif
 
 #define MINIMAL_NAMESPACE_POLLUTION_PLEASE
 #include "disk.h"
@@ -49,6 +52,16 @@ os_listdev_sysctl(FILE *stream)
 	return (0);
 }
 #endif
+
+#if HAVE_OPENDISK
+int
+os_opendisk_opendisk(const char *name, int flags, char *buf, size_t buflen,
+    int cooked)
+{
+	buf[0] = '\0';
+	return (opendisk(name, flags, buf, buflen, cooked));
+}
+#endif /* HAVE_OPENDISK */
 
 #if defined(HAVE_SYS_DISKLABEL_H) && \
     (defined(DIOCGPDINFO) || defined(DIOCGDINFO))

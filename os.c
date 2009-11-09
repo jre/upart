@@ -17,9 +17,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#ifdef HAVE_UTIL_H
-#include <util.h>
-#endif
 
 #define MINIMAL_NAMESPACE_POLLUTION_PLEASE
 #include "disk.h"
@@ -46,12 +43,6 @@ static int	listdev_linux(FILE *);
 static int	getparams_linux(int, struct disk_params *, const char *);
 #endif
 
-#ifdef HAVE_OPENDISK
-#define OS_OPENDISK_OPENDISK	(opendisk_opendisk)
-static int	opendisk_opendisk(const char *, int, char *, size_t, int);
-#else
-#define OS_OPENDISK_OPENDISK	(0)
-#endif
 static int	opendisk_generic(const char *, int, char *, size_t, int);
 
 #define DEVPREFIX		"/dev/"
@@ -223,16 +214,6 @@ getparams_linux(int fd, struct disk_params *params, const char *name)
 	return (0);
 }
 #endif
-
-#if HAVE_OPENDISK
-static int
-opendisk_opendisk(const char *name, int flags, char *buf, size_t buflen,
-    int cooked)
-{
-	buf[0] = '\0';
-	return (opendisk(name, flags, buf, buflen, cooked));
-}
-#endif /* HAVE_OPENDISK */
 
 static int
 opendisk_generic(const char *name, int flags, char *buf, size_t buflen,

@@ -31,6 +31,13 @@ int	os_listdev_sysctl(FILE *);
 #define OS_LISTDEV_SYSCTL	(NULL)
 #endif
 
+#ifdef HAVE_OPENDISK
+#define OS_OPENDISK_OPENDISK	(os_opendisk_opendisk)
+int	os_opendisk_opendisk(const char *, int, char *, size_t, int);
+#else
+#define OS_OPENDISK_OPENDISK	(0)
+#endif
+
 #if defined(HAVE_SYS_DISKLABEL_H) && \
     (defined(DIOCGPDINFO) || defined(DIOCGDINFO))
 #define OS_GETPARAMS_DISKLABEL	(os_getparams_disklabel)

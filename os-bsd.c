@@ -63,7 +63,7 @@ os_listdev_sysctl(FILE *stream)
 				names[i] = ' ';
 #endif /* CTL_HW && HW_DISKNAMES */
 
-#ifdef HAVE_SYSCTLBYNAME
+#ifdef HAVE_SYSCTLNAMETOMIB
 	if (names == NULL) {
 		i = 5;
 		if (sysctlnametomib("kern.disks", mib, &i) < 0 ||

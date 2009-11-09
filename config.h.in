@@ -39,7 +39,7 @@
 /* sysctl, for listing disks on bsd */
 #undef HAVE_SYS_SYSCTL_H
 #undef HAVE_SYSCTL
-#undef HAVE_SYSCTLBYNAME
+#undef HAVE_SYSCTLNAMETOMIB
 
 /* osx iokit stuff for listing disks */
 #undef HAVE_COREFOUNDATION_COREFOUNDATION_H

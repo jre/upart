@@ -36,19 +36,6 @@
 #include <util.h>
 #endif
 
-#ifdef HAVE_COREFOUNDATION_COREFOUNDATION_H
-#include <CoreFoundation/CoreFoundation.h>
-#endif
-#ifdef HAVE_IOKIT_IOKITLIB_H
-#include <IOKit/IOKitLib.h>
-#endif
-#ifdef HAVE_IOKIT_IOBSD_H
-#include <IOKit/IOBSD.h>
-#endif
-#ifdef HAVE_IOKIT_STORAGE_IOMEDIA_H
-#include <IOKit/storage/IOMedia.h>
-#endif
-
 #ifdef __HAIKU__
 
 #include <DiskDeviceDefs.h>
@@ -101,6 +88,7 @@ static int	opendisk(const char *, int, char *, size_t, int);
 #define MINIMAL_NAMESPACE_POLLUTION_PLEASE
 #include "disk.h"
 #include "os.h"
+#include "os-darwin.h"
 #include "os-solaris.h"
 #include "util.h"
 
@@ -119,12 +107,6 @@ static int	listdev_sysctl(FILE *);
 #define HAVE_LISTDEV_LINUX
 static int	listdev_linux(FILE *);
 #endif
-#if defined(HAVE_COREFOUNDATION_COREFOUNDATION_H) && \
-    defined(HAVE_IOKIT_IOKITLIB_H) && \
-    defined(kIOMediaClass) && defined(kIOBSDNameKey)
-#define HAVE_LISTDEV_IOKIT
-static int	listdev_iokit(FILE *);
-#endif
 
 #if defined(HAVE_SYS_DISKLABEL_H) && \
     (defined(DIOCGPDINFO) || defined(DIOCGDINFO))
@@ -138,10 +120,6 @@ static int	getparams_freebsd(int, struct disk_params *, const char *);
 #if defined(HAVE_LINUX_FS_H) || defined(HAVE_LINUX_HDREG_H)
 #define HAVE_GETPARAMS_LINUX
 static int	getparams_linux(int, struct disk_params *, const char *);
-#endif
-#if defined(HAVE_SYS_DISK_H) && defined(DKIOCGETBLOCKSIZE)
-#define HAVE_GETPARAMS_DARWIN
-static int	getparams_darwin(int, struct disk_params *, const char *);
 #endif
 #if defined(__HAIKU__)
 #define HAVE_GETPARAMS_HAIKU
@@ -165,9 +143,7 @@ os_list_devices(void *stream)
 {
 	int (*funcs[])(FILE *) = {
 	/* The order of these is significant, more than one may be defined. */
-#ifdef HAVE_LISTDEV_IOKIT
-		listdev_iokit,
-#endif
+		OS_LISTDEV_IOKIT,
 #ifdef HAVE_LISTDEV_LINUX
 		listdev_linux,
 #endif
@@ -239,9 +215,7 @@ up_os_getparams(int fd, struct disk_params *params, const char *name)
 #ifdef HAVE_GETPARAMS_LINUX
 	    getparams_linux,
 #endif
-#ifdef HAVE_GETPARAMS_DARWIN
-	    getparams_darwin,
-#endif
+	    OS_GETPARAMS_DARWIN,
 	    OS_GETPARAMS_SOLARIS,
 #ifdef HAVE_GETPARAMS_HAIKU
 	    getparams_haiku,
@@ -341,68 +315,6 @@ listdev_linux(FILE *stream)
 	closedir(dir);
 	if (once)
 		putc('\n', stream);
-	return (0);
-}
-#endif
-
-#ifdef HAVE_LISTDEV_IOKIT
-static int
-listdev_iokit(FILE *stream)
-{
-	CFMutableDictionaryRef dict;
-	io_iterator_t iter;
-	io_object_t serv;
-	CFStringRef name;
-	int once;
-
-	if ((dict = IOServiceMatching(kIOMediaClass)) == NULL) {
-		/* XXX */
-		return (-1);
-	}
-	CFDictionarySetValue(dict, CFSTR(kIOMediaWholeKey), kCFBooleanTrue);
-
-	if (IOServiceGetMatchingServices(kIOMasterPortDefault, dict, &iter) !=
-	    KERN_SUCCESS) {
-		/* XXX */
-		return (-1);
-	}
-	once = 0;
-	while ((serv = IOIteratorNext(iter))) {
-		char *suchAFuckingPainInTheAss;
-		CFIndex len;
-
-		if ((name = IORegistryEntryCreateCFProperty(serv,
-			    CFSTR(kIOBSDNameKey),
-			    kCFAllocatorDefault,
-			    0)) == NULL) {
-			/* XXX */
-			IOObjectRelease(serv);
-			continue;
-		}
-
-		if (once)
-			putc(' ', stream);
-		len = CFStringGetLength(name) + 1;
-		if ((suchAFuckingPainInTheAss = malloc(len)) == NULL) {
-			perror("malloc");
-			IOObjectRelease(serv);
-			CFRelease(name);
-			break;
-		}
-		if (!CFStringGetCString(name, suchAFuckingPainInTheAss, len,
-			kCFStringEncodingASCII)) {
-			/* XXX */
-		} else {
-			fputs(suchAFuckingPainInTheAss, stream);
-			once = 1;
-		}
-		free(suchAFuckingPainInTheAss);
-		IOObjectRelease(serv);
-	}
-	IOObjectRelease(iter);
-	if (once)
-		putc('\n', stream);
-
 	return (0);
 }
 #endif
@@ -507,28 +419,6 @@ getparams_linux(int fd, struct disk_params *params, const char *name)
 	return (0);
 }
 #endif
-
-#ifdef HAVE_GETPARAMS_DARWIN
-static int
-getparams_darwin(int fd, struct disk_params *params, const char *name)
-{
-	uint32_t smallsize;
-	uint64_t bigsize;
-
-	if (ioctl(fd, DKIOCGETBLOCKSIZE, &smallsize) == 0)
-		params->sectsize = smallsize;
-	else if (UP_NOISY(QUIET))
-		up_warn("failed to get sector size for %s: %s",
-		    name, strerror(errno));
-	if (ioctl(fd, DKIOCGETBLOCKCOUNT, &bigsize) == 0)
-		params->size = bigsize;
-	else if (UP_NOISY(QUIET))
-		up_warn("failed to get block count for %s: %s",
-		    name, strerror(errno));
-
-	return (0);
-}
-#endif /* HAVE_GETPARAMS_DARWIN */
 
 #ifdef HAVE_GETPARAMS_HAIKU
 

@@ -2,6 +2,8 @@
 #include "config.h"
 #endif
 
+#ifdef __HAIKU__
+
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -14,8 +16,6 @@
 #include "disk.h"
 #include "os-haiku.h"
 #include "util.h"
-
-#ifdef __HAIKU__
 
 /* XXX copy/pasting from private headers sucks */
 

@@ -49,7 +49,7 @@ AC_CHECK_HEADERS([sys/sysctl.h],,,
 [#ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif])
-AC_CHECK_FUNCS([sysctl])
+AC_CHECK_FUNCS([sysctl sysctlbyname])
 
 dnl osx headers and frameworks
 AC_CHECK_HEADERS([CoreFoundation/CoreFoundation.h],

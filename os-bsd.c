@@ -16,42 +16,76 @@
 #include "os-bsd.h"
 #include "util.h"
 
-#if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYSCTL) && \
-    defined(CTL_HW) && defined(HW_DISKNAMES)
+#if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYSCTL)
+
+static char *
+sysctl_disk_names(int *name, unsigned int namelen)
+{
+	size_t size;
+	char *str;
+
+	size = 0;
+	if (sysctl(name, namelen, NULL, &size, NULL, 0) < 0 ||
+	    (str = malloc(size)) == NULL)
+		return (NULL);
+	if (sysctl(name, namelen, str, &size, NULL, 0) < 0) {
+		int saved = errno;
+		free(str);
+		errno = saved;
+		return (NULL);
+	}
+	return (str);
+}
+
 int
 os_listdev_sysctl(FILE *stream)
 {
-	int mib[2];
-	size_t size, i;
 	char *names;
+	int mib[5];
+	size_t i;
 
+	names = NULL;
+
+#if defined(CTL_HW) && defined(HW_DISKNAMES)
 	mib[0] = CTL_HW;
 	mib[1] = HW_DISKNAMES;
-	size = 0;
-	if (sysctl(mib, 2, NULL, &size, NULL, 0) < 0) {
-		up_warn("failed to retrieve hw.disknames sysctl: %s",
-		    strerror(errno));
+	if ((names = sysctl_disk_names(mib, 2)) == NULL && errno != ENOENT) {
+		if (errno == ENOMEM)
+			perror("malloc");
+		else
+		    up_warn("failed to retrieve hw.disknames sysctl: %s",
+			strerror(errno));
 		return (-1);
 	}
-	names = malloc(size);
-	if (names == NULL) {
-		perror("malloc");
-		return (-1);
-	}
-	if (sysctl(mib, 2, names, &size, NULL, 0) < 0) {
-		up_warn("failed to retrieve hw.disknames sysctl: %s",
-		    strerror(errno));
-		return (-1);
-	}
+	if (names != NULL)
+		for (i = 0; names[i] != '\0'; i++)
+			if (names[i] == ',')
+				names[i] = ' ';
+#endif /* CTL_HW && HW_DISKNAMES */
 
-	for (i = 0; i < size; i++)
-		if (names[i] == ',')
-			names[i] = ' ';
+#ifdef HAVE_SYSCTLBYNAME
+	if (names == NULL) {
+		i = 5;
+		if (sysctlnametomib("kern.disks", mib, &i) < 0 ||
+		    (names = sysctl_disk_names(mib, i)) == NULL) {
+			if (errno == ENOMEM)
+				perror("malloc");
+			else
+				up_warn("failed to retrieve kern.disks sysctl: %s",
+				    strerror(errno));
+			return (-1);
+		}
+	}
+#endif
+
+	if (names == NULL)
+		return (-1);
+
 	fprintf(stream, "%s\n", names);
 	free(names);
 	return (0);
 }
-#endif
+#endif /* HAVE_SYSCTL_H && HAVE_SYSCTL */
 
 #if HAVE_OPENDISK
 int

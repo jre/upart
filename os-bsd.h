@@ -23,8 +23,7 @@
 #include <sys/sysctl.h>
 #endif
 
-#if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYSCTL) && \
-    defined(CTL_HW) && defined(HW_DISKNAMES)
+#if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYSCTL)
 #define OS_LISTDEV_SYSCTL	(os_listdev_sysctl)
 int	os_listdev_sysctl(FILE *);
 #else

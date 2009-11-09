@@ -8,24 +8,29 @@
 #include "util.h"
 
 #ifdef OS_HAVE_IOKIT
+#include <mach/mach_error.h>
 int
 os_listdev_iokit(FILE *stream)
 {
 	CFMutableDictionaryRef dict;
 	io_iterator_t iter;
+	kern_return_t ret;
 	io_object_t serv;
 	CFStringRef name;
 	int once;
 
 	if ((dict = IOServiceMatching(kIOMediaClass)) == NULL) {
-		/* XXX */
+		/* XXX does this set errno? */
+		up_warn("failed to create matching dictionary: %s",
+		    strerror(errno));
 		return (-1);
 	}
 	CFDictionarySetValue(dict, CFSTR(kIOMediaWholeKey), kCFBooleanTrue);
 
-	if (IOServiceGetMatchingServices(kIOMasterPortDefault, dict, &iter) !=
-	    KERN_SUCCESS) {
-		/* XXX */
+	ret = IOServiceGetMatchingServices(kIOMasterPortDefault, dict, &iter);
+	if (ret != KERN_SUCCESS) {
+		up_warn("failed to get maching IOKit services: %s\n",
+		    mach_error_string(ret));
 		return (-1);
 	}
 	once = 0;
@@ -37,7 +42,9 @@ os_listdev_iokit(FILE *stream)
 			    CFSTR(kIOBSDNameKey),
 			    kCFAllocatorDefault,
 			    0)) == NULL) {
-			/* XXX */
+			/* XXX does this set errno? */
+			up_warn("failed to get service property: %s",
+			    strerror(errno));
 			IOObjectRelease(serv);
 			continue;
 		}
@@ -53,7 +60,9 @@ os_listdev_iokit(FILE *stream)
 		}
 		if (!CFStringGetCString(name, suchAFuckingPainInTheAss, len,
 			kCFStringEncodingASCII)) {
-			/* XXX */
+			/* XXX does this set errno? */
+			up_warn("failed to convert string: %s",
+			    strerror(errno));
 		} else {
 			fputs(suchAFuckingPainInTheAss, stream);
 			once = 1;

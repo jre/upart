@@ -18,6 +18,7 @@
 
 #if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYSCTL)
 
+#if (defined(CTL_HW) && defined(HW_DISKNAMES)) || defined(HAVE_SYSCTLNAMETOMIB)
 static char *
 sysctl_disk_names(int *name, unsigned int namelen)
 {
@@ -36,43 +37,46 @@ sysctl_disk_names(int *name, unsigned int namelen)
 	}
 	return (str);
 }
+#endif /*  (CTL_HW && HW_DISKNAMES) || HAVE_SYSCTLNAMETOMIB */
 
 int
 os_listdev_sysctl(FILE *stream)
 {
 	char *names;
-	int mib[2];
-	size_t i;
 
 	names = NULL;
 
 #if defined(CTL_HW) && defined(HW_DISKNAMES)
-	mib[0] = CTL_HW;
-	mib[1] = HW_DISKNAMES;
-	if ((names = sysctl_disk_names(mib, 2)) == NULL && errno != ENOENT) {
-		if (errno == ENOMEM)
-			perror("malloc");
-		else
-		    up_warn("failed to retrieve hw.disknames sysctl: %s",
-			strerror(errno));
-		return (-1);
+	{
+		int mib[2] = { CTL_HW, HW_DISKNAMES };
+		size_t i;
+		names = sysctl_disk_names(mib, 2);
+		if (names == NULL && errno != ENOENT) {
+			if (errno == ENOMEM)
+				perror("malloc");
+			else
+				up_warn("failed to retrieve hw.disknames "
+				    "sysctl: %s", strerror(errno));
+			return (-1);
+		}
+		if (names != NULL)
+			for (i = 0; names[i] != '\0'; i++)
+				if (names[i] == ',')
+					names[i] = ' ';
 	}
-	if (names != NULL)
-		for (i = 0; names[i] != '\0'; i++)
-			if (names[i] == ',')
-				names[i] = ' ';
 #endif /* CTL_HW && HW_DISKNAMES */
 
 #ifdef HAVE_SYSCTLNAMETOMIB
 	if (names == NULL) {
-		i = 2;
+		int mib[2];
+		size_t i = 2;
 		if (sysctlnametomib("kern.disks", mib, &i) < 0 ||
 		    (names = sysctl_disk_names(mib, i)) == NULL) {
 			if (errno == ENOMEM)
 				perror("malloc");
 			else
-				up_warn("failed to retrieve kern.disks sysctl: %s",
-				    strerror(errno));
+				up_warn("failed to retrieve kern.disks "
+				    "sysctl: %s", strerror(errno));
 			return (-1);
 		}
 	}

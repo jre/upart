@@ -42,8 +42,8 @@ os_listdev_linux(FILE *stream)
 		default:
 			continue;
 		}
-		if ((end = strcpn(ent->d_name + 2, letters)) > 0 &&
-		    ent->d_name[2+off] == '\0') {
+		if ((end = strspn(ent->d_name + 2, letters)) > 0 &&
+		    ent->d_name[2+end] == '\0') {
 			if (once)
 				putc(' ', stream);
 			fputs(ent->d_name, stream);

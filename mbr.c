@@ -178,20 +178,19 @@ mbrext_setup(struct disk *disk, struct map *map)
     struct up_mbr              *parent;
     const struct up_mbr_p      *buf;
     int                         index;
-    int64_t                     absoff, reloff, max;
+    int64_t                     absoff, reloff;
 
     assert(UP_MAP_MBR == map->parent->map->type);
 
     parent    = map->parent->map->priv;
     absoff    = map->start;
     reloff    = 0;
-    max       = map->size;
     index     = MBR_PART_COUNT + parent->extcount;
 
     for(;;)
     {
         /* load extended mbr */
-        assert(absoff >= map->start && absoff + max <= map->start + map->size);
+        assert(absoff >= map->start && map->start - absoff < map->size);
         buf = up_disk_save1sect(disk, absoff, map, 1);
         if(!buf)
             return -1;
@@ -225,16 +224,15 @@ mbrext_setup(struct disk *disk, struct map *map)
 
         index++;
 
-        max    = UP_LETOH32(buf->part[MBR_EXTNEXT].size);
         reloff = UP_LETOH32(buf->part[MBR_EXTNEXT].start);
         absoff = reloff + map->start;
 
-        if(0 > reloff || 0 >= max || reloff + max > map->size)
+        if(0 > reloff || reloff >= map->size)
         {
             if(UP_NOISY(QUIET))
                 up_warn("logical MBR partition %d out of range: "
                         "offset %"PRId64"+%"PRId64" size %"PRId64,
-                        index, map->start, reloff, max);
+                        index, map->start, reloff, map->size);
             break;
         }
     }

@@ -140,16 +140,22 @@ size_t strlcat(char *dst, const char *src, size_t siz);
 
 struct opts
 {
-    const char         *serialize;
-    const char         *label;
-    int                 verbosity;
-    unsigned int        plainfile     : 1;
-    unsigned int        relaxed       : 1;
-    unsigned int        sloppyio      : 1;
+	const char *serialize;
+	const char *label;
+	int verbosity;
+	unsigned int plainfile : 1;
+	unsigned int relaxed : 1;
+	unsigned int sloppyio : 1;
 };
 
+/* Pointer to the global program options, initially NULL. */
 extern const struct opts *opts;
 
-void	set_options(const struct opts *);
+/* Initialize an option struct with sane default values. */
+void	 init_options(struct opts *);
+
+/* Set the global options. The passed-in struct is copied and need not
+ * be retained. */
+void	 set_options(const struct opts *);
 
 #endif /* HDR_UPART_UTIL */

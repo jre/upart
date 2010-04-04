@@ -81,7 +81,7 @@ readargs(int argc, char *argv[], struct opts *newopts,
 {
     int opt;
 
-    memset(newopts, 0, sizeof *newopts);
+    init_options(newopts);
     memset(params, 0, sizeof *params);
     while(0 < (opt = getopt(argc, argv, "c:fh:klL:qrs:vVw:z:")))
     {

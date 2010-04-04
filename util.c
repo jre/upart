@@ -242,6 +242,12 @@ up_vmsg(unsigned int flags, const char *fmt, va_list ap)
 const struct opts *opts = NULL;
 
 void
+init_options(struct opts *opts)
+{
+	memset(opts, 0, sizeof(*opts));
+}
+
+void
 set_options(const struct opts *new_opts)
 {
 	static struct opts static_opts = { 0 };

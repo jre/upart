@@ -257,7 +257,7 @@ sparc_info(const struct map *map, FILE *stream)
 		return (-1);
 
 	if (!UP_NOISY(EXTRA))
-		return (0);
+		return (1);
 
 	if (fprintf(stream,
 		"  rpm: %u\n"
@@ -296,7 +296,7 @@ sparc_info(const struct map *map, FILE *stream)
 
 	if (putc('\n', stream) == EOF)
 		return (-1);
-	return (0);
+	return (1);
 }
 
 static int

@@ -376,7 +376,7 @@ bsdlabel_info(const struct map *map, FILE *stream)
 		    fprintf(stream, " (offset %d) of %s:\n",
                         priv->sectoff, UP_DISK_PATH(map->disk)) < 0)
 			return (-1);
-		return (0);
+		return (1);
 	}
 
         disktype = LABEL_LGETINT16(priv, disktype);

@@ -260,7 +260,7 @@ gpt_getinfo(const struct map *map, FILE *stream)
 			UP_LETOH32(gpt->gpt.maxpart),
 			UP_LETOH32(gpt->gpt.partsize)));
 
-	return (0);
+	return (1);
 }
 
 static int

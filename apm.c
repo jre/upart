@@ -213,7 +213,7 @@ apm_info(const struct map *map, FILE *stream)
 	    printsect_verbose(map->start, stream)  < 0 ||
 	    fprintf(stream, " of %s:\n", UP_DISK_PATH(map->disk)) < 0)
 		return (-1);
-	return (0);
+	return (1);
 }
 
 static int
@@ -229,7 +229,7 @@ apm_extrahdr(const struct map *map, FILE *stream)
 {
 
 	if (!UP_NOISY(NORMAL))
-		return 0;
+		return (0);
 
         if (UP_NOISY(EXTRA))
 		return (fprintf(stream, " %-24s %-24s %-10s %s",
@@ -287,7 +287,7 @@ apm_extra(const struct part *part, FILE *stream)
 			    return (-1);
         }
 
-	return (0);
+	return (1);
 }
 
 static void

@@ -88,37 +88,10 @@ struct map_funcs
 	map_freemap_fn free_mappriv;
 	/* free private partition data */
 	map_freepart_fn free_partpriv;
-
-	/* XXX temporary backwards compatibility */
-	int (*getinfo)(const struct map *, char *, int);
-	int (*getextrahdr)(const struct map *, char *, int);
-	int (*getextra)(const struct part *, char *, int);
-	int (*getdump)(const struct map *, int64_t, const void *, int64_t, int,
-	    char *, int);
 };
 
 void		 up_map_funcs_init(struct map_funcs *);
 void		 up_map_register(enum mapid, const struct map_funcs *);
-void		 up_map_register_old(enum mapid, const char *, int,
-    /* load: check if map exists and allocate private data */
-    int (*)(const struct disk *, const struct part *, void **),
-    /* setup: add partitions, misc setup not done in load */
-    int (*)(struct disk *, struct map *),
-    /* getinfo: copy map header line into string */
-    int (*)(const struct map *, char *, int),
-    /* getindex: copy part index into string */
-    int (*)(const struct part *, char *, int),
-    /* getextrahdr: copy header for extra verbose info into string */
-    int (*)(const struct map *, char *, int),
-    /* getextra: copy extra verbose info into string */
-    int (*)(const struct part *, char *, int),
-    /* getdumpextra: copy extra information for sector dump into string */
-    int (*)(const struct map *, int64_t, const void *, int64_t, int,
-	char *, int),
-    /* freeprivmap: free map private data, map may be NULL */
-    void (*)(struct map *, void *),
-    /* freeprivpart: free part private data, part may be NULL */
-    void (*)(struct part *, void *));
 
 int		 up_map_loadall(struct disk *);
 void		 up_map_freeall(struct disk *);

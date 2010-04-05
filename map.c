@@ -25,11 +25,6 @@ static struct map	*map_new(struct disk *, struct part *, enum mapid,
     void *);
 static void		 map_printcontainer(const struct part *, FILE *);
 static void		 map_indent(int, FILE *);
-static int		 compat_print_header(const struct map *, FILE *);
-static int		 compat_print_extrahdr(const struct map *, FILE *);
-static int		 compat_print_extra(const struct part *, FILE *);
-static int		 compat_dump_extra(const struct map *, int64_t,
-    const void *, int64_t, int, FILE *);
 
 static struct map_funcs st_types[UP_MAP_ID_COUNT];
 
@@ -62,51 +57,6 @@ up_map_register(enum mapid type, const struct map_funcs *params)
 	funcs->dump_extra = params->dump_extra;
 	funcs->free_mappriv = params->free_mappriv;
 	funcs->free_partpriv = params->free_partpriv;
-
-	funcs->getinfo = params->getinfo;
-	funcs->getextra = params->getextra;
-	funcs->getextrahdr = params->getextrahdr;
-	funcs->getdump = params->getdump;
-}
-
-void
-up_map_register_old(enum mapid type, const char *label, int flags,
-    int (*load)(const struct disk *, const struct part *, void **),
-    int (*setup)(struct disk *, struct map *),
-    int (*getinfo)(const struct map *, char *, int),
-    int (*getindex)(const struct part *, char *, int),
-    int (*getextrahdr)(const struct map *, char *, int),
-    int (*getextra)(const struct part *, char *, int),
-    int (*getdumpextra)(const struct map *, int64_t, const void *, int64_t,
-	int, char *, int),
-    void (*freeprivmap)(struct map *, void *),
-    void (*freeprivpart)(struct part *, void *))
-{
-	struct map_funcs funcs;
-
-	up_map_funcs_init(&funcs);
-	funcs.flags |= flags;
-	funcs.label = (char*)label;
-	funcs.load = load;
-	funcs.setup = setup;
-	funcs.get_index = (map_getpart_fn)getindex;
-	if (getinfo) {
-		funcs.getinfo = getinfo;
-		funcs.print_header = compat_print_header;
-	}
-	if (getextra || getextrahdr) {
-		funcs.getextrahdr = getextrahdr;
-		funcs.getextra = getextra;
-		funcs.print_extrahdr = compat_print_extrahdr;
-		funcs.print_extra = compat_print_extra;
-	}
-	if (getdumpextra) {
-		funcs.getdump = getdumpextra;
-		funcs.dump_extra = compat_dump_extra;
-	}
-	funcs.free_mappriv = freeprivmap;
-	funcs.free_partpriv = freeprivpart;
-	up_map_register(type, &funcs);
 }
 
 int
@@ -493,84 +443,4 @@ const struct map *
 up_map_nextmap(const struct map *map)
 {
     return SIMPLEQ_NEXT(map, link);
-}
-
-static int
-compat_print_header(const struct map *map, FILE *stream)
-{
-	struct map_funcs *funcs;
-	char buf[1024];
-	int len;
-
-	CHECKTYPE(map->type);
-	funcs = &st_types[map->type];
-
-	len = funcs->getinfo(map, buf, sizeof(buf));
-	buf[sizeof(buf)-1] = '\0';
-	if (len <= 0)
-		return (len);
-	if (fputs(buf, stream) == EOF ||
-	    putc('\n', stream) == EOF)
-		return (-1);
-	return (len + 1);
-}
-
-static int
-compat_print_extrahdr(const struct map *map, FILE *stream)
-{
-	struct map_funcs *funcs;
-	char buf[512];
-	int len;
-
-	CHECKTYPE(map->type);
-	funcs = &st_types[map->type];
-
-	if (funcs->getextrahdr != NULL)
-		len = funcs->getextrahdr(map, buf, sizeof(buf));
-	else
-		len = funcs->getextra(NULL, buf, sizeof(buf));
-	if (len <= 0)
-		return (len);
-	if (putc(' ', stream) == EOF ||
-	    fputs(buf, stream) == EOF)
-		return (-1);
-	return (len + 1);
-}
-
-static int
-compat_print_extra(const struct part *part, FILE *stream)
-{
-	struct map_funcs *funcs;
-	char buf[512];
-	int len;
-
-	CHECKTYPE(part->map->type);
-	funcs = &st_types[part->map->type];
-
-	len = funcs->getextra(part, buf, sizeof(buf));
-	if (len <= 0)
-		return (len);
-	if (putc(' ', stream) == EOF ||
-	    fputs(buf, stream) == EOF)
-		return (-1);
-	return (len + 1);
-}
-
-static int
-compat_dump_extra(const struct map *map, int64_t start,
-    const void *data, int64_t size, int tag, FILE *stream)
-{
-	struct map_funcs *funcs;
-	char buf[512];
-	int len;
-
-	CHECKTYPE(map->type);
-	funcs = &st_types[map->type];
-
-	len = funcs->getdump(map, start, data, size, tag, buf, sizeof(buf));
-	if (len <= 0)
-		return (len);
-	if (fputs(buf, stream) == EOF)
-		return (-1);
-	return (len);
 }

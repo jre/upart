@@ -177,13 +177,12 @@ static int bsdlabel_getpart_v0(struct map *, struct up_bsdpart *,
     const uint8_t *);
 static int bsdlabel_getpart_v1(struct map *, struct up_bsdpart *,
     const uint8_t *);
-static int	bsdlabel_info(const struct map *, char *, int);
-static int	bsdlabel_index(const struct part *, char *, int);
-static int	bsdlabel_extrahdr(const struct map *, char *, int);
-static int	bsdlabel_extra(const struct part *, char *, int);
-static int bsdlabel_dump(const struct map *map, int64_t start,
-                         const void *data, int64_t size, int tag, char *buf,
-                         int buflen);
+static int	bsdlabel_info(const struct map *, FILE *);
+static int	bsdlabel_index(const struct part *, char *, size_t);
+static int	bsdlabel_extrahdr(const struct map *, FILE *);
+static int	bsdlabel_extra(const struct part *, FILE *);
+static int	bsdlabel_dump(const struct map *, int64_t,
+    const void *, int64_t, int, FILE *);
 static int	bsdlabel_scan(const struct disk *, int64_t,
     int64_t, const uint8_t **, int *, int *, int *);
 static int	bsdlabel_read(const struct disk *, int64_t,
@@ -193,18 +192,19 @@ static uint16_t bsdlabel_cksum(struct up_bsd_p *hdr,
 
 void up_bsdlabel_register(void)
 {
-    up_map_register_old(UP_MAP_BSD,
-                    LABEL_LABEL,
-                    0,
-                    bsdlabel_load,
-                    bsdlabel_setup,
-                    bsdlabel_info,
-                    bsdlabel_index,
-                    bsdlabel_extrahdr,
-                    bsdlabel_extra,
-                    bsdlabel_dump,
-                    up_map_freeprivmap_def,
-                    up_map_freeprivpart_def);
+	struct map_funcs funcs;
+
+	memset(&funcs, 0, sizeof(funcs));
+	funcs.label = LABEL_LABEL;
+	funcs.load = bsdlabel_load;
+	funcs.setup = bsdlabel_setup;
+	funcs.print_header = bsdlabel_info;
+	funcs.get_index = bsdlabel_index;
+	funcs.print_extrahdr = bsdlabel_extrahdr;
+	funcs.print_extra = bsdlabel_extra;
+	funcs.dump_extra = bsdlabel_dump;
+
+	up_map_register(UP_MAP_BSD, &funcs);
 }
 
 static int
@@ -350,27 +350,35 @@ bsdlabel_getpart_v1(struct map *map, struct up_bsdpart *part, const uint8_t *buf
 }
 
 static int
-bsdlabel_info(const struct map *map, char *buf, int size)
+bsdlabel_info(const struct map *map, FILE *stream)
 {
-    struct up_bsd      *priv = map->priv;
-    uint16_t            disktype;
-    char               *disktypestr;
-    char                typename[sizeof(priv->label.typename)+1];
-    char                packname[sizeof(priv->label.packname)+1];
-    uint64_t sectcount;
-    const char *labeltype;
-    int res;
+	struct up_bsd *priv;
+	char typename[sizeof(priv->label.typename)+1];
+	char packname[sizeof(priv->label.packname)+1];
+	const char *labeltype;
+	uint64_t sectcount;
+	uint16_t disktype;
+	char *disktypestr;
+	int res;
 
-    if (priv->version > 0)
-	    labeltype = "OpenBSD disklabel";
-    else
-	    labeltype = up_map_label(map);
+	if (!UP_NOISY(NORMAL))
+		return (0);
 
-    if(UP_NOISY(EXTRA))
-    {
+	priv = map->priv;
+	if (priv->version > 0)
+		labeltype = "OpenBSD disklabel";
+	else
+		labeltype = up_map_label(map);
+
+	if (!UP_NOISY(EXTRA))
+		return (fprintf(stream, "%s in sector %"PRId64
+			" (offset %d) of %s:\n",
+                        labeltype, map->start, priv->sectoff,
+			UP_DISK_PATH(map->disk)));
+
         disktype = LABEL_LGETINT16(priv, disktype);
         disktypestr = (disktype < sizeof(up_disktypes) /
-                       sizeof(up_disktypes[0]) ? up_disktypes[disktype] : "");
+	    sizeof(up_disktypes[0]) ? up_disktypes[disktype] : "");
         memcpy(typename, priv->label.typename, sizeof(priv->label.typename));
         typename[sizeof(typename)-1] = 0;
         memcpy(packname, priv->label.packname, sizeof(priv->label.packname));
@@ -381,99 +389,94 @@ bsdlabel_info(const struct map *map, char *buf, int size)
 	}
 
 	if (priv->version > 0)
-		res = snprintf(buf, size, "%s in sector %"PRId64" (offset %d)"
+		res = fprintf(stream, "%s in sector %"PRId64" (offset %d)"
 		    " of %s:\n  version: %u\n", labeltype, map->start,
 		    priv->sectoff, UP_DISK_PATH(map->disk), priv->version);
 	else
-		res = snprintf(buf, size, "%s in sector %"PRId64" (offset %d)"
+		res = fprintf(stream, "%s in sector %"PRId64" (offset %d)"
 		    " of %s:\n", labeltype, map->start, priv->sectoff,
 		    UP_DISK_PATH(map->disk));
-
-	if (res < 0 || res >= size)
+	if (res < 0)
 		return (res);
 
-        return snprintf(buf + res, size - res,
-                    "  type: %s (%u)\n"
-                    "  disk: %s\n"
-                    "  label: %s\n"
-                    "  flags: %08x\n"
-                    "  bytes/sector: %u\n"
-                    "  sectors/track: %u\n"
-                    "  tracks/cylinder: %u\n"
-                    "  sectors/cylinder: %u\n"
-                    "  cylinders: %u\n"
-                    "  total sectors: %"PRId64"\n"
-                    "  rpm: %u\n"
-                    "  interleave: %u\n"
-                    "  trackskew: %u\n"
-                    "  cylinderskew: %u\n"
-                    "  headswitch: %u\n"
-                    "  track-to-track seek: %u\n"
-                    "  byte order: %s endian\n"
-                    "  partition count: %u\n",
-                    disktypestr, disktype,
-                    typename,
-                    packname,
-                    LABEL_LGETINT32(priv, flags),
-                    LABEL_LGETINT32(priv, sectsize),
-                    LABEL_LGETINT32(priv, sectpertrack),
-                    LABEL_LGETINT32(priv, trackpercyl),
-                    LABEL_LGETINT32(priv, sectpercyl),
-                    LABEL_LGETINT32(priv, cylcount),
-                    sectcount,
-                    LABEL_LGETINT16(priv, rpm),
-                    LABEL_LGETINT16(priv, interleave),
-                    LABEL_LGETINT16(priv, trackskew),
-                    LABEL_LGETINT16(priv, cylskew),
-                    LABEL_LGETINT32(priv, headswitch),
-                    LABEL_LGETINT32(priv, trackseek),
-                    (UP_ENDIAN_BIG == priv->endian ? "big" : "little"),
-                    LABEL_LGETINT16(priv, maxpart));
-    }
-    else if(UP_NOISY(NORMAL))
-        return snprintf(buf, size, "%s in sector %"PRId64" (offset %d) of %s:",
-                        labeltype, map->start, priv->sectoff,
-                        UP_DISK_PATH(map->disk));
-    else
-        return 0;
+        return (fprintf(stream,
+		"  type: %s (%u)\n"
+		"  disk: %s\n"
+		"  label: %s\n"
+		"  flags: %08x\n"
+		"  bytes/sector: %u\n"
+		"  sectors/track: %u\n"
+		"  tracks/cylinder: %u\n"
+		"  sectors/cylinder: %u\n"
+		"  cylinders: %u\n"
+		"  total sectors: %"PRId64"\n"
+		"  rpm: %u\n"
+		"  interleave: %u\n"
+		"  trackskew: %u\n"
+		"  cylinderskew: %u\n"
+		"  headswitch: %u\n"
+		"  track-to-track seek: %u\n"
+		"  byte order: %s endian\n"
+		"  partition count: %u\n\n",
+		disktypestr, disktype,
+		typename,
+		packname,
+		LABEL_LGETINT32(priv, flags),
+		LABEL_LGETINT32(priv, sectsize),
+		LABEL_LGETINT32(priv, sectpertrack),
+		LABEL_LGETINT32(priv, trackpercyl),
+		LABEL_LGETINT32(priv, sectpercyl),
+		LABEL_LGETINT32(priv, cylcount),
+		sectcount,
+		LABEL_LGETINT16(priv, rpm),
+		LABEL_LGETINT16(priv, interleave),
+		LABEL_LGETINT16(priv, trackskew),
+		LABEL_LGETINT16(priv, cylskew),
+		LABEL_LGETINT32(priv, headswitch),
+		LABEL_LGETINT32(priv, trackseek),
+		(UP_ENDIAN_BIG == priv->endian ? "big" : "little"),
+		LABEL_LGETINT16(priv, maxpart)));
 }
 
 static int
-bsdlabel_index(const struct part *part, char *buf, int size)
+bsdlabel_index(const struct part *part, char *buf, size_t size)
 {
-    struct up_bsdpart *priv = part->priv;
+	struct up_bsdpart *priv;
 
-    return snprintf(buf, size, "%c", 'a' + priv->index);
+	priv = part->priv;
+	return (snprintf(buf, size, "%c", 'a' + priv->index));
 }
 
 static int
-bsdlabel_extrahdr(const struct map *map, char *buf, int size)
+bsdlabel_extrahdr(const struct map *map, FILE *stream)
 {
-    const char *hdr = UP_BSDLABEL_FMT_HDR();
+	const char *hdr;
 
-    if(hdr)
-        return snprintf(buf, size, "%s", hdr);
-    else
-        return 0;
+	hdr = UP_BSDLABEL_FMT_HDR();
+	if (hdr == NULL)
+		return (0);
+        return (fprintf(stream, " %s", hdr));
 }
 
 static int
-bsdlabel_extra(const struct part *part, char *buf, int size)
+bsdlabel_extra(const struct part *part, FILE *stream)
 {
-	struct up_bsdpart *priv = part->priv;
+	struct up_bsdpart *priv;
 
-	return up_bsdlabel_fmt(part, buf, size,
-	    priv->type, priv->fsize, priv->frags, priv->cpg);
+	priv = part->priv;
+	return (up_bsdlabel_fmt(part, priv->type,
+		priv->fsize, priv->frags, priv->cpg, stream));
 }
 
 static int
 bsdlabel_dump(const struct map *map, int64_t start, const void *data,
-              int64_t size, int tag, char *buf, int buflen)
+              int64_t size, int tag, FILE *stream)
 {
-    struct up_bsd *priv = map->priv;
+	struct up_bsd *priv;
 
-    return snprintf(buf, buflen, " offset %d (0x%x)",
-                    priv->byteoff, priv->byteoff);
+	priv = map->priv;
+	return (fprintf(stream, " offset %d (0x%x)",
+		priv->byteoff, priv->byteoff));
 }
 
 static int
@@ -596,25 +599,25 @@ up_bsdlabel_fstype(int type)
 }
 
 int
-up_bsdlabel_fmt(const struct part *part, char *buf, int size,
-    int type, uint32_t fsize, int frags, int cpg)
+up_bsdlabel_fmt(const struct part *part, int type,
+    uint32_t fsize, int frags, int cpg, FILE *stream)
 {
-    const char *typestr;
+	const char *typestr;
 
-    if(!UP_NOISY(NORMAL))
-        return 0;
+	if (!UP_NOISY(NORMAL))
+		return (0);
 
-    typestr = up_bsdlabel_fstype(type);
+	typestr = up_bsdlabel_fstype(type);
 
-    if(NULL == typestr)
-        return snprintf(buf, size, "%u", type);
-    else if(UP_NOISY(EXTRA) &&
-            UP_BSDLABEL_FSTYPE_UNUSED == type && part->size)
-        return snprintf(buf, size, "%-7s %5u %5u",
-	    typestr, fsize, fsize * frags);
-    else if(UP_NOISY(EXTRA) && UP_BSDLABEL_FSTYPE_42BSD == type)
-        return snprintf(buf, size, "%-7s %5u %5u %5u",
-                        typestr, fsize, fsize * frags, cpg);
-    else
-        return snprintf(buf, size, "%s", typestr);
+	if (NULL == typestr)
+		return (fprintf(stream, " %u", type));
+	else if (UP_NOISY(EXTRA) &&
+	    UP_BSDLABEL_FSTYPE_UNUSED == type && part->size)
+		return (fprintf(stream, " %-7s %5u %5u",
+			typestr, fsize, fsize * frags));
+	else if(UP_NOISY(EXTRA) && UP_BSDLABEL_FSTYPE_42BSD == type)
+		return (fprintf(stream, " %-7s %5u %5u %5u",
+			typestr, fsize, fsize * frags, cpg));
+	else
+		return (fprintf(stream, " %s", typestr));
 }

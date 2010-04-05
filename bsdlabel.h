@@ -17,7 +17,6 @@ void up_bsdlabel_register(void);
      (UP_NOISY(NORMAL) ? "Type" :  NULL))
 
 const char *up_bsdlabel_fstype(int type);
-int up_bsdlabel_fmt(const struct part *part, char *buf, int size,
-                    int type, uint32_t fsize, int frags, int cpg);
+int	up_bsdlabel_fmt(const struct part *, int, uint32_t, int, int, FILE *);
 
 #endif /* HDR_UPART_BSDLABEL */

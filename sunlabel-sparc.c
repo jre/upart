@@ -121,10 +121,10 @@ struct up_sparcpart
 static int	sparc_load(const struct disk *, const struct part *,
     void **priv);
 static int	sparc_setup(struct disk *, struct map *);
-static int	sparc_info(const struct map *, char *, int);
-static int	sparc_index(const struct part *, char *, int);
-static int	sparc_extrahdr(const struct map *, char *, int);
-static int	sparc_extra(const struct part *, char *, int);
+static int	sparc_info(const struct map *, FILE *);
+static int	sparc_index(const struct part *, char *, size_t);
+static int	sparc_extrahdr(const struct map *, FILE *);
+static int	sparc_extra(const struct part *, FILE *);
 static int	sparc_read(const struct disk *, int64_t, int64_t,
     const uint8_t **);
 static unsigned int sparc_check_vtoc(const struct up_sparc_p *);
@@ -132,18 +132,18 @@ static unsigned int sparc_check_obsd(const struct up_sparcobsd_p *);
 
 void up_sunlabel_sparc_register(void)
 {
-    up_map_register_old(UP_MAP_SUN_SPARC,
-                    SPARC_LABEL,
-                    0,
-                    sparc_load,
-                    sparc_setup,
-                    sparc_info,
-                    sparc_index,
-                    sparc_extrahdr,
-                    sparc_extra,
-                    NULL,
-                    up_map_freeprivmap_def,
-                    up_map_freeprivpart_def);
+	struct map_funcs funcs;
+
+	memset(&funcs, 0, sizeof(funcs));
+	funcs.label = SPARC_LABEL;
+	funcs.load = sparc_load;
+	funcs.setup = sparc_setup;
+	funcs.print_header = sparc_info;
+	funcs.get_index = sparc_index;
+	funcs.print_extrahdr = sparc_extrahdr;
+	funcs.print_extra = sparc_extra;
+
+	up_map_register(UP_MAP_SUN_SPARC, &funcs);
 }
 
 static int
@@ -228,136 +228,150 @@ sparc_setup(struct disk *disk, struct map *map)
 }
 
 static int
-sparc_info(const struct map *map, char *buf, int size)
+sparc_info(const struct map *map, FILE *stream)
 {
-    const struct up_sparc       *priv = map->priv;
-    const struct up_sparc_p     *label = &priv->packed;
-    const struct up_sparcvtoc_p *vtoc;
-    int                         res1, res2;
-    char                        name[sizeof(vtoc->name)+1];
-    const char                  *extstr;
+	const struct up_sparc *priv;
+	const struct up_sparc_p *label;
+	const struct up_sparcvtoc_p *vtoc;
+	char name[sizeof(vtoc->name)+1];
+	const char *extstr;
 
-    if(SPARC_ISEXT(priv->ext, VTOC))
-        extstr = " (Sun VTOC)";
-    else if(SPARC_ISEXT(priv->ext, OBSD_TYPES))
-        extstr = " (OpenBSD extensions)";
-    else if(SPARC_ISEXT(priv->ext, OBSD))
-        extstr = " (OpenBSD partitions)";
-    else
-        extstr = "";
+	if (!UP_NOISY(NORMAL))
+		return (0);
 
-    if(UP_NOISY(EXTRA))
-    {
-        res1 = snprintf(buf, size,
-                        "%s%s in sector %"PRId64" of %s:\n"
-                        "  rpm: %u\n"
-                        "  physical cylinders: %u\n"
-                        "  alternates/cylinder: %u\n"
-                        "  interleave: %u\n"
-                        "  data cylinders: %u\n"
-                        "  alternate cylinders: %u\n"
-                        "  tracks/cylinder: %u\n"
-                        "  sectors/track: %u\n",
-                        up_map_label(map), extstr,
-                        map->start, UP_DISK_PATH(map->disk),
-                        UP_BETOH16(label->rpm),
-                        UP_BETOH16(label->physcyls),
-                        UP_BETOH16(label->alts),
-                        UP_BETOH16(label->interleave),
-                        UP_BETOH16(label->datacyls),
-                        UP_BETOH16(label->altcyls),
-                        UP_BETOH16(label->heads),
-                        UP_BETOH16(label->sects));
-        if(0 > res1 || res1 >= size)
-            return res1;
-        if(SPARC_ISEXT(priv->ext, VTOC))
-        {
-            vtoc = &label->ext.vtoc;
-            memcpy(name, vtoc->name, sizeof vtoc->name);
-            name[sizeof(name)-1] = 0;
-            res2 = snprintf(buf + res1, size - res1,
-                            "  name: %s\n"
-                            "  partition count: %d\n"
-                            "  read sector skip: %d\n"
-                            "  write sector skip: %d\n",
-                            name,
-                            UP_BETOH16(vtoc->partcount),
-                            UP_BETOH16(vtoc->readskip),
-                            UP_BETOH16(vtoc->writeskip));
-        }
-        else
-            res2 = 0;
-        if(0 > res2)
-            return res2;
-        return res1 + res2;
-    }
-    else if(UP_NOISY(NORMAL))
-        return snprintf(buf, size,
-                        "%s%s in sector %"PRId64" of %s:", up_map_label(map),
-                        extstr, map->start, UP_DISK_PATH(map->disk));
-    else
-        return 0;
+	priv = map->priv;
+	label = &priv->packed;
+
+	if (SPARC_ISEXT(priv->ext, VTOC))
+		extstr = " (Sun VTOC)";
+	else if (SPARC_ISEXT(priv->ext, OBSD_TYPES))
+		extstr = " (OpenBSD extensions)";
+	else if (SPARC_ISEXT(priv->ext, OBSD))
+		extstr = " (OpenBSD partitions)";
+	else
+		extstr = "";
+
+	if (!UP_NOISY(EXTRA))
+		return (fprintf(stream, "%s%s in sector %"PRId64" of %s:\n",
+			up_map_label(map), extstr, map->start,
+			UP_DISK_PATH(map->disk)));
+
+	if (fprintf(stream,
+		"%s%s in sector %"PRId64" of %s:\n"
+		"  rpm: %u\n"
+		"  physical cylinders: %u\n"
+		"  alternates/cylinder: %u\n"
+		"  interleave: %u\n"
+		"  data cylinders: %u\n"
+		"  alternate cylinders: %u\n"
+		"  tracks/cylinder: %u\n"
+		"  sectors/track: %u\n",
+		up_map_label(map), extstr,
+		map->start, UP_DISK_PATH(map->disk),
+		UP_BETOH16(label->rpm),
+		UP_BETOH16(label->physcyls),
+		UP_BETOH16(label->alts),
+		UP_BETOH16(label->interleave),
+		UP_BETOH16(label->datacyls),
+		UP_BETOH16(label->altcyls),
+		UP_BETOH16(label->heads),
+		UP_BETOH16(label->sects)) < 0)
+		return (-1);
+
+	if (SPARC_ISEXT(priv->ext, VTOC)) {
+		vtoc = &label->ext.vtoc;
+		memcpy(name, vtoc->name, sizeof vtoc->name);
+		name[sizeof(name)-1] = 0;
+		if (fprintf(stream,
+			"  name: %s\n"
+			"  partition count: %d\n"
+			"  read sector skip: %d\n"
+			"  write sector skip: %d\n",
+			name,
+			UP_BETOH16(vtoc->partcount),
+			UP_BETOH16(vtoc->readskip),
+			UP_BETOH16(vtoc->writeskip)) < 0)
+			return (-1);
+	}
+
+	if (putc('\n', stream) == EOF)
+		return (-1);
+	return (0);
 }
 
 static int
-sparc_index(const struct part *part, char *buf, int size)
+sparc_index(const struct part *part, char *buf, size_t size)
 {
-    struct up_sparc            *label = part->map->priv;
-    struct up_sparcpart        *priv = part->priv;
+	struct up_sparc *label;
+	struct up_sparcpart *priv;
 
-    if(SPARC_ISEXT(label->ext, OBSD))
-        return snprintf(buf, size, "%c", 'a' + priv->index);
-    else
-        return snprintf(buf, size, "%d", priv->index);
+	label = part->map->priv;
+	priv = part->priv;
+
+	if (SPARC_ISEXT(label->ext, OBSD))
+		return (snprintf(buf, size, "%c", 'a' + priv->index));
+	else
+		return (snprintf(buf, size, "%d", priv->index));
 }
 
 static int
-sparc_extrahdr(const struct map *map, char *buf, int size)
+sparc_extrahdr(const struct map *map, FILE *stream)
 {
-    struct up_sparc    *priv = map->priv;
-    const char         *hdr;
+	struct up_sparc *priv;
+	const char *hdr;
 
-    if(!UP_NOISY(NORMAL))
-        return 0;
+	if (!UP_NOISY(NORMAL))
+		return (0);
 
-    if(SPARC_ISEXT(priv->ext, VTOC))
-        hdr = UP_SUNLABEL_FMT_HDR;
-    else if(SPARC_ISEXT(priv->ext, OBSD_TYPES))
-        hdr = UP_BSDLABEL_FMT_HDR();
-    else
-        hdr = NULL;
+	priv = map->priv;
+	if (SPARC_ISEXT(priv->ext, VTOC))
+		hdr = UP_SUNLABEL_FMT_HDR;
+	else if (SPARC_ISEXT(priv->ext, OBSD_TYPES))
+		hdr = UP_BSDLABEL_FMT_HDR();
+	else
+		hdr = NULL;
 
-    if(hdr)
-        return snprintf(buf, size, "%s", hdr);
-    else
-        return 0;
+	if (hdr == NULL)
+		return (0);
+        return (fprintf(stream, " %s", hdr));
 }
 
 static int
-sparc_extra(const struct part *part, char *buf, int size)
+sparc_extra(const struct part *part, FILE *stream)
 {
-    struct up_sparc            *label = part->map->priv;
-    struct up_sparcvtoc_p      *vtoc = &label->packed.ext.vtoc;
-    struct up_sparcobsd_p      *obsd = &label->packed.ext.obsd;
-    struct up_sparcpart        *priv = part->priv;
+	struct up_sparc *label;
+	struct up_sparcvtoc_p *vtoc;
+	struct up_sparcobsd_p *obsd;
+	struct up_sparcpart *priv;
 
-    if(!UP_NOISY(NORMAL))
-        return 0;
+	if (!UP_NOISY(NORMAL))
+		return (0);
 
-    if(SPARC_ISEXT(label->ext, VTOC) && UP_NOISY(NORMAL))
-        return up_sunlabel_fmt(buf, size,
-                               UP_BETOH16(vtoc->parts[priv->index].tag),
-                               UP_BETOH16(vtoc->parts[priv->index].flag));
-    else if(SPARC_ISEXT(label->ext, OBSD_TYPES)) {
-	    uint8_t bf = obsd->fragblock[priv->index];
-	    int frags = OBSDLABEL_BF_FRAG(bf);
-	    return up_bsdlabel_fmt(part, buf, size,
-		obsd->types[priv->index],
-		(frags ? OBSDLABEL_BF_BSIZE(bf) / frags : 0),
-		frags, UP_BETOH16(obsd->cpg[priv->index]));
-    }
-    else
-        return 0;
+	label = part->map->priv;
+	vtoc = &label->packed.ext.vtoc;
+	obsd = &label->packed.ext.obsd;
+	priv = part->priv;
+
+	if (SPARC_ISEXT(label->ext, VTOC) && UP_NOISY(NORMAL)) {
+		/* XXX ugh */
+		char buf[128];
+		up_sunlabel_fmt(buf, sizeof(buf),
+		    UP_BETOH16(vtoc->parts[priv->index].tag),
+		    UP_BETOH16(vtoc->parts[priv->index].flag));
+		return (fprintf(stream, " %s", buf));
+	}
+	else if (SPARC_ISEXT(label->ext, OBSD_TYPES)) {
+		uint8_t bf;
+		int frags;
+
+		bf = obsd->fragblock[priv->index];
+		frags = OBSDLABEL_BF_FRAG(bf);
+		return (up_bsdlabel_fmt(part, obsd->types[priv->index],
+			(frags ? OBSDLABEL_BF_BSIZE(bf) / frags : 0),
+			frags, UP_BETOH16(obsd->cpg[priv->index]), stream));
+	}
+	else
+		return (0);
 }
 
 static int

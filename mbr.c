@@ -70,9 +70,10 @@ static int	mbrext_load(const struct disk *, const struct part *,
     void **);
 static int	mbr_setup(struct disk *, struct map *);
 static int	mbrext_setup(struct disk *, struct map *);
-static int	mbr_getinfo(const struct map *, char *, int);
-static int	mbr_getindex(const struct part *, char *, int);
-static int	mbr_getextra(const struct part *, char *, int);
+static int	mbr_getinfo(const struct map *, FILE *);
+static int	mbr_getindex(const struct part *, char *, size_t);
+static int	mbr_getextrahdr(const struct map *, FILE *);
+static int	mbr_getextra(const struct part *, FILE *);
 static int	mbr_addpart(struct map *, const struct up_mbrpart_p *,
     int, int64_t, const struct up_mbr_p *);
 static int	mbr_read(const struct disk *, int64_t, int64_t,
@@ -82,31 +83,28 @@ static const char *mbr_name(uint8_t type);
 void
 up_mbr_register(void)
 {
-    up_map_register_old(UP_MAP_MBR,
-                    "MBR",
-                    0,
-                    mbr_load,
-                    mbr_setup,
-                    mbr_getinfo,
-                    mbr_getindex,
-                    NULL,
-                    mbr_getextra,
-                    NULL,
-                    up_map_freeprivmap_def,
-                    up_map_freeprivpart_def);
+	struct map_funcs funcs;
 
-    up_map_register_old(UP_MAP_MBREXT,
-                    "extended MBR",
-                    UP_TYPE_NOPRINTHDR,
-                    mbrext_load,
-                    mbrext_setup,
-                    NULL,
-                    mbr_getindex,
-                    NULL,
-                    mbr_getextra,
-                    NULL,
-                    NULL,
-                    up_map_freeprivpart_def);
+	up_map_funcs_init(&funcs);
+	funcs.label = "MBR";
+	funcs.load = mbr_load;
+	funcs.setup = mbr_setup;
+	funcs.print_header = mbr_getinfo;
+	funcs.get_index = mbr_getindex;
+	funcs.print_extrahdr = mbr_getextrahdr;
+	funcs.print_extra = mbr_getextra;
+	up_map_register(UP_MAP_MBR, &funcs);
+
+	up_map_funcs_init(&funcs);
+	funcs.label = "extended MBR";
+	funcs.flags |= UP_TYPE_NOPRINTHDR;
+	funcs.load = mbrext_load;
+	funcs.setup = mbrext_setup;
+	funcs.get_index = mbr_getindex;
+	funcs.print_extrahdr = mbr_getextrahdr;
+	funcs.print_extra = mbr_getextra;
+	funcs.free_mappriv = NULL;
+	up_map_register(UP_MAP_MBREXT, &funcs);
 }
 
 static int
@@ -243,57 +241,65 @@ mbrext_setup(struct disk *disk, struct map *map)
 }
 
 static int
-mbr_getinfo(const struct map *map, char *buf, int size)
+mbr_getinfo(const struct map *map, FILE *stream)
 {
-    if(!UP_NOISY(NORMAL))
-        return 0;
-    return snprintf(buf, size, "%s partition table in sector %"PRId64" of %s:",
-                    up_map_label(map), map->start, UP_DISK_PATH(map->disk));
+	if (!UP_NOISY(NORMAL))
+		return (0);
+
+	return (fprintf(stream, "%s partition table in sector "
+		"%"PRId64" of %s:\n", up_map_label(map), map->start,
+		UP_DISK_PATH(map->disk)));
 }
 
 static int
-mbr_getindex(const struct part *part, char *buf, int size)
+mbr_getindex(const struct part *part, char *buf, size_t size)
 {
-    struct up_mbrpart *priv = part->priv;
+	struct up_mbrpart *priv;
 
-    return snprintf(buf, size, "%d", priv->index);
+	priv = part->priv;
+	return (snprintf(buf, size, "%d", priv->index));
 }
 
 static int
-mbr_getextra(const struct part *part, char *buf, int size)
+mbr_getextrahdr(const struct map *map, FILE *stream)
 {
-    struct up_mbrpart  *priv;
-    const char         *label;
-    char                active;
-    int                 firstcyl, firstsect, lastcyl, lastsect;
+	if (!UP_NOISY(NORMAL))
+		return (0);
 
-    if(!UP_NOISY(NORMAL))
-        return 0;
+	if (UP_NOISY(EXTRA))
+		return (fprintf(stream, " A    C   H  S    C   H  S Type"));
+	else
+		return (fprintf(stream, " A Type"));
+}
 
-    if(!part)
-    {
-        if(UP_NOISY(EXTRA))
-            return snprintf(buf, size, "A    C   H  S    C   H  S Type");
-        else
-            return snprintf(buf, size, "A Type");
-    }
-    priv = part->priv;
+static int
+mbr_getextra(const struct part *part, FILE *stream)
+{
+	int firstcyl, firstsect, lastcyl, lastsect;
+	struct up_mbrpart *priv;
+	const char *label;
+	char active;
 
-    label     = mbr_name(priv->part.type);
-    active    = MBR_FLAG_ACTIVE & priv->part.flags ? '*' : ' ';
-    firstcyl  = MBR_GETCYL(priv->part.firstsectcyl);
-    firstsect = MBR_GETSECT(priv->part.firstsectcyl);
-    lastcyl   = MBR_GETCYL(priv->part.lastsectcyl);
-    lastsect  = MBR_GETSECT(priv->part.lastsectcyl);
+	if (!UP_NOISY(NORMAL))
+		return (0);
 
-    if(UP_NOISY(EXTRA))
-        return snprintf(buf, size, "%c %4u/%3u/%2u-%4u/%3u/%2u %s (0x%02x)",
-                        active, firstcyl, priv->part.firsthead, firstsect,
-                        lastcyl, priv->part.lasthead, lastsect, label,
-                        priv->part.type);
-    else
-        return snprintf(buf, size, "%c %s (0x%02x)",
-                        active, label, priv->part.type);
+	priv = part->priv;
+
+	label = mbr_name(priv->part.type);
+	active = MBR_FLAG_ACTIVE & priv->part.flags ? '*' : ' ';
+	firstcyl = MBR_GETCYL(priv->part.firstsectcyl);
+	firstsect = MBR_GETSECT(priv->part.firstsectcyl);
+	lastcyl = MBR_GETCYL(priv->part.lastsectcyl);
+	lastsect = MBR_GETSECT(priv->part.lastsectcyl);
+
+	if (UP_NOISY(EXTRA))
+		return (fprintf(stream, " %c %4u/%3u/%2u-%4u/%3u/%2u %s "
+			"(0x%02x)", active, firstcyl, priv->part.firsthead,
+			firstsect, lastcyl, priv->part.lasthead, lastsect,
+			label, priv->part.type));
+	else
+		return (fprintf(stream, " %c %s (0x%02x)",
+			active, label, priv->part.type));
 }
 
 static int

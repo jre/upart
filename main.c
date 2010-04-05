@@ -23,8 +23,8 @@
 #include "sunlabel-x86.h"
 
 static char	*readargs(int, char *[], struct opts *, struct disk_params *);
-static void usage(const char *fmt, ...);
-static int serialize(const struct disk *disk);
+static void	 usage(const char *, ...);
+static int	 serialize(const struct disk *);
 
 int
 main(int argc, char *argv[])
@@ -77,111 +77,110 @@ main(int argc, char *argv[])
 
 static char *
 readargs(int argc, char *argv[], struct opts *newopts,
-	struct disk_params *params)
+    struct disk_params *params)
 {
-    int opt;
+	int opt;
 
-    init_options(newopts);
-    memset(params, 0, sizeof *params);
-    while(0 < (opt = getopt(argc, argv, "c:fh:klL:qrs:vVw:z:")))
-    {
-        switch(opt)
-        {
-            case 'c':
-                params->cyls = strtol(optarg, NULL, 0);
-                if(0 >= params->cyls)
-                    usage("illegal cylinder count: %s", optarg);
-                break;
-            case 'f':
-                newopts->plainfile = 1;
-                break;
-            case 'h':
-                params->heads = strtol(optarg, NULL, 0);
-                if(0 >= params->heads)
-                    usage("illegal tracks per cylinder (head) count: %s", optarg);
-                break;
-            case 'k':
-                newopts->sloppyio = 1;
-                break;
+	init_options(newopts);
+	memset(params, 0, sizeof *params);
+	while(0 < (opt = getopt(argc, argv, "c:fh:klL:qrs:vVw:z:"))) {
+		switch(opt) {
+		case 'c':
+			params->cyls = strtol(optarg, NULL, 0);
+			if (0 >= params->cyls)
+				usage("illegal cylinder count: %s", optarg);
+			break;
+		case 'f':
+			newopts->plainfile = 1;
+			break;
+		case 'h':
+			params->heads = strtol(optarg, NULL, 0);
+			if (0 >= params->heads)
+				usage("illegal tracks per cylinder (ie: head) "
+				    "count: %s", optarg);
+			break;
+		case 'k':
+			newopts->sloppyio = 1;
+			break;
 		case 'l':
 			os_list_devices(stdout);
 			exit(EXIT_SUCCESS);
 			break;
-            case 'L':
-                newopts->label = optarg;
-                break;
-            case 'q':
-                newopts->verbosity--;
-                break;
-            case 'r':
-                newopts->relaxed = 1;
-                break;
-            case 's':
-                params->sects = strtol(optarg, NULL, 0);
-                if(0 >= params->sects)
-                    usage("illegal sectors per track count (sectors): %s", optarg);
-                break;
-            case 'v':
-                newopts->verbosity++;
-                break;
-            case 'V':
-                printf("%s version %s\n"
-		    "Copyright (c) 2007-2010 Joshua R. Elsasser\n",
-		    PACKAGE_NAME, PACKAGE_VERSION);
-                exit(EXIT_SUCCESS);
-                break;
-            case 'w':
-                newopts->serialize = optarg;
-                break;
-            case 'z':
-                params->sectsize = strtol(optarg, NULL, 0);
-                if(0 >= params->sectsize)
-                    usage("illegal sector size: %s", optarg);
-                break;
-            default:
-                usage(NULL);
-                break;
-        }
-    }
+		case 'L':
+			newopts->label = optarg;
+			break;
+		case 'q':
+			newopts->verbosity--;
+			break;
+		case 'r':
+			newopts->relaxed = 1;
+			break;
+		case 's':
+			params->sects = strtol(optarg, NULL, 0);
+			if (0 >= params->sects)
+				usage("illegal sectors per track count (sectors): %s", optarg);
+			break;
+		case 'v':
+			newopts->verbosity++;
+			break;
+		case 'V':
+			printf("%s version %s\n"
+			    "Copyright (c) 2007-2010 Joshua R. Elsasser\n",
+			    PACKAGE_NAME, PACKAGE_VERSION);
+			exit(EXIT_SUCCESS);
+			break;
+		case 'w':
+			newopts->serialize = optarg;
+			break;
+		case 'z':
+			params->sectsize = strtol(optarg, NULL, 0);
+			if (0 >= params->sectsize)
+				usage("illegal sector size: %s", optarg);
+			break;
+		default:
+			usage(NULL);
+			break;
+		}
+	}
 
-    if(newopts->label && !newopts->serialize)
-        usage("-w is required for -l");
-    if(optind + 1 == argc)
-        return argv[optind];
-    else
-        usage(NULL);
-    return NULL;
+	if (newopts->label && !newopts->serialize)
+		usage("-w is required for -l");
+	if (optind + 1 == argc)
+		return (argv[optind]);
+	else
+		usage(NULL);
+	return (NULL);
 }
 
 static void
 usage(const char *message, ...)
 {
-    va_list ap;
+	va_list ap;
 
-    if(message)
-    {
-        va_start(ap, message);
-        vprintf(message, ap);
-        va_end(ap);
-        fputc('\n', stdout);
-    }
+	if (message != NULL) {
+		va_start(ap, message);
+		vprintf(message, ap);
+		va_end(ap);
+		fputc('\n', stdout);
+	}
 
-    printf("usage: %s [options] path\n"
-           "  -c cyls   total number of cylinders (cylinders)\n"
-           "  -f        path is a plain file and not a device\n"
-           "  -h heads  number of tracks per cylinder (heads)\n"
-           "  -k        keep going after I/O errors\n"
-           "  -l        list valid disk devices and exit\n"
-           "  -L label  label to use with -w option\n"
-           "  -q        lower verbosity level when printing maps\n"
-           "  -r        relax some checks when reading maps\n"
-           "  -s sects  number of sectors per track (sectors)\n"
-           "  -v        raise verbosity level when printing maps\n"
-           "  -V        display the version of %s and exit\n"
-           "  -w file   write disk and partition info to file\n"
-           "  -z size   sector size in bytes\n", up_getname(), PACKAGE_NAME);
+	printf("usage: %s [options] path\n"
+	    "  -c cyls   total number of cylinders (cylinders)\n"
+	    "  -f        path is a plain file and not a device\n"
+	    "  -h heads  number of tracks per cylinder (heads)\n"
+	    "  -k        keep going after I/O errors\n"
+	    "  -l        list valid disk devices and exit\n"
+	    "  -L label  label to use with -w option\n"
+	    "  -q        lower verbosity level when printing maps\n"
+	    "  -r        relax some checks when reading maps\n"
+	    "  -s sects  number of sectors per track (sectors)\n"
+	    "  -v        raise verbosity level when printing maps\n"
+	    "  -V        display the version of %s and exit\n"
+	    "  -w file   write disk and partition info to file\n"
+	    "  -z size   sector size in bytes\n",
+	    up_getname(), PACKAGE_NAME);
 
-    exit(EXIT_FAILURE);
+	exit(EXIT_FAILURE);
 }
 
 static int

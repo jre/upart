@@ -352,14 +352,10 @@ sparc_extra(const struct part *part, FILE *stream)
 	obsd = &label->packed.ext.obsd;
 	priv = part->priv;
 
-	if (SPARC_ISEXT(label->ext, VTOC) && UP_NOISY(NORMAL)) {
-		/* XXX ugh */
-		char buf[128];
-		up_sunlabel_fmt(buf, sizeof(buf),
-		    UP_BETOH16(vtoc->parts[priv->index].tag),
-		    UP_BETOH16(vtoc->parts[priv->index].flag));
-		return (fprintf(stream, " %s", buf));
-	}
+	if (SPARC_ISEXT(label->ext, VTOC) && UP_NOISY(NORMAL))
+		return (up_sunlabel_fmt(stream,
+			UP_BETOH16(vtoc->parts[priv->index].tag),
+			UP_BETOH16(vtoc->parts[priv->index].flag)));
 	else if (SPARC_ISEXT(label->ext, OBSD_TYPES)) {
 		uint8_t bf;
 		int frags;

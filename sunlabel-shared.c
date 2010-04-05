@@ -53,19 +53,20 @@ up_sunlabel_parttype(unsigned int type)
 }
 
 int
-up_sunlabel_fmt(char *buf, int size, unsigned int type, unsigned int flags)
+up_sunlabel_fmt(FILE *stream, unsigned int type, unsigned int flags)
 {
-    const char *typestr = up_sunlabel_parttype(type);
-    char        flagstr[5];
+	const char *typestr;
+	char flagstr[5];
 
-    if(~PFLAG_KNOWN & flags)
-        snprintf(flagstr, sizeof flagstr, "%04x", flags);
-    else
-        snprintf(flagstr, sizeof flagstr, "%c%c",
-                 PFLAG_GETCHR(flags, RONLY), PFLAG_GETCHR(flags, UNMNT));
+	if (~PFLAG_KNOWN & flags)
+		snprintf(flagstr, sizeof flagstr, "%04x", flags);
+	else
+		snprintf(flagstr, sizeof flagstr, "%c%c",
+		    PFLAG_GETCHR(flags, RONLY), PFLAG_GETCHR(flags, UNMNT));
 
-    if(typestr)
-        return snprintf(buf, size, "%-5s %s", flagstr, typestr);
-    else
-        return snprintf(buf, size, "%-5s %u", flagstr, type);
+	typestr = up_sunlabel_parttype(type);
+	if (typestr != NULL)
+		return (fprintf(stream, " %-5s %s", flagstr, typestr));
+	else
+		return (fprintf(stream, " %-5s %u", flagstr, type));
 }

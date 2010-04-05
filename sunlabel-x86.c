@@ -81,27 +81,27 @@ struct up_sunx86part
 static int	sun_x86_load(const struct disk *, const struct part *,
     void **priv);
 static int	sun_x86_setup(struct disk *, struct map *);
-static int	sun_x86_info(const struct map *, char *, int);
-static int	sun_x86_index(const struct part *, char *, int);
-static int	sun_x86_extrahdr(const struct map *, char *, int);
-static int	sun_x86_extra(const struct part *, char *, int);
+static int	sun_x86_info(const struct map *, FILE *);
+static int	sun_x86_index(const struct part *, char *, size_t);
+static int	sun_x86_extrahdr(const struct map *, FILE *);
+static int	sun_x86_extra(const struct part *, FILE *);
 static int	sun_x86_read(const struct disk *, int64_t, int64_t,
     const uint8_t **);
 
 void up_sunlabel_x86_register(void)
 {
-    up_map_register_old(UP_MAP_SUN_X86,
-                    SUNX86_LABEL,
-                    0,
-                    sun_x86_load,
-                    sun_x86_setup,
-                    sun_x86_info,
-                    sun_x86_index,
-                    sun_x86_extrahdr,
-                    sun_x86_extra,
-                    NULL,
-                    up_map_freeprivmap_def,
-                    up_map_freeprivpart_def);
+	struct map_funcs funcs;
+
+	memset(&funcs, 0, sizeof(funcs));
+	funcs.label = SUNX86_LABEL;
+	funcs.load = sun_x86_load;
+	funcs.setup = sun_x86_setup;
+	funcs.print_header = sun_x86_info;
+	funcs.get_index = sun_x86_index;
+	funcs.print_extrahdr = sun_x86_extrahdr;
+	funcs.print_extra = sun_x86_extra;
+
+	up_map_register(UP_MAP_SUN_X86, &funcs);
 }
 
 static int
@@ -185,85 +185,91 @@ sun_x86_setup(struct disk *disk, struct map *map)
 }
 
 static int
-sun_x86_info(const struct map *map, char *buf, int size)
+sun_x86_info(const struct map *map, FILE *stream)
 {
-    const struct up_sunx86     *priv = map->priv;
-    const struct up_sunx86_p   *packed = &priv->packed;
-    char                        name[sizeof(packed->name)+1];
+	const struct up_sunx86 *priv;
+	const struct up_sunx86_p *packed;
+	char name[sizeof(packed->name)+1];
 
-    if(UP_NOISY(EXTRA))
-    {
+	if (!UP_NOISY(NORMAL))
+		return (0);
+
+	priv = map->priv;
+	packed = &priv->packed;
+
+	if (!UP_NOISY(EXTRA))
+		return (fprintf(stream, "%s in sector %"PRId64" of %s:\n",
+			up_map_label(map), map->start,
+			UP_DISK_PATH(map->disk)));
+
         memcpy(name, packed->name, sizeof(packed->name));
         name[sizeof(name)-1] = 0;
-        return snprintf(buf, size, "%s in sector %"PRId64" (offset %d) of %s:\n"
-                    "  name: %s\n"
-                    "  bytes/sector: %u\n"
-                    "  partition count: %u\n"
-                    "  physical cylinders: %u\n"
-                    "  data cylinders: %u\n"
-                    "  alternate cylinders: %u\n"
-                    "  cylinders offset: %u\n"
-                    "  tracks/cylinder: %u\n"
-                    "  sectors/track: %u\n"
-                    "  interleave: %u\n"
-                    "  skew: %u\n"
-                    "  alternates/cylinder: %u\n"
-                    "  rpm: %u\n"
-                    "  write sectskip: %u\n"
-                    "  read sectskip: %u\n",
-                    up_map_label(map),
-                    map->start, SUNX86_OFF, UP_DISK_PATH(map->disk),
-                    name,
-                    UP_LETOH16(packed->sectsize),
-                    UP_LETOH16(packed->partcount),
-                    UP_LETOH32(packed->physcyls),
-                    UP_LETOH32(packed->datacyls),
-                    UP_LETOH16(packed->altcyls),
-                    UP_LETOH16(packed->cyloff),
-                    UP_LETOH32(packed->heads),
-                    UP_LETOH32(packed->sects),
-                    UP_LETOH16(packed->interleave),
-                    UP_LETOH16(packed->skew),
-                    UP_LETOH16(packed->alts),
-                    UP_LETOH16(packed->rpm),
-                    UP_LETOH16(packed->writeskip),
-                    UP_LETOH16(packed->readskip));
-    }
-    else if(UP_NOISY(NORMAL))
-        return snprintf(buf, size, "%s in sector %"PRId64" of %s:",
-                        up_map_label(map), map->start, UP_DISK_PATH(map->disk));
-    else
-        return 0;
+        return (fprintf(stream, "%s in sector %"PRId64" (offset %d) of %s:\n"
+		"  name: %s\n"
+		"  bytes/sector: %u\n"
+		"  partition count: %u\n"
+		"  physical cylinders: %u\n"
+		"  data cylinders: %u\n"
+		"  alternate cylinders: %u\n"
+		"  cylinders offset: %u\n"
+		"  tracks/cylinder: %u\n"
+		"  sectors/track: %u\n"
+		"  interleave: %u\n"
+		"  skew: %u\n"
+		"  alternates/cylinder: %u\n"
+		"  rpm: %u\n"
+		"  write sectskip: %u\n"
+		"  read sectskip: %u\n\n",
+		up_map_label(map),
+		map->start, SUNX86_OFF, UP_DISK_PATH(map->disk),
+		name,
+		UP_LETOH16(packed->sectsize),
+		UP_LETOH16(packed->partcount),
+		UP_LETOH32(packed->physcyls),
+		UP_LETOH32(packed->datacyls),
+		UP_LETOH16(packed->altcyls),
+		UP_LETOH16(packed->cyloff),
+		UP_LETOH32(packed->heads),
+		UP_LETOH32(packed->sects),
+		UP_LETOH16(packed->interleave),
+		UP_LETOH16(packed->skew),
+		UP_LETOH16(packed->alts),
+		UP_LETOH16(packed->rpm),
+		UP_LETOH16(packed->writeskip),
+		UP_LETOH16(packed->readskip)));
 }
 
 static int
-sun_x86_index(const struct part *part, char *buf, int size)
+sun_x86_index(const struct part *part, char *buf, size_t size)
 {
-    struct up_sunx86part *priv = part->priv;
+	struct up_sunx86part *priv;
 
-    return snprintf(buf, size, "%d", priv->index);
+	priv = part->priv;
+	return (snprintf(buf, size, "%d", priv->index));
 }
 
 static int
-sun_x86_extrahdr(const struct map *map, char *buf, int size)
+sun_x86_extrahdr(const struct map *map, FILE *stream)
 {
-    if(UP_NOISY(NORMAL))
-        return snprintf(buf, size, UP_SUNLABEL_FMT_HDR);
-    else
-        return 0;
+	if (UP_NOISY(NORMAL))
+		return (fprintf(stream, " %s", UP_SUNLABEL_FMT_HDR));
+	else
+		return (0);
 }
 
 static int
-sun_x86_extra(const struct part *part, char *buf, int size)
+sun_x86_extra(const struct part *part, FILE *stream)
 {
-    const struct up_sunx86part *priv = part->priv;
+	const struct up_sunx86part *priv;
 
-    if(UP_NOISY(NORMAL))
-        return up_sunlabel_fmt(buf, size,
-                               UP_LETOH16(priv->part.type),
-                               UP_LETOH16(priv->part.flags));
-    else
-        return 0;
+	priv = part->priv;
+
+	if (UP_NOISY(NORMAL))
+		return (up_sunlabel_fmt(stream,
+			UP_LETOH16(priv->part.type),
+			UP_LETOH16(priv->part.flags)));
+	else
+		return (0);
 }
 
 static int

@@ -1,0 +1,21 @@
+mac68k.img: 1.97GB (4124736 sectors of 512 bytes)
+    label:               mac68k.img
+    device path:         mac68k.img
+    sector size:         512
+    total sectors:       4124736
+    total cylinders:     6810 (cylinders)
+    tracks per cylinder: 4 (heads)
+    sectors per track:   151 (sectors)
+
+
+Apple partition map in sector 0 of mac68k.img:
+                 Start            Size Type                     Name                     Status     A/UX boot data
+1:                   1              63 Apple_partition_map      Apple                    0x00000003
+2:                  64              32 Apple_Driver43           Macintosh                0x0000007f
+3:                  96           40960 Apple_HFS                MacOS                    0x000000b7
+4:               41056          196608 Apple_UNIX_SVR2          root                     0x00000033 root, usr, fs
+5:              237664          458752 Apple_UNIX_SVR2          swap                     0x00000033 swap
+6:              696416          196608 Apple_UNIX_SVR2          tmp                      0x00000033 usr, fs
+7:              893024          196608 Apple_UNIX_SVR2          var                      0x00000033 usr, fs
+8:             1089632         2097152 Apple_UNIX_SVR2          usr                      0x00000033 usr, fs
+9:             3186784          937952 Apple_UNIX_SVR2          home                     0x00000033 usr, fs

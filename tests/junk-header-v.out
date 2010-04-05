@@ -1,0 +1,16 @@
+junk-header.img: 9.84MB (20160 sectors of 512 bytes)
+    label:               junk-header.img
+    device path:         junk-header.img
+    sector size:         512
+    total sectors:       20160
+    total cylinders:     20 (cylinders)
+    tracks per cylinder: 16 (heads)
+    sectors per track:   63 (sectors)
+
+
+MBR partition table in sector 0 of junk-header.img:
+                 Start            Size A    C   H  S    C   H  S Type
+0:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
+1:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
+2:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
+3:                  63           20097 *    0/  1/ 1-  19/ 15/63 OpenBSD (0xa6)

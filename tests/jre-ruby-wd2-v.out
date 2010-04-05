@@ -1,0 +1,121 @@
+jre-ruby-wd2.img: 233GB (488397168 sectors of 512 bytes)
+    label:               jre-ruby-wd2.img
+    device path:         jre-ruby-wd2.img
+    sector size:         512
+    total sectors:       488397168
+    total cylinders:     32301 (cylinders)
+    tracks per cylinder: 240 (heads)
+    sectors per track:   63 (sectors)
+
+
+MBR partition table in sector 0 of jre-ruby-wd2.img:
+                 Start            Size A    C   H  S    C   H  S Type
+0:                  63       244198526 *    0/  1/ 1-1023/168/ 5 OpenBSD (0xa6)
+ OpenBSD disklabel in sector 63 (offset 1) of jre-ruby-wd2.img:
+  version: 1
+  type: ESDI (5)
+  disk: ESDI/IDE disk
+  label: WDC WD2500JB-57R
+  flags: 00000000
+  bytes/sector: 512
+  sectors/track: 63
+  tracks/cylinder: 255
+  sectors/cylinder: 16065
+  cylinders: 30401
+  total sectors: 488397168
+  rpm: 3600
+  interleave: 1
+  trackskew: 0
+  cylinderskew: 0
+  headswitch: 0
+  track-to-track seek: 0
+  byte order: little endian
+  partition count: 16
+
+                  Start            Size Type    fsize bsize   cpg
+ a:                  63          530082 4.2BSD   2048 16384     1
+ b:              530145          530145 swap
+ c:   X               0       488397168 unused      0     0
+ d:             1060290          530145 4.2BSD   2048 16384     1
+ e:             1590435          530145 4.2BSD   2048 16384     1
+ f:             2120580        41945715 4.2BSD   2048 16384     1
+ g:            44066295       200132294 4.2BSD   2048 16384     1
+ h:   X       244198605       244198563 4.2BSD   2048 16384    16
+ i:   X               0               0 unused
+ j:   X               0               0 unused
+ k:   X               0               0 unused
+ l:   X               0               0 unused
+ m:   X               0               0 unused
+ n:   X               0               0 unused
+ o:   X               0               0 unused
+ p:   X               0               0 unused
+1:           244198589       244198579   1023/168/ 6-1023/ 80/63 FreeBSD or DragonFly (0xa5)
+ BSD disklabel in sector 244198589 (offset 1) of jre-ruby-wd2.img:
+  type: unknown (0)
+  disk: amnesiac
+  label: 
+  flags: 00000000
+  bytes/sector: 512
+  sectors/track: 63
+  tracks/cylinder: 16
+  sectors/cylinder: 1008
+  cylinders: 242260
+  total sectors: 244198579
+  rpm: 3600
+  interleave: 1
+  trackskew: 0
+  cylinderskew: 0
+  headswitch: 0
+  track-to-track seek: 0
+  byte order: little endian
+  partition count: 8
+
+                  Start            Size Type    fsize bsize   cpg
+ a:           244198605       244198563 4.2BSD   2048 16384 28512
+ b:   X               0               0 unused
+ c:           244198589       244198579 unused      0     0
+ d:   X               0               0 unused
+ e:   X               0               0 unused
+ f:   X               0               0 unused
+ g:   X               0               0 unused
+ h:   X               0               0 unused
+2:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
+3:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
+OpenBSD disklabel in sector 0 (offset 1) of jre-ruby-wd2.img:
+  version: 1
+  type: ESDI (5)
+  disk: ESDI/IDE disk
+  label: WDC WD2500JB-57R
+  flags: 00000000
+  bytes/sector: 512
+  sectors/track: 63
+  tracks/cylinder: 255
+  sectors/cylinder: 16065
+  cylinders: 30401
+  total sectors: 488397168
+  rpm: 3600
+  interleave: 1
+  trackskew: 0
+  cylinderskew: 0
+  headswitch: 0
+  track-to-track seek: 0
+  byte order: little endian
+  partition count: 16
+
+                 Start            Size Type    fsize bsize   cpg
+a:                  63          530082 4.2BSD   2048 16384    16
+b:              530145          530145 swap
+c:                   0       488397168 unused      0     0
+d:             1060290          530145 4.2BSD   2048 16384    16
+e:             1590435          530145 4.2BSD   2048 16384    16
+f:             2120580        41945715 4.2BSD   2048 16384    16
+g:            44066295       200132294 4.2BSD   2048 16384    16
+h:           244198605       244198563 4.2BSD   2048 16384    16
+i:   X               0               0 unused
+j:   X               0               0 unused
+k:   X               0               0 unused
+l:   X               0               0 unused
+m:   X               0               0 unused
+n:   X               0               0 unused
+o:   X               0               0 unused
+p:   X               0               0 unused

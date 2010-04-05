@@ -1,10 +1,2 @@
 empty.img: 149GB (312581808 sectors of 512 bytes)
-    label:               empty.img
-    device path:         empty.img
-    sector size:         512
-    total sectors:       312581808
-    total cylinders:     310101 (cylinders)
-    tracks per cylinder: 16 (heads)
-    sectors per track:   63 (sectors)
-
 

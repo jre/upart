@@ -1,0 +1,33 @@
+sparc-linux.img: 16.9GB (35378533 sectors of 512 bytes)
+    label:               sparc-linux.img
+    device path:         sparc-linux.img
+    sector size:         512
+    total sectors:       35378533
+    total cylinders:     7508 (cylinders)
+    tracks per cylinder: 19 (heads)
+    sectors per track:   248 (sectors)
+
+
+Sun sparc disklabel (Sun VTOC) in sector 0 of sparc-linux.img:
+  rpm: 5400
+  physical cylinders: 2202
+  alternates/cylinder: 0
+  interleave: 1
+  data cylinders: 2202
+  alternate cylinders: 0
+  tracks/cylinder: 255
+  sectors/track: 63
+  name: 
+  partition count: 0
+  read sector skip: 0
+  write sector skip: 0
+
+                 Start            Size Flags Type
+0:                   0          192780 wm    boot
+1:              192780        33720435 wm    Linux Filesystem
+2:                   0        35375130 wm    backup
+3:            33913215         1461915 wm    Linux Swap
+4:   X               0               0 wm    unassigned
+5:   X               0               0 wm    unassigned
+6:   X               0               0 wm    unassigned
+7:   X               0               0 wm    unassigned

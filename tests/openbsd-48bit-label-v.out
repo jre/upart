@@ -1,0 +1,48 @@
+openbsd-48bit-label.img: 3.00TB (6442450177 sectors of 512 bytes)
+    label:               openbsd-48bit-label.img
+    device path:         openbsd-48bit-label.img
+    sector size:         512
+    total sectors:       6442450177
+    total cylinders:     401023 (cylinders)
+    tracks per cylinder: 255 (heads)
+    sectors per track:   63 (sectors)
+
+
+OpenBSD disklabel in sector 0 (offset 1) of openbsd-48bit-label.img:
+  version: 1
+  type: SCSI (4)
+  disk: SCSI disk
+  label: SR RAID 0
+  flags: 00000000
+  bytes/sector: 512
+  sectors/track: 255
+  tracks/cylinder: 511
+  sectors/cylinder: 130305
+  cylinders: 49441
+  total sectors: 6442450177
+  rpm: 3600
+  interleave: 1
+  trackskew: 0
+  cylinderskew: 1
+  headswitch: 0
+  track-to-track seek: 2147482881
+  byte order: little endian
+  partition count: 16
+
+                 Start            Size Type    fsize bsize   cpg
+a:                  63      6442450114 4.2BSD   2048 16384     1
+b:   X               0               0 unused
+c:                   0      6442450177 unused      0     0
+d:   X               0               0 unused
+e:   X               0               0 unused
+f:   X               0               0 unused
+g:   X               0               0 unused
+h:   X               0               0 unused
+i:   X               0               0 unused
+j:   X               0               0 unused
+k:   X               0               0 unused
+l:   X               0               0 unused
+m:   X               0               0 unused
+n:   X               0               0 unused
+o:   X               0               0 unused
+p:   X               0               0 unused

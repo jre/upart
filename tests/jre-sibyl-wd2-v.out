@@ -1,0 +1,120 @@
+jre-sibyl-wd2.img: 149GB (312581808 sectors of 512 bytes)
+    label:               jre-sibyl-wd2.img
+    device path:         jre-sibyl-wd2.img
+    sector size:         512
+    total sectors:       312581808
+    total cylinders:     310101 (cylinders)
+    tracks per cylinder: 16 (heads)
+    sectors per track:   63 (sectors)
+
+
+MBR partition table in sector 0 of jre-sibyl-wd2.img:
+                 Start            Size A    C   H  S    C   H  S Type
+0:                  63        36699201      0/  1/ 1-1023/ 15/63 NetBSD (0xa9)
+ BSD disklabel in sector 63 (offset 1) of jre-sibyl-wd2.img:
+  type: unknown (0)
+  disk: SAMSUNG SP1614C
+  label: 
+  flags: 00000000
+  bytes/sector: 512
+  sectors/track: 63
+  tracks/cylinder: 16
+  sectors/cylinder: 1008
+  cylinders: 310101
+  total sectors: 312581808
+  rpm: 3600
+  interleave: 1
+  trackskew: 0
+  cylinderskew: 0
+  headswitch: 0
+  track-to-track seek: 0
+  byte order: little endian
+  partition count: 16
+
+                  Start            Size Type    fsize bsize   cpg
+ a:                  63        35648928 4.2BSD   2048 16384 28280
+ b:            35648991         1050273 swap
+ c:                  63        36699201 unused      0     0
+ d:   X               0       312581808 unused      0     0
+ e:   X        36699280          524272 4.2BSD   2048 16384 32768
+ f:   X        38272128         1048576 4.2BSD   2048 16384     8
+ g:   X        39320704        34077808 4.2BSD   2048 16384 28552
+ h:   X        73398528        31457664 ccd/NTFS
+ i:   X       104856255        41942817 ext2fs
+ j:   X       146799135        41942817 4.2BSD   2048 16384 28936
+ k:   X       188742015       123839730 4.2BSD   2048 16384 29144
+ l:   X               0               0 unused
+ m:   X               0               0 unused
+ n:   X               0               0 unused
+ o:   X               0               0 unused
+ p:   X               0               0 unused
+1:            36699264        36699264   1023/  0/ 1-1023/ 15/63 FreeBSD or DragonFly (0xa5)
+ BSD disklabel in sector 36699264 (offset 1) of jre-sibyl-wd2.img:
+  type: unknown (0)
+  disk: amnesiac
+  label: 
+  flags: 00000000
+  bytes/sector: 512
+  sectors/track: 63
+  tracks/cylinder: 16
+  sectors/cylinder: 1008
+  cylinders: 36408
+  total sectors: 36699264
+  rpm: 3600
+  interleave: 1
+  trackskew: 0
+  cylinderskew: 0
+  headswitch: 0
+  track-to-track seek: 0
+  byte order: little endian
+  partition count: 8
+
+                  Start            Size Type    fsize bsize   cpg
+ a:            36699280          524272 4.2BSD   2048 16384 32768
+ b:            37223552         1048576 swap
+ c:            36699264        36699264 unused      0     0
+ d:            38272128         1048576 4.2BSD   2048 16384     8
+ e:            39320704        34077808 4.2BSD   2048 16384 28552
+ f:   X               0               0 unused
+ g:   X               0               0 unused
+ h:   X               0               0 unused
+2:            73398528        31457664 * 1023/  0/ 1-1023/ 15/63 NTFS or HPFS (0x07)
+3:           104856192       207725616   1023/  0/ 1-1023/ 15/63 OpenBSD (0xa6)
+ OpenBSD disklabel in sector 104856192 (offset 1) of jre-sibyl-wd2.img:
+  version: 1
+  type: ESDI (5)
+  disk: ESDI/IDE disk
+  label: SAMSUNG SP1614C 
+  flags: 00000000
+  bytes/sector: 512
+  sectors/track: 63
+  tracks/cylinder: 16
+  sectors/cylinder: 1008
+  cylinders: 310101
+  total sectors: 312581808
+  rpm: 3600
+  interleave: 1
+  trackskew: 0
+  cylinderskew: 0
+  headswitch: 0
+  track-to-track seek: 0
+  byte order: little endian
+  partition count: 16
+
+                  Start            Size Type    fsize bsize   cpg
+ a:           104856192          525168 4.2BSD   2048 16384     1
+ b:           105381360         1049328 swap
+ c:   X               0       312581808 unused      0     0
+ d:           106430688          525168 4.2BSD   2048 16384     1
+ e:           106955856          525168 4.2BSD   2048 16384     1
+ f:           107481024        20972448 4.2BSD   2048 16384     1
+ g:           128453472       184128336 4.2BSD   2048 16384     1
+ h:   X               0               0 unused
+ i:   X              63        36699201 unknown
+ j:   X        36699264        36699264 unknown
+ k:   X        73398528        31457664 unknown
+ l:   X               0               0 unused
+ m:   X               0               0 unused
+ n:   X               0               0 unused
+ o:   X               0               0 unused
+ p:   X               0               0 unused

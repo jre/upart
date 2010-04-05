@@ -339,7 +339,9 @@ up_map_print(const struct map *map, FILE *stream, int recurse)
 	if (!(UP_TYPE_NOPRINTHDR & funcs->flags)) {
 		if (!indented)
 			map_indent(map->depth, stream);
-		fprintf(stream, "       %15s %15s", "Start", "Size");
+		fprintf(stream, "       %15s %15s",
+		    (opts->swapcols ?  "Size" : "Start"),
+		    (opts->swapcols ?  "Start" : "Size"));
 		if (funcs->print_extrahdr != NULL)
 			funcs->print_extrahdr(map, stream);
 		putc('\n', stream);
@@ -366,9 +368,11 @@ up_map_print(const struct map *map, FILE *stream, int recurse)
 		strlcat(idx, ":", sizeof(idx));
 
 		fprintf(stream, "%-4s %c ", idx, flag);
-		printsect_pad(part->start, 15, stream);
+		printsect_pad((opts->swapcols ? part->size : part->start),
+		    15, stream);
 		putc(' ', stream);
-		printsect_pad(part->size, 15, stream);
+		printsect_pad((opts->swapcols ? part->start : part->size),
+		    15, stream);
 		if (funcs->print_extra != NULL)
 			funcs->print_extra(part, stream);
 		putc('\n', stream);

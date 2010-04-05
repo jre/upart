@@ -7,7 +7,7 @@
 .Sh SYNOPSIS
 .Bk -words
 .Nm upart
-.Op Fl fhlqrvVx
+.Op Fl fhlqrsvVx
 .Op Fl C Ar cylinders
 .Op Fl H Ar heads
 .Op Fl L Ar label
@@ -64,6 +64,8 @@ options decrease the verbosity level further.
 .It Fl r
 Relax some checks when parsing partition maps. This may be useful to
 extract information out of a partially corrupted map.
+.It Fl s
+Swap the start and size columns of the partition display.
 .It Fl v
 Show more information when reading, parsing, and printing partition
 maps. Additional

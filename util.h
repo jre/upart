@@ -152,6 +152,7 @@ struct opts
 	unsigned int sloppyio : 1;
 	unsigned int printhex : 1;
 	unsigned int humansize : 1;
+	unsigned int swapcols : 1;
 };
 
 /* Pointer to the global program options, initially NULL. */

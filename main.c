@@ -83,7 +83,7 @@ readargs(int argc, char *argv[], struct opts *newopts,
 
 	init_options(newopts);
 	memset(params, 0, sizeof *params);
-	while(0 < (opt = getopt(argc, argv, "C:fhH:klL:qrS:vVw:xz:"))) {
+	while(0 < (opt = getopt(argc, argv, "C:fhH:klL:qrsS:vVw:xz:"))) {
 		switch(opt) {
 		case 'C':
 			params->cyls = strtol(optarg, NULL, 0);
@@ -117,6 +117,9 @@ readargs(int argc, char *argv[], struct opts *newopts,
 			break;
 		case 'r':
 			newopts->relaxed = 1;
+			break;
+		case 's':
+			newopts->swapcols = 1;
 			break;
 		case 'S':
 			params->sects = strtol(optarg, NULL, 0);
@@ -179,6 +182,7 @@ usage(const char *message, ...)
 	    "  -l        list valid disk devices and exit\n"
 	    "  -L label  label to use with -w option\n"
 	    "  -q        lower verbosity level when printing maps\n"
+	    "  -s        swap start and size columns\n"
 	    "  -r        relax some checks when reading maps\n"
 	    "  -S sects  number of sectors per track (sectors)\n"
 	    "  -v        raise verbosity level when printing maps\n"

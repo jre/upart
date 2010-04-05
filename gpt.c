@@ -90,9 +90,10 @@ struct up_gpt
 static int	gpt_load(const struct disk *, const struct part *,
     void **);
 static int	gpt_setup(struct disk *, struct map *);
-static int	gpt_getinfo(const struct map *, char *, int);
-static int	gpt_getindex(const struct part *, char *, int);
-static int	gpt_getextra(const struct part *, char *, int);
+static int	gpt_getinfo(const struct map *, FILE *);
+static int	gpt_getindex(const struct part *, char *, size_t);
+static int	gpt_getextrahdr(const struct map *, FILE *);
+static int	gpt_getextra(const struct part *, FILE *);
 static int	gpt_findhdr(const struct disk *, int64_t, int64_t,
     struct up_gpt_p *);
 static int	gpt_readhdr(const struct disk *, int64_t, int64_t,
@@ -103,18 +104,18 @@ static const char *gpt_typename(const struct up_guid_p *);
 void
 up_gpt_register(void)
 {
-    up_map_register_old(UP_MAP_GPT,
-                    "EFI GPT",
-                    0,
-                    gpt_load,
-                    gpt_setup,
-                    gpt_getinfo,
-                    gpt_getindex,
-                    NULL,
-                    gpt_getextra,
-                    NULL,
-                    up_map_freeprivmap_def,
-                    up_map_freeprivpart_def);
+	struct map_funcs funcs;
+
+	memset(&funcs, 0, sizeof(funcs));
+	funcs.label = "EFI GPT";
+	funcs.load = gpt_load;
+	funcs.setup = gpt_setup;
+	funcs.print_header = gpt_getinfo;
+	funcs.get_index = gpt_getindex;
+	funcs.print_extrahdr = gpt_getextrahdr;
+	funcs.print_extra = gpt_getextra;
+
+	up_map_register(UP_MAP_GPT, &funcs);
 }
 
 int
@@ -219,86 +220,91 @@ gpt_setup(struct disk *disk, struct map *map)
 }
 
 static int
-gpt_getinfo(const struct map *map, char *buf, int size)
+gpt_getinfo(const struct map *map, FILE *stream)
 {
-    const struct up_gpt *gpt = map->priv;
+	const struct up_gpt *gpt;
 
-    if(UP_NOISY(EXTRA))
-        return snprintf(buf, size, "%s partition table in sectors %"PRId64" "
-                    "and %"PRId64" of %s:\n"
-                    "  size:                 %u\n"
-                    "  primary gpt sector:   %"PRIu64"\n"
-                    "  backup gpt sector:    %"PRIu64"\n"
-                    "  first data sector:    %"PRIu64"\n"
-                    "  last data sector:     %"PRIu64"\n"
-                    "  guid:                 "GPT_GUID_FMT"\n"
-                    "  partition sector:     %"PRIu64"\n"
-                    "  max partitions:       %u\n"
-                    "  partition size:       %u\n"
-                    "\n",
-                    up_map_label(map),
-                    GPT_PRIOFF(map->start, map->size),
-                    GPT_SECOFF(map->start, map->size), UP_DISK_PATH(map->disk),
-                    UP_LETOH32(gpt->gpt.size),
-                    UP_LETOH64(gpt->gpt.gpt1sect),
-                    UP_LETOH64(gpt->gpt.gpt2sect),
-                    UP_LETOH64(gpt->gpt.firstsect),
-                    UP_LETOH64(gpt->gpt.lastsect),
-                    GPT_GUID_FMT_ARGS(&gpt->gpt.guid),
-                    UP_LETOH64(gpt->gpt.partsect),
-                    UP_LETOH32(gpt->gpt.maxpart),
-                    UP_LETOH32(gpt->gpt.partsize));
-    else if(UP_NOISY(NORMAL))
-        return snprintf(buf, size, "%s partition table in sectors %"PRId64
-                        " and %"PRId64" of %s:",
-                        up_map_label(map),
-                        GPT_PRIOFF(map->start, map->size),
-                        GPT_SECOFF(map->start, map->size), UP_DISK_PATH(map->disk));
-    else
-        return 0;
+	gpt = map->priv;
+
+	if (UP_NOISY(EXTRA))
+		return (fprintf(stream, "%s partition table in sectors "
+			"%"PRId64" and %"PRId64" of %s:\n"
+			"  size:                 %u\n"
+			"  primary gpt sector:   %"PRIu64"\n"
+			"  backup gpt sector:    %"PRIu64"\n"
+			"  first data sector:    %"PRIu64"\n"
+			"  last data sector:     %"PRIu64"\n"
+			"  guid:                 "GPT_GUID_FMT"\n"
+			"  partition sector:     %"PRIu64"\n"
+			"  max partitions:       %u\n"
+			"  partition size:       %u\n"
+			"\n\n",
+			up_map_label(map),
+			GPT_PRIOFF(map->start, map->size),
+			GPT_SECOFF(map->start, map->size), UP_DISK_PATH(map->disk),
+			UP_LETOH32(gpt->gpt.size),
+			UP_LETOH64(gpt->gpt.gpt1sect),
+			UP_LETOH64(gpt->gpt.gpt2sect),
+			UP_LETOH64(gpt->gpt.firstsect),
+			UP_LETOH64(gpt->gpt.lastsect),
+			GPT_GUID_FMT_ARGS(&gpt->gpt.guid),
+			UP_LETOH64(gpt->gpt.partsect),
+			UP_LETOH32(gpt->gpt.maxpart),
+			UP_LETOH32(gpt->gpt.partsize)));
+	else if (UP_NOISY(NORMAL))
+		return (fprintf(stream, "%s partition table in sectors "
+			"%"PRId64" and %"PRId64" of %s:\n",
+			up_map_label(map),
+			GPT_PRIOFF(map->start, map->size),
+			GPT_SECOFF(map->start, map->size),
+			UP_DISK_PATH(map->disk)));
+	else
+		return (0);
 }
 
 static int
-gpt_getindex(const struct part *part, char *buf, int size)
+gpt_getindex(const struct part *part, char *buf, size_t size)
 {
-    const struct up_gptpart *priv = part->priv;
+	const struct up_gptpart *priv;
 
-    return snprintf(buf, size, "%d", priv->index + 1);
+	priv = part->priv;
+	return (snprintf(buf, size, "%d", priv->index + 1));
 }
 
 static int
-gpt_getextra(const struct part *part, char *buf, int size)
+gpt_getextrahdr(const struct map *map, FILE *stream)
 {
-    const struct up_gptpart    *priv;
-    const char                 *label;
+	if (!UP_NOISY(NORMAL))
+		return (0);
 
-    if(!UP_NOISY(NORMAL))
-        return 0;
-
-    if(!part)
-    {
-        if(UP_NOISY(EXTRA))
-            return snprintf(buf, size, "%-36s Type", "GUID");
+        if (UP_NOISY(EXTRA))
+		return (fprintf(stream, " %-36s Type", "GUID"));
         else
-            return snprintf(buf, size, "Type");
-    }
+		return (fprintf(stream, " Type"));
+}
 
-    priv = part->priv;
-    label = gpt_typename(&priv->part.type);
+static int
+gpt_getextra(const struct part *part, FILE *stream)
+{
+	const struct up_gptpart *priv;
+	const char *label;
 
-    if(UP_NOISY(EXTRA))
-        return snprintf(buf, size, GPT_GUID_FMT " " GPT_GUID_FMT " %s",
+	if (!UP_NOISY(NORMAL))
+		return (0);
+
+	priv = part->priv;
+	label = gpt_typename(&priv->part.type);
+
+	if (UP_NOISY(EXTRA))
+		return (fprintf(stream, " "GPT_GUID_FMT" "GPT_GUID_FMT" %s",
                         GPT_GUID_FMT_ARGS(&priv->part.guid),
                         GPT_GUID_FMT_ARGS(&priv->part.type),
-                        (label ? label : ""));
-    else
-    {
-        if(label)
-            return snprintf(buf, size, "%s", label);
+                        (label ? label : "")));
+	else if (label)
+		return (fprintf(stream, " %s", label));
         else
-            return snprintf(buf, size, GPT_GUID_FMT,
-                            GPT_GUID_FMT_ARGS(&priv->part.type));
-    }
+		return (fprintf(stream, " "GPT_GUID_FMT,
+			GPT_GUID_FMT_ARGS(&priv->part.type)));
 }
 
 static int

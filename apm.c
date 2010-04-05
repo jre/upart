@@ -97,31 +97,31 @@ static const char *bzb_types[] =
     "swap",
 };
 
-static int	apm_load(const struct disk *, const struct part *,
-	void **);
+static int	apm_load(const struct disk *, const struct part *, void **);
 static int	apm_setup(struct disk *, struct map *);
-static int	apm_info(const struct map *, char *, int);
-static int	apm_index(const struct part *, char *, int);
-static int	apm_extra(const struct part *, char *, int);
-static void apm_bounds(const struct up_apm_p *map,
-                       int64_t *start, int64_t *size);
+static int	apm_info(const struct map *, FILE *);
+static int	apm_index(const struct part *, char *, size_t);
+static int	apm_extrahdr(const struct map *, FILE *);
+static int	apm_extra(const struct part *, FILE *);
+static void	apm_bounds(const struct up_apm_p *, int64_t *, int64_t *);
 static int	apm_find(const struct disk *, int64_t, int64_t,
-                    int64_t *, int64_t *);
+    int64_t *, int64_t *);
 
-void up_apm_register(void)
+void
+up_apm_register(void)
 {
-    up_map_register_old(UP_MAP_APM,
-                    "Apple partition map",
-                    0,
-                    apm_load,
-                    apm_setup,
-                    apm_info,
-                    apm_index,
-                    NULL,
-                    apm_extra,
-                    NULL,
-                    up_map_freeprivmap_def,
-                    up_map_freeprivpart_def);
+	struct map_funcs funcs;
+
+	memset(&funcs, 0, sizeof(funcs));
+	funcs.label = "Apple partition map";
+	funcs.load = apm_load;
+	funcs.setup = apm_setup;
+	funcs.print_header = apm_info;
+	funcs.get_index = apm_index;
+	funcs.print_extrahdr = apm_extrahdr;
+	funcs.print_extra = apm_extra;
+
+	up_map_register(UP_MAP_APM, &funcs);
 }
 
 static int
@@ -202,86 +202,88 @@ apm_setup(struct disk *disk, struct map *map)
 }
 
 static int
-apm_info(const struct map *map, char *buf, int size)
+apm_info(const struct map *map, FILE *stream)
 {
-    if(!UP_NOISY(NORMAL))
-        return 0;
-    /* XXX display driver info here like pdisk does? */
-    return snprintf(buf, size, "%s in sector %"PRId64" of %s:",
-                    up_map_label(map), map->start, UP_DISK_PATH(map->disk));
+	if (!UP_NOISY(NORMAL))
+		return (0);
+
+	/* XXX display driver info here like pdisk does? */
+	return (fprintf(stream, "%s in sector %"PRId64" of %s:\n",
+		up_map_label(map), map->start, UP_DISK_PATH(map->disk)));
 }
 
 static int
-apm_index(const struct part *part, char *buf, int size)
+apm_index(const struct part *part, char *buf, size_t size)
 {
-    struct up_apmpart *priv = part->priv;
+	struct up_apmpart *priv = part->priv;
 
-    return snprintf(buf, size, "%d", 1 + priv->index);
+	return (snprintf(buf, size, "%d", 1 + priv->index));
 }
 
 static int
-apm_extra(const struct part *part, char *buf, int size)
+apm_extrahdr(const struct map *map, FILE *stream)
 {
-    struct up_apmpart  *priv;
-    struct up_apm_p    *raw;
-    char                type[sizeof(raw->type)+1], name[sizeof(raw->name)+1];
-    uint32_t            flags, slice;
-    int                 res;
 
-    if(!UP_NOISY(NORMAL))
-        return 0;
+	if (!UP_NOISY(NORMAL))
+		return 0;
 
-    if(!part)
-    {
-        if(UP_NOISY(EXTRA))
-            return snprintf(buf, size, "%-24s %-24s %-10s %s",
-                            "Type", "Name", "Status", "A/UX boot data");
+        if (UP_NOISY(EXTRA))
+		return (fprintf(stream, " %-24s %-24s %-10s %s",
+			"Type", "Name", "Status", "A/UX boot data"));
         else
-            return snprintf(buf, size, "%-24s %s", "Type", "Name");
-    }
+		return (fprintf(stream, " %-24s %s", "Type", "Name"));
+}
 
-    priv = part->priv;
-    raw  = &priv->part;
-    memcpy(type, raw->type, sizeof raw->type);
-    type[sizeof(type)-1] = '\0';
-    memcpy(name, raw->name, sizeof raw->name);
-    name[sizeof(name)-1] = '\0';
+static int
+apm_extra(const struct part *part, FILE *stream)
+{
+	struct up_apmpart *priv;
+	struct up_apm_p *raw;
+	char type[sizeof(raw->type)+1], name[sizeof(raw->name)+1];
 
-    if(UP_NOISY(EXTRA))
-    {
-        res = snprintf(buf, size, "%-24s %-24s 0x%08x",
-                       type, name, UP_BETOH32(raw->status));
+	if (!UP_NOISY(NORMAL))
+		return (0);
+
+	priv = part->priv;
+	raw = &priv->part;
+	memcpy(type, raw->type, sizeof raw->type);
+	type[sizeof(type)-1] = '\0';
+	memcpy(name, raw->name, sizeof raw->name);
+	name[sizeof(name)-1] = '\0';
+
+	if (!UP_NOISY(EXTRA))
+		return (fprintf(stream, " %-24s %s", type, name));
+
+	if (fprintf(stream, " %-24s %-24s 0x%08x",
+		type, name, UP_BETOH32(raw->status)) < 0)
+		return (-1);
+
         /* XXX this is broken */
         if(BZB_MAGIC == UP_BETOH32(raw->bzbmagic))
         {
+            uint32_t flags, slice;
+
             flags = UP_BETOH32(raw->bzbflags);
             slice = BZB_FLAG_SLICE(flags);
-            strlcat(buf, " ", size);
-            if(slice)
-                res = up_scatprintf(buf, size, "slice %d, ", slice);
-            if(0 > res || res >= size)
-                return res;
-            if(raw->bzbcluster)
-                res = up_scatprintf(buf, size, "cluster %d, ", raw->bzbcluster);
-            if(0 > res || res >= size)
-                return res;
-            if(BZB_FLAG_ROOT & flags)
-                strlcat(buf, "root, ", size);
-            if(BZB_FLAG_USR & flags)
-                strlcat(buf, "usr, ", size);
-            if(BZB_FLAG_CRIT & flags)
-                strlcat(buf, "crit, ", size);
-            if(sizeof(bzb_types) / sizeof(bzb_types[0]) > raw->bzbtype &&
-               NULL != bzb_types[raw->bzbtype])
-                strlcat(buf, bzb_types[raw->bzbtype], size);
-            res = strlen(buf);
-            if(2 <= res && ',' == buf[res-2] && ' ' == buf[res-1])
-                buf[res -= 2] = '\0';
+	    if (putc(' ', stream) == EOF ||
+		(slice &&
+		    fprintf(stream, "slice %d, ", slice) < 0) ||
+		(raw->bzbcluster &&
+		    fprintf(stream, "cluster %d, ", raw->bzbcluster) < 0) ||
+		((BZB_FLAG_ROOT & flags) &&
+		    fputs("root, ", stream) == EOF) ||
+		((BZB_FLAG_USR & flags) &&
+		    fputs("usr, ", stream) == EOF) ||
+		((BZB_FLAG_CRIT & flags) &&
+		    fputs("crit, ", stream) == EOF))
+		    return (-1);
+            if (sizeof(bzb_types) / sizeof(bzb_types[0]) > raw->bzbtype &&
+		NULL != bzb_types[raw->bzbtype])
+		    if (fputs(bzb_types[raw->bzbtype], stream) == EOF)
+			    return (-1);
         }
-        return res;
-    }
-    else
-        return snprintf(buf, size, "%-24s %s", type, name);
+
+	return (0);
 }
 
 static void

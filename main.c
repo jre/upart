@@ -125,7 +125,9 @@ readargs(int argc, char *argv[], struct opts *newopts,
                 newopts->verbosity++;
                 break;
             case 'V':
-                printf("%s version %s\n", PACKAGE_NAME, PACKAGE_VERSION);
+                printf("%s version %s\n"
+		    "Copyright (c) 2007-2010 Joshua R. Elsasser\n",
+		    PACKAGE_NAME, PACKAGE_VERSION);
                 exit(EXIT_SUCCESS);
                 break;
             case 'w':

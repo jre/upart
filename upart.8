@@ -1,4 +1,4 @@
-.Dd April 25, 2008
+.Dd April 5, 2010
 .Dt UPART 8
 .Os
 .Sh NAME
@@ -7,11 +7,11 @@
 .Sh SYNOPSIS
 .Bk -words
 .Nm upart
-.Op Fl flqrvV
-.Op Fl c Ar cylinders
-.Op Fl h Ar heads
+.Op Fl fhlqrvV
+.Op Fl C Ar cylinders
+.Op Fl H Ar heads
 .Op Fl L Ar label
-.Op Fl s Ar sectors
+.Op Fl S Ar sectors
 .Op Fl w Ar file
 .Op Fl z Ar size
 .Ar path
@@ -38,8 +38,8 @@ VTOC and OpenBSD extensions to the SPARC format are supprted as well.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
-.It Xo Fl c Ar cylinders
-.Fl h Ar heads Fl s Ar sects
+.It Xo Fl C Ar cylinders
+.Fl H Ar heads Fl S Ar sects
 .Xc
 Specify an alternate geometry for the disk. This is useful if the
 geometry could not be determined automatically, or is incorrect.
@@ -47,6 +47,8 @@ geometry could not be determined automatically, or is incorrect.
 Indicate that
 .Ar path
 is a plain file, and not a device node.
+.It Fl h
+Display a usage message and exit.
 .It Fl l
 List available disk device names and exit.
 .It Fl L Ar label

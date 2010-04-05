@@ -83,9 +83,9 @@ readargs(int argc, char *argv[], struct opts *newopts,
 
 	init_options(newopts);
 	memset(params, 0, sizeof *params);
-	while(0 < (opt = getopt(argc, argv, "c:fh:klL:qrs:vVw:z:"))) {
+	while(0 < (opt = getopt(argc, argv, "C:fhH:klL:qrS:vVw:z:"))) {
 		switch(opt) {
-		case 'c':
+		case 'C':
 			params->cyls = strtol(optarg, NULL, 0);
 			if (0 >= params->cyls)
 				usage("illegal cylinder count: %s", optarg);
@@ -93,7 +93,7 @@ readargs(int argc, char *argv[], struct opts *newopts,
 		case 'f':
 			newopts->plainfile = 1;
 			break;
-		case 'h':
+		case 'H':
 			params->heads = strtol(optarg, NULL, 0);
 			if (0 >= params->heads)
 				usage("illegal tracks per cylinder (ie: head) "
@@ -115,7 +115,7 @@ readargs(int argc, char *argv[], struct opts *newopts,
 		case 'r':
 			newopts->relaxed = 1;
 			break;
-		case 's':
+		case 'S':
 			params->sects = strtol(optarg, NULL, 0);
 			if (0 >= params->sects)
 				usage("illegal sectors per track count (sectors): %s", optarg);
@@ -165,15 +165,16 @@ usage(const char *message, ...)
 	}
 
 	printf("usage: %s [options] path\n"
-	    "  -c cyls   total number of cylinders (cylinders)\n"
+	    "  -C cyls   total number of cylinders (cylinders)\n"
 	    "  -f        path is a plain file and not a device\n"
-	    "  -h heads  number of tracks per cylinder (heads)\n"
+	    "  -h        show this message and exit\n"
+	    "  -H heads  number of tracks per cylinder (heads)\n"
 	    "  -k        keep going after I/O errors\n"
 	    "  -l        list valid disk devices and exit\n"
 	    "  -L label  label to use with -w option\n"
 	    "  -q        lower verbosity level when printing maps\n"
 	    "  -r        relax some checks when reading maps\n"
-	    "  -s sects  number of sectors per track (sectors)\n"
+	    "  -S sects  number of sectors per track (sectors)\n"
 	    "  -v        raise verbosity level when printing maps\n"
 	    "  -V        display the version of %s and exit\n"
 	    "  -w file   write disk and partition info to file\n"

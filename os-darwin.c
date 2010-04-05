@@ -2,6 +2,8 @@
 #include "config.h"
 #endif
 
+#include <stdio.h>
+
 #define MINIMAL_NAMESPACE_POLLUTION_PLEASE
 #include "disk.h"
 #include "os-darwin.h"

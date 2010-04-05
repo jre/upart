@@ -193,7 +193,7 @@ static uint16_t bsdlabel_cksum(struct up_bsd_p *hdr,
 
 void up_bsdlabel_register(void)
 {
-    up_map_register(UP_MAP_BSD,
+    up_map_register_old(UP_MAP_BSD,
                     LABEL_LABEL,
                     0,
                     bsdlabel_load,

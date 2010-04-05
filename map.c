@@ -18,21 +18,6 @@
     assert(UP_MAP_NONE < (typ) && UP_MAP_ID_COUNT > (typ) && \
            UP_TYPE_REGISTERED & st_types[(typ)].flags)
 
-struct map_funcs {
-	char *label;
-	int flags;
-	int (*load)(const struct disk *, const struct part *, void **);
-	int (*setup)(struct disk *, struct map *);
-	int (*getinfo)(const struct map *, char *, int);
-	int (*getindex)(const struct part *, char *, int);
-	int (*getextrahdr)(const struct map *, char *, int);
-	int (*getextra)(const struct part *, char *, int);
-	int (*getdump)(const struct map *, int64_t, const void *, int64_t, int,
-	    char *, int);
-	void (*freeprivmap)(struct map *, void *);
-	void (*freeprivpart)(struct part *, void *);
-};
-
 static int		 map_loadall(struct disk *, struct part *);
 static struct part	*map_newcontainer(int64_t);
 static void		 map_freecontainer(struct disk *, struct part *);
@@ -40,11 +25,51 @@ static struct map	*map_new(struct disk *, struct part *, enum mapid,
     void *);
 static void		 map_printcontainer(const struct part *, FILE *);
 static void		 map_indent(int, FILE *);
+static int		 compat_print_header(const struct map *, FILE *);
+static int		 compat_print_extrahdr(const struct map *, FILE *);
+static int		 compat_print_extra(const struct part *, FILE *);
+static int		 compat_dump_extra(const struct map *, int64_t,
+    const void *, int64_t, int, FILE *);
 
 static struct map_funcs st_types[UP_MAP_ID_COUNT];
 
 void
-up_map_register(enum mapid type, const char *label, int flags,
+up_map_register(enum mapid type, const struct map_funcs *params)
+{
+	struct map_funcs *funcs;
+
+	assert(type > UP_MAP_NONE && type < UP_MAP_ID_COUNT);
+	assert(!(UP_TYPE_REGISTERED & st_types[type].flags));
+	assert(!(UP_TYPE_REGISTERED & params->flags));
+
+	funcs = &st_types[type];
+	funcs->label = strdup(params->label);
+	funcs->flags = UP_TYPE_REGISTERED | params->flags;
+	funcs->load = params->load;
+	funcs->setup = params->setup;
+	funcs->get_index = params->get_index;
+	funcs->print_header = params->print_header;
+	funcs->print_extrahdr = params->print_extrahdr;
+	funcs->print_extra = params->print_extra;
+	funcs->dump_extra = params->dump_extra;
+	if (params->free_mappriv == NULL)
+		funcs->free_mappriv = params->free_mappriv;
+	else
+		funcs->free_mappriv = up_map_freeprivmap_def;
+	if (params->free_partpriv == NULL)
+		funcs->free_partpriv = params->free_partpriv;
+	else
+		funcs->free_partpriv = up_map_freeprivpart_def;
+
+	funcs->label = params->label;
+	funcs->getinfo = params->getinfo;
+	funcs->getextra = params->getextra;
+	funcs->getextrahdr = params->getextrahdr;
+	funcs->getdump = params->getdump;
+}
+
+void
+up_map_register_old(enum mapid type, const char *label, int flags,
     int (*load)(const struct disk *, const struct part *, void **),
     int (*setup)(struct disk *, struct map *),
     int (*getinfo)(const struct map *, char *, int),
@@ -56,24 +81,31 @@ up_map_register(enum mapid type, const char *label, int flags,
     void (*freeprivmap)(struct map *, void *),
     void (*freeprivpart)(struct part *, void *))
 {
-	struct map_funcs *funcs;
+	struct map_funcs funcs;
 
-	assert(type > UP_MAP_NONE && type < UP_MAP_ID_COUNT);
-	assert(!(UP_TYPE_REGISTERED & st_types[type].flags));
-	assert(!(UP_TYPE_REGISTERED & flags));
-
-	funcs = &st_types[type];
-	funcs->label = strdup(label);
-	funcs->flags = UP_TYPE_REGISTERED | flags;
-	funcs->load = load;
-	funcs->setup = setup;
-	funcs->getinfo = getinfo;
-	funcs->getindex = getindex;
-	funcs->getextrahdr = getextrahdr;
-	funcs->getextra = getextra;
-	funcs->getdump = getdumpextra;
-	funcs->freeprivmap = freeprivmap;
-	funcs->freeprivpart = freeprivpart;
+	memset(&funcs, 0, sizeof(funcs));
+	funcs.flags = flags;
+	funcs.label = (char*)label;
+	funcs.load = load;
+	funcs.setup = setup;
+	funcs.get_index = (map_getpart_fn)getindex;
+	if (getinfo) {
+		funcs.getinfo = getinfo;
+		funcs.print_header = compat_print_header;
+	}
+	if (getextra || getextrahdr) {
+		funcs.getextrahdr = getextrahdr;
+		funcs.getextra = getextra;
+		funcs.print_extrahdr = compat_print_extrahdr;
+		funcs.print_extra = compat_print_extra;
+	}
+	if (getdumpextra) {
+		funcs.getdump = getdumpextra;
+		funcs.dump_extra = compat_dump_extra;
+	}
+	funcs.free_mappriv = freeprivmap;
+	funcs.free_partpriv = freeprivpart;
+	up_map_register(type, &funcs);
 }
 
 int
@@ -104,8 +136,8 @@ up_map_load(struct disk *disk, struct part *parent, enum mapid type,
 #endif
 		map = map_new(disk, parent, type, priv);
 		if (map == NULL) {
-			if (funcs->freeprivmap && priv)
-				funcs->freeprivmap(NULL, priv);
+			if (funcs->free_mappriv && priv)
+				funcs->free_mappriv(NULL, priv);
 			return (-1);
 		}
 		map->parent = parent; /* XXX this is so broken */
@@ -293,14 +325,14 @@ up_map_free(struct disk *disk, struct map *map)
     {
         SIMPLEQ_REMOVE_HEAD(&map->list, link);
         map_freecontainer(disk, ii);
-        if(st_types[ii->map->type].freeprivpart && ii->priv)
-            st_types[ii->map->type].freeprivpart(ii, ii->priv);
+        if(st_types[ii->map->type].free_partpriv && ii->priv)
+            st_types[ii->map->type].free_partpriv(ii, ii->priv);
         free(ii);
     }
 
     /* free private data */
-    if(st_types[map->type].freeprivmap && map->priv)
-        st_types[map->type].freeprivmap(map, map->priv);
+    if(st_types[map->type].free_mappriv && map->priv)
+        st_types[map->type].free_mappriv(map, map->priv);
 
     /* mark sectors unused */
     up_disk_sectsunref(disk, map);
@@ -330,95 +362,69 @@ up_map_label(const struct map *map)
 }
 
 void
-up_map_print(const struct map *map, void *_stream, int recurse)
+up_map_print(const struct map *map, FILE *stream, int recurse)
 {
-    FILE                       *stream = _stream;
-    struct map_funcs        *funcs;
-    char                        buf[512], idx[5], flag;
-    const struct part       *ii;
-    int                         len;
+	struct map_funcs *funcs;
+	const struct part *part;
+	int indented;
+	char idx[5], flag;
 
-    CHECKTYPE(map->type);
+	CHECKTYPE(map->type);
+	funcs = &st_types[map->type];
+	indented = 0;
 
-    funcs = &st_types[map->type];
+	if (!UP_NOISY(NORMAL))
+		return;
 
-    /* print info line */
-    if(funcs->getinfo)
-    {
-        len = funcs->getinfo(map, buf, sizeof buf);
-        if(len)
-        {
-            map_indent(map->depth, stream);
-            fputs(buf, stream);
-            putc('\n', stream);
-        }
-    }
+	/* print info line(s) */
+	if (funcs->print_header != NULL) {
+		map_indent(map->depth, stream);
+		indented = 1;
+		if (funcs->print_header(map, stream) > 0)
+			indented = 0;
+	}
 
-    /* print the header line */
-    if(!(UP_TYPE_NOPRINTHDR & funcs->flags))
-    {
-        /* extra */
-        len = 0;
-        if(funcs->getextrahdr)
-            len = funcs->getextrahdr(map, buf, sizeof buf);
-        else if(funcs->getextra)
-            len = funcs->getextra(NULL, buf, sizeof buf);
+	/* print the header line */
+	if (!(UP_TYPE_NOPRINTHDR & funcs->flags)) {
+		if (!indented)
+			map_indent(map->depth, stream);
+		fprintf(stream, "       %15s %15s", "Start", "Size");
+		if (funcs->print_extrahdr != NULL)
+			funcs->print_extrahdr(map, stream);
+		putc('\n', stream);
+		indented = 0;
+	}
 
-        /* print */
-        if(UP_NOISY(NORMAL) || len)
-            map_indent(map->depth, stream);
-        if(UP_NOISY(NORMAL))
-            fputs("                 Start            Size", stream);
-        if(len)
-        {
-            putc(' ', stream);
-            fputs(buf, stream);
-        }
-        if(UP_NOISY(NORMAL) || len)
-            putc('\n', stream);
-    }
+	/* print partitions */
+	for (part = up_map_first(map); part != NULL; part = up_map_next(part)) {
+		/* skip empty partitions unless verbose */
+		if (UP_PART_EMPTY & part->flags && !UP_NOISY(EXTRA))
+			continue;
 
-    /* print partitions */
-    for(ii = up_map_first(map); ii; ii = up_map_next(ii))
-    {
-        /* skip empty partitions unless verbose */
-        if(UP_PART_EMPTY & ii->flags && !UP_NOISY(EXTRA))
-            continue;
+		if (!indented)
+			map_indent(map->depth, stream);
 
-        /* flags */
-        if(UP_PART_IS_BAD(ii->flags))
-            flag = 'X';
-        else
-            flag = ' ';
+		if (UP_PART_IS_BAD(part->flags))
+			flag = 'X';
+		else
+			flag = ' ';
 
-        /* index */
-        idx[0] = 0;
-        funcs->getindex(ii, idx, sizeof idx - 1);
-        strlcat(idx, ":", sizeof idx);
+		idx[0] = '\0';
+		funcs->get_index(part, idx, sizeof(idx));
+		idx[sizeof(idx)-1] = '\0';
+		strlcat(idx, ":", sizeof(idx));
 
-        /* extra */
-        len = 0;
-        if(funcs->getextra)
-            len = funcs->getextra(ii, buf, sizeof buf);
+		fprintf(stream, "%-4s %c %15"PRId64" %15"PRId64,
+                    idx, flag, part->start, part->size);
+		if (funcs->print_extra != NULL)
+			funcs->print_extra(part, stream);
+		putc('\n', stream);
+		indented = 0;
 
-        /* print */
-        if(UP_NOISY(NORMAL) || len)
-            map_indent(map->depth, stream);
-        if(UP_NOISY(NORMAL))
-            fprintf(stream, "%-4s %c %15"PRId64" %15"PRId64,
-                    idx, flag, ii->start, ii->size);
-        if(len)
-        {
-            putc(' ', stream);
-            fputs(buf, stream);
-        }
-        if(UP_NOISY(NORMAL) || len)
-            putc('\n', stream);
-
-        /* recurse */
-        if(recurse)
-            map_printcontainer(ii, stream);
-    }
+		/* recurse */
+		if (recurse)
+			map_printcontainer(part, stream);
+	}
 }
 
 void
@@ -446,25 +452,22 @@ map_indent(int depth, FILE *stream)
 }
 
 void
-up_map_dumpsect(const struct map *map, void *_stream, int64_t start,
-                int64_t size, const void *data, int tag)
+up_map_dumpsect(const struct map *map, FILE *stream, int64_t start,
+    int64_t size, const void *data, int tag)
 {
-    FILE   *stream = _stream;
-    char    buf[512];
+	struct map_funcs *funcs;
 
-    CHECKTYPE(map->type);
+	CHECKTYPE(map->type);
+	funcs = &st_types[map->type];
 
-    buf[0] = 0;
-    if(st_types[map->type].getdump)
-        st_types[map->type].getdump(map, start, data, size,
-                                     tag, buf, sizeof buf);
+	fprintf(stream, "\n\nDump of %s %s at sector %"PRId64" (0x%"PRIx64")",
+            UP_DISK_PATH(map->disk), funcs->label, start, start);
+	if (funcs->dump_extra != NULL)
+		funcs->dump_extra(map, start, data, size, tag, stream);
+	fputs(":\n", stream);
 
-    fprintf(stream, "\n\nDump of %s %s at sector %"PRId64" (0x%"PRIx64")%s:\n",
-            UP_DISK_PATH(map->disk), st_types[map->type].label,
-            start, start, buf);
-
-    up_hexdump(data, UP_DISK_1SECT(map->disk) * size,
-               UP_DISK_1SECT(map->disk) * start, stream);
+	up_hexdump(data, UP_DISK_1SECT(map->disk) * size,
+	    UP_DISK_1SECT(map->disk) * start, stream);
 }
 
 const struct part *
@@ -489,4 +492,84 @@ const struct map *
 up_map_nextmap(const struct map *map)
 {
     return SIMPLEQ_NEXT(map, link);
+}
+
+static int
+compat_print_header(const struct map *map, FILE *stream)
+{
+	struct map_funcs *funcs;
+	char buf[1024];
+	int len;
+
+	CHECKTYPE(map->type);
+	funcs = &st_types[map->type];
+
+	len = funcs->getinfo(map, buf, sizeof(buf));
+	buf[sizeof(buf)-1] = '\0';
+	if (len <= 0)
+		return (len);
+	if (fputs(buf, stream) == EOF ||
+	    putc('\n', stream) == EOF)
+		return (-1);
+	return (len + 1);
+}
+
+static int
+compat_print_extrahdr(const struct map *map, FILE *stream)
+{
+	struct map_funcs *funcs;
+	char buf[512];
+	int len;
+
+	CHECKTYPE(map->type);
+	funcs = &st_types[map->type];
+
+	if (funcs->getextrahdr != NULL)
+		len = funcs->getextrahdr(map, buf, sizeof(buf));
+	else
+		len = funcs->getextra(NULL, buf, sizeof(buf));
+	if (len <= 0)
+		return (len);
+	if (putc(' ', stream) == EOF ||
+	    fputs(buf, stream) == EOF)
+		return (-1);
+	return (len + 1);
+}
+
+static int
+compat_print_extra(const struct part *part, FILE *stream)
+{
+	struct map_funcs *funcs;
+	char buf[512];
+	int len;
+
+	CHECKTYPE(part->map->type);
+	funcs = &st_types[part->map->type];
+
+	len = funcs->getextra(part, buf, sizeof(buf));
+	if (len <= 0)
+		return (len);
+	if (putc(' ', stream) == EOF ||
+	    fputs(buf, stream) == EOF)
+		return (-1);
+	return (len + 1);
+}
+
+static int
+compat_dump_extra(const struct map *map, int64_t start,
+    const void *data, int64_t size, int tag, FILE *stream)
+{
+	struct map_funcs *funcs;
+	char buf[512];
+	int len;
+
+	CHECKTYPE(map->type);
+	funcs = &st_types[map->type];
+
+	len = funcs->getdump(map, start, data, size, tag, buf, sizeof(buf));
+	if (len <= 0)
+		return (len);
+	if (fputs(buf, stream) == EOF)
+		return (-1);
+	return (len);
 }

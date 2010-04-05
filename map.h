@@ -55,7 +55,50 @@ struct map {
 	SIMPLEQ_ENTRY(map) link;
 };
 
-void		 up_map_register(enum mapid, const char *, int,
+typedef int (*map_load_fn)(const struct disk *, const struct part *, void **);
+typedef int (*map_setup_fn)(struct disk *, struct map *);
+typedef int (*map_getmap_fn)(const struct map *, char *, size_t);
+typedef int (*map_getpart_fn)(const struct part *, char *, size_t);
+typedef int (*map_printmap_fn)(const struct map *, FILE *);
+typedef int (*map_printpart_fn)(const struct part *, FILE *);
+typedef int (*map_printdump_fn)(const struct map *, int64_t, const void *,
+    int64_t, int, FILE *);
+typedef void (*map_freemap_fn)(struct map *, void *);
+typedef void (*map_freepart_fn)(struct part *, void *);
+
+struct map_funcs
+{
+	char *label;
+	unsigned int flags;
+	/* check if map exists and allocate private data */
+	map_load_fn load;
+	/* add partitions, and any misc. setup not done in load */
+	map_setup_fn setup;
+	/* print map header, can be several lines */
+	map_printmap_fn print_header;
+	/* retrieve partition index */
+	map_getpart_fn get_index;
+	/* print header for verbose partition info */
+	map_printmap_fn print_extrahdr;
+	/* print verbose partition info */
+	map_printpart_fn print_extra;
+	/* print extra information for sector dump */
+	map_printdump_fn dump_extra;
+	/* free private map data, map may be NULL if it was never allocated */
+	map_freemap_fn free_mappriv;
+	/* free private partition data */
+	map_freepart_fn free_partpriv;
+
+	/* XXX temporary backwards compatibility */
+	int (*getinfo)(const struct map *, char *, int);
+	int (*getextrahdr)(const struct map *, char *, int);
+	int (*getextra)(const struct part *, char *, int);
+	int (*getdump)(const struct map *, int64_t, const void *, int64_t, int,
+	    char *, int);
+};
+
+void		 up_map_register(enum mapid, const struct map_funcs *);
+void		 up_map_register_old(enum mapid, const char *, int,
     /* load: check if map exists and allocate private data */
     int (*)(const struct disk *, const struct part *, void **),
     /* setup: add partitions, misc setup not done in load */
@@ -88,8 +131,8 @@ void		 up_map_freeprivmap_def(struct map *, void *);
 void		 up_map_freeprivpart_def(struct part *, void *);
 
 const char	*up_map_label(const struct map *);
-void		 up_map_print(const struct map *, void *, int);
-void		 up_map_dumpsect(const struct map *, void *, int64_t,
+void		 up_map_print(const struct map *, FILE *, int);
+void		 up_map_dumpsect(const struct map *, FILE *, int64_t,
     int64_t, const void *, int);
 void		 up_map_printall(const struct disk *, void *);
 

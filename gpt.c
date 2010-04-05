@@ -103,7 +103,7 @@ static const char *gpt_typename(const struct up_guid_p *);
 void
 up_gpt_register(void)
 {
-    up_map_register(UP_MAP_GPT,
+    up_map_register_old(UP_MAP_GPT,
                     "EFI GPT",
                     0,
                     gpt_load,

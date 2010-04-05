@@ -132,7 +132,7 @@ static unsigned int sparc_check_obsd(const struct up_sparcobsd_p *);
 
 void up_sunlabel_sparc_register(void)
 {
-    up_map_register(UP_MAP_SUN_SPARC,
+    up_map_register_old(UP_MAP_SUN_SPARC,
                     SPARC_LABEL,
                     0,
                     sparc_load,

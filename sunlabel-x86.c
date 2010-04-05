@@ -90,7 +90,7 @@ static int	sun_x86_read(const struct disk *, int64_t, int64_t,
 
 void up_sunlabel_x86_register(void)
 {
-    up_map_register(UP_MAP_SUN_X86,
+    up_map_register_old(UP_MAP_SUN_X86,
                     SUNX86_LABEL,
                     0,
                     sun_x86_load,

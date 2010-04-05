@@ -82,7 +82,7 @@ static const char *mbr_name(uint8_t type);
 void
 up_mbr_register(void)
 {
-    up_map_register(UP_MAP_MBR,
+    up_map_register_old(UP_MAP_MBR,
                     "MBR",
                     0,
                     mbr_load,
@@ -95,7 +95,7 @@ up_mbr_register(void)
                     up_map_freeprivmap_def,
                     up_map_freeprivpart_def);
 
-    up_map_register(UP_MAP_MBREXT,
+    up_map_register_old(UP_MAP_MBREXT,
                     "extended MBR",
                     UP_TYPE_NOPRINTHDR,
                     mbrext_load,

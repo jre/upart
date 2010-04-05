@@ -110,7 +110,7 @@ static int	apm_find(const struct disk *, int64_t, int64_t,
 
 void up_apm_register(void)
 {
-    up_map_register(UP_MAP_APM,
+    up_map_register_old(UP_MAP_APM,
                     "Apple partition map",
                     0,
                     apm_load,

@@ -359,7 +359,6 @@ bsdlabel_info(const struct map *map, FILE *stream)
 	uint64_t sectcount;
 	uint16_t disktype;
 	char *disktypestr;
-	int res;
 
 	if (!UP_NOISY(NORMAL))
 		return (0);
@@ -370,11 +369,15 @@ bsdlabel_info(const struct map *map, FILE *stream)
 	else
 		labeltype = up_map_label(map);
 
-	if (!UP_NOISY(EXTRA))
-		return (fprintf(stream, "%s in sector %"PRId64
-			" (offset %d) of %s:\n",
-                        labeltype, map->start, priv->sectoff,
-			UP_DISK_PATH(map->disk)));
+	if (!UP_NOISY(EXTRA)) {
+		/* XXX in -> at */
+		if (fprintf(stream, "%s in ", labeltype) < 0 ||
+		    printsect_verbose(map->start, stream) < 0 ||
+		    fprintf(stream, " (offset %d) of %s:\n",
+                        priv->sectoff, UP_DISK_PATH(map->disk)) < 0)
+			return (-1);
+		return (0);
+	}
 
         disktype = LABEL_LGETINT16(priv, disktype);
         disktypestr = (disktype < sizeof(up_disktypes) /
@@ -388,16 +391,15 @@ bsdlabel_info(const struct map *map, FILE *stream)
 		sectcount |= (uint64_t)LABEL_LGETINT16(priv, v1_sectcount_h) << 32;
 	}
 
-	if (priv->version > 0)
-		res = fprintf(stream, "%s in sector %"PRId64" (offset %d)"
-		    " of %s:\n  version: %u\n", labeltype, map->start,
-		    priv->sectoff, UP_DISK_PATH(map->disk), priv->version);
-	else
-		res = fprintf(stream, "%s in sector %"PRId64" (offset %d)"
-		    " of %s:\n", labeltype, map->start, priv->sectoff,
-		    UP_DISK_PATH(map->disk));
-	if (res < 0)
-		return (res);
+	/* XXX in -> at */
+	if (fprintf(stream, "%s in ", labeltype) < 0 ||
+	    printsect_verbose(map->start, stream) < 0 ||
+	    fprintf(stream, " (offset %d) of %s:\n",
+		priv->sectoff, UP_DISK_PATH(map->disk)) < 0)
+		return (-1);
+	if (priv->version > 0 &&
+	    fprintf(stream, "  version: %u\n", priv->version) < 0)
+		return (-1);
 
         return (fprintf(stream,
 		"  type: %s (%u)\n"

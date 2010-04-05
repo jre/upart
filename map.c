@@ -327,6 +327,9 @@ up_map_print(const struct map *map, FILE *stream, int recurse)
 	if (!UP_NOISY(NORMAL))
 		return;
 
+	/* XXX audit all the print_ functions to return > 0 if
+	 * something was printed */
+
 	/* print info line(s) */
 	if (funcs->print_header != NULL) {
 		map_indent(map->depth, stream);
@@ -365,8 +368,10 @@ up_map_print(const struct map *map, FILE *stream, int recurse)
 		idx[sizeof(idx)-1] = '\0';
 		strlcat(idx, ":", sizeof(idx));
 
-		fprintf(stream, "%-4s %c %15"PRId64" %15"PRId64,
-                    idx, flag, part->start, part->size);
+		fprintf(stream, "%-4s %c ", idx, flag);
+		printsect_pad(part->start, 15, stream);
+		putc(' ', stream);
+		printsect_pad(part->size, 15, stream);
 		if (funcs->print_extra != NULL)
 			funcs->print_extra(part, stream);
 		putc('\n', stream);
@@ -411,8 +416,10 @@ up_map_dumpsect(const struct map *map, FILE *stream, int64_t start,
 	CHECKTYPE(map->type);
 	funcs = &st_types[map->type];
 
-	fprintf(stream, "\n\nDump of %s %s at sector %"PRId64" (0x%"PRIx64")",
-            UP_DISK_PATH(map->disk), funcs->label, start, start);
+	fprintf(stream, "\n\nDump of %s %s at ",
+            UP_DISK_PATH(map->disk), funcs->label);
+	printsect_verbose(start, stream);
+	fprintf(stream, " (0x%"PRIx64")", start);
 	if (funcs->dump_extra != NULL)
 		funcs->dump_extra(map, start, data, size, tag, stream);
 	fputs(":\n", stream);

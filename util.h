@@ -128,6 +128,10 @@ void up_msg(unsigned int flags, const char *fmt, ...)
 #define UP_VERBOSITY_SPAM       2
 #define UP_NOISY(need)		(opts->verbosity >= UP_VERBOSITY_ ## need)
 
+int	printsect(uint64_t, FILE *);
+int	printsect_pad(uint64_t, int, FILE *);
+int	printsect_verbose(uint64_t, FILE *);
+
 /* see strlcpy(3) manpage */
 #ifndef HAVE_STRLCPY
 size_t strlcpy(char *dst, const char *src, size_t siz);

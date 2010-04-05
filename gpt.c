@@ -224,11 +224,22 @@ gpt_getinfo(const struct map *map, FILE *stream)
 {
 	const struct up_gpt *gpt;
 
+	if (!UP_NOISY(NORMAL))
+		return (0);
+
 	gpt = map->priv;
 
-	if (UP_NOISY(EXTRA))
-		return (fprintf(stream, "%s partition table in sectors "
-			"%"PRId64" and %"PRId64" of %s:\n"
+	/* XXX in -> at and switch to _verbose */
+	if (fprintf(stream, "%s partition table in sectors ",
+		up_map_label(map)) < 0 ||
+	    printsect(GPT_PRIOFF(map->start, map->size), stream) < 0 ||
+	    fputs(" and ", stream) == EOF ||
+	    printsect(GPT_SECOFF(map->start, map->size), stream) < 0 ||
+	    fprintf(stream, " of %s:\n", UP_DISK_PATH(map->disk)) < 0)
+		return (-1);
+
+	if (UP_NOISY(EXTRA)) 
+		return (fprintf(stream,
 			"  size:                 %u\n"
 			"  primary gpt sector:   %"PRIu64"\n"
 			"  backup gpt sector:    %"PRIu64"\n"
@@ -239,9 +250,6 @@ gpt_getinfo(const struct map *map, FILE *stream)
 			"  max partitions:       %u\n"
 			"  partition size:       %u\n"
 			"\n\n",
-			up_map_label(map),
-			GPT_PRIOFF(map->start, map->size),
-			GPT_SECOFF(map->start, map->size), UP_DISK_PATH(map->disk),
 			UP_LETOH32(gpt->gpt.size),
 			UP_LETOH64(gpt->gpt.gpt1sect),
 			UP_LETOH64(gpt->gpt.gpt2sect),
@@ -251,15 +259,8 @@ gpt_getinfo(const struct map *map, FILE *stream)
 			UP_LETOH64(gpt->gpt.partsect),
 			UP_LETOH32(gpt->gpt.maxpart),
 			UP_LETOH32(gpt->gpt.partsize)));
-	else if (UP_NOISY(NORMAL))
-		return (fprintf(stream, "%s partition table in sectors "
-			"%"PRId64" and %"PRId64" of %s:\n",
-			up_map_label(map),
-			GPT_PRIOFF(map->start, map->size),
-			GPT_SECOFF(map->start, map->size),
-			UP_DISK_PATH(map->disk)));
-	else
-		return (0);
+
+	return (0);
 }
 
 static int

@@ -239,6 +239,24 @@ up_vmsg(unsigned int flags, const char *fmt, va_list ap)
         putc('\n', stderr);
 }
 
+int
+printsect(uint64_t num, FILE *stream)
+{
+	return (fprintf(stream, "%"PRId64, num));
+}
+
+int
+printsect_pad(uint64_t num, int padding, FILE *stream)
+{
+	return (fprintf(stream, "%*"PRId64, padding, num));
+}
+
+int
+printsect_verbose(uint64_t num, FILE *stream)
+{
+	return (fprintf(stream, "sector %"PRId64"", num));
+}
+
 const struct opts *opts = NULL;
 
 void

@@ -251,13 +251,15 @@ sparc_info(const struct map *map, FILE *stream)
 	else
 		extstr = "";
 
+	if (fprintf(stream, "%s%s in ", up_map_label(map), extstr) < 0 ||
+	    printsect_verbose(map->start, stream) < 0 ||
+	    fprintf(stream, " of %s:\n", UP_DISK_PATH(map->disk)) < 0)
+		return (-1);
+
 	if (!UP_NOISY(EXTRA))
-		return (fprintf(stream, "%s%s in sector %"PRId64" of %s:\n",
-			up_map_label(map), extstr, map->start,
-			UP_DISK_PATH(map->disk)));
+		return (0);
 
 	if (fprintf(stream,
-		"%s%s in sector %"PRId64" of %s:\n"
 		"  rpm: %u\n"
 		"  physical cylinders: %u\n"
 		"  alternates/cylinder: %u\n"
@@ -266,8 +268,6 @@ sparc_info(const struct map *map, FILE *stream)
 		"  alternate cylinders: %u\n"
 		"  tracks/cylinder: %u\n"
 		"  sectors/track: %u\n",
-		up_map_label(map), extstr,
-		map->start, UP_DISK_PATH(map->disk),
 		UP_BETOH16(label->rpm),
 		UP_BETOH16(label->physcyls),
 		UP_BETOH16(label->alts),

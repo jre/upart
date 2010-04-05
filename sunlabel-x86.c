@@ -92,7 +92,7 @@ void up_sunlabel_x86_register(void)
 {
 	struct map_funcs funcs;
 
-	memset(&funcs, 0, sizeof(funcs));
+	up_map_funcs_init(&funcs);
 	funcs.label = SUNX86_LABEL;
 	funcs.load = sun_x86_load;
 	funcs.setup = sun_x86_setup;

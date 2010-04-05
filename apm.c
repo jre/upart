@@ -112,7 +112,7 @@ up_apm_register(void)
 {
 	struct map_funcs funcs;
 
-	memset(&funcs, 0, sizeof(funcs));
+	up_map_funcs_init(&funcs);
 	funcs.label = "Apple partition map";
 	funcs.load = apm_load;
 	funcs.setup = apm_setup;

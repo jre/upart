@@ -97,6 +97,7 @@ struct map_funcs
 	    char *, int);
 };
 
+void		 up_map_funcs_init(struct map_funcs *);
 void		 up_map_register(enum mapid, const struct map_funcs *);
 void		 up_map_register_old(enum mapid, const char *, int,
     /* load: check if map exists and allocate private data */

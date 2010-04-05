@@ -106,7 +106,7 @@ up_gpt_register(void)
 {
 	struct map_funcs funcs;
 
-	memset(&funcs, 0, sizeof(funcs));
+	up_map_funcs_init(&funcs);
 	funcs.label = "EFI GPT";
 	funcs.load = gpt_load;
 	funcs.setup = gpt_setup;

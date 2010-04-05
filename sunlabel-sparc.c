@@ -134,7 +134,7 @@ void up_sunlabel_sparc_register(void)
 {
 	struct map_funcs funcs;
 
-	memset(&funcs, 0, sizeof(funcs));
+	up_map_funcs_init(&funcs);
 	funcs.label = SPARC_LABEL;
 	funcs.load = sparc_load;
 	funcs.setup = sparc_setup;

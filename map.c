@@ -34,6 +34,14 @@ static int		 compat_dump_extra(const struct map *, int64_t,
 static struct map_funcs st_types[UP_MAP_ID_COUNT];
 
 void
+up_map_funcs_init(struct map_funcs *funcs)
+{
+	memset(funcs, 0, sizeof(*funcs));
+	funcs->free_partpriv = up_map_freeprivpart_def;
+	funcs->free_mappriv = up_map_freeprivmap_def;
+}
+
+void
 up_map_register(enum mapid type, const struct map_funcs *params)
 {
 	struct map_funcs *funcs;
@@ -52,16 +60,9 @@ up_map_register(enum mapid type, const struct map_funcs *params)
 	funcs->print_extrahdr = params->print_extrahdr;
 	funcs->print_extra = params->print_extra;
 	funcs->dump_extra = params->dump_extra;
-	if (params->free_mappriv == NULL)
-		funcs->free_mappriv = params->free_mappriv;
-	else
-		funcs->free_mappriv = up_map_freeprivmap_def;
-	if (params->free_partpriv == NULL)
-		funcs->free_partpriv = params->free_partpriv;
-	else
-		funcs->free_partpriv = up_map_freeprivpart_def;
+	funcs->free_mappriv = params->free_mappriv;
+	funcs->free_partpriv = params->free_partpriv;
 
-	funcs->label = params->label;
 	funcs->getinfo = params->getinfo;
 	funcs->getextra = params->getextra;
 	funcs->getextrahdr = params->getextrahdr;
@@ -83,8 +84,8 @@ up_map_register_old(enum mapid type, const char *label, int flags,
 {
 	struct map_funcs funcs;
 
-	memset(&funcs, 0, sizeof(funcs));
-	funcs.flags = flags;
+	up_map_funcs_init(&funcs);
+	funcs.flags |= flags;
 	funcs.label = (char*)label;
 	funcs.load = load;
 	funcs.setup = setup;

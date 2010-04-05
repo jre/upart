@@ -194,7 +194,7 @@ void up_bsdlabel_register(void)
 {
 	struct map_funcs funcs;
 
-	memset(&funcs, 0, sizeof(funcs));
+	up_map_funcs_init(&funcs);
 	funcs.label = LABEL_LABEL;
 	funcs.load = bsdlabel_load;
 	funcs.setup = bsdlabel_setup;

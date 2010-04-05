@@ -246,9 +246,12 @@ mbr_getinfo(const struct map *map, FILE *stream)
 	if (!UP_NOISY(NORMAL))
 		return (0);
 
-	return (fprintf(stream, "%s partition table in sector "
-		"%"PRId64" of %s:\n", up_map_label(map), map->start,
-		UP_DISK_PATH(map->disk)));
+	/* XXX in -> at */
+	if (fprintf(stream, "%s partition table in ", up_map_label(map)) < 0 ||
+	    printsect_verbose(map->start, stream) < 0 ||
+	    fprintf(stream, " of %s:\n", UP_DISK_PATH(map->disk)) < 0)
+		return (-1);
+	return (1);
 }
 
 static int

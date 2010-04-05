@@ -7,7 +7,7 @@
 .Sh SYNOPSIS
 .Bk -words
 .Nm upart
-.Op Fl fhlqrvV
+.Op Fl fhlqrvVx
 .Op Fl C Ar cylinders
 .Op Fl H Ar heads
 .Op Fl L Ar label
@@ -48,7 +48,7 @@ Indicate that
 .Ar path
 is a plain file, and not a device node.
 .It Fl h
-Display a usage message and exit.
+Format sizes in a more human-readable fashion.
 .It Fl l
 List available disk device names and exit.
 .It Fl L Ar label
@@ -79,6 +79,8 @@ Save partition information for the disk to
 in a compact binary image format. The image may later be read by
 .Nm
 as if it were the original disk.
+.It Fl x
+Display numbers in hexadecimal (base 16).
 .It Fl z Ar size
 Specify an alternative sector size in bytes.
 .El

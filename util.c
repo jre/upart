@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "disk.h"
 #include "util.h"
 
 /* Consider everything above 0x19 and belot 0x7f printable */
@@ -242,19 +243,37 @@ up_vmsg(unsigned int flags, const char *fmt, va_list ap)
 int
 printsect(uint64_t num, FILE *stream)
 {
-	return (fprintf(stream, "%"PRId64, num));
+	return (printsect_pad(num, 0, stream));
 }
 
 int
 printsect_pad(uint64_t num, int padding, FILE *stream)
 {
-	return (fprintf(stream, "%*"PRId64, padding, num));
+	struct disk *disk;
+	const char *unit;
+	float size;
+
+	if (opts->humansize) {
+		disk = current_disk();
+		size = up_fmtsize(num * (disk == NULL ?
+			512 : UP_DISK_1SECT(disk)), &unit);
+		padding = MAX(0, padding - strlen(unit));
+		return (fprintf(stream, "%*.*f%s",
+			padding, UP_BESTDECIMAL(size), size, unit));
+	}
+	else if (opts->printhex)
+		return (fprintf(stream, "%#*"PRIx64, padding, num));
+	else
+		return (fprintf(stream, "%*"PRId64, padding, num));
 }
 
 int
 printsect_verbose(uint64_t num, FILE *stream)
 {
-	return (fprintf(stream, "sector %"PRId64"", num));
+	if (!opts->humansize &&
+	    fputs("sector ", stream) == EOF)
+		return (-1);
+	return (printsect_pad(num, 0, stream));
 }
 
 const struct opts *opts = NULL;

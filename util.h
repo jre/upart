@@ -150,6 +150,8 @@ struct opts
 	unsigned int plainfile : 1;
 	unsigned int relaxed : 1;
 	unsigned int sloppyio : 1;
+	unsigned int printhex : 1;
+	unsigned int humansize : 1;
 };
 
 /* Pointer to the global program options, initially NULL. */

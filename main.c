@@ -83,7 +83,7 @@ readargs(int argc, char *argv[], struct opts *newopts,
 
 	init_options(newopts);
 	memset(params, 0, sizeof *params);
-	while(0 < (opt = getopt(argc, argv, "C:fhH:klL:qrS:vVw:z:"))) {
+	while(0 < (opt = getopt(argc, argv, "C:fhH:klL:qrS:vVw:xz:"))) {
 		switch(opt) {
 		case 'C':
 			params->cyls = strtol(optarg, NULL, 0);
@@ -92,6 +92,9 @@ readargs(int argc, char *argv[], struct opts *newopts,
 			break;
 		case 'f':
 			newopts->plainfile = 1;
+			break;
+		case 'h':
+			newopts->humansize = 1;
 			break;
 		case 'H':
 			params->heads = strtol(optarg, NULL, 0);
@@ -132,6 +135,9 @@ readargs(int argc, char *argv[], struct opts *newopts,
 		case 'w':
 			newopts->serialize = optarg;
 			break;
+		case 'x':
+			newopts->printhex = 1;
+			break;
 		case 'z':
 			params->sectsize = strtol(optarg, NULL, 0);
 			if (0 >= params->sectsize)
@@ -167,7 +173,7 @@ usage(const char *message, ...)
 	printf("usage: %s [options] path\n"
 	    "  -C cyls   total number of cylinders (cylinders)\n"
 	    "  -f        path is a plain file and not a device\n"
-	    "  -h        show this message and exit\n"
+	    "  -h        show human-readable sizes\n"
 	    "  -H heads  number of tracks per cylinder (heads)\n"
 	    "  -k        keep going after I/O errors\n"
 	    "  -l        list valid disk devices and exit\n"
@@ -178,6 +184,7 @@ usage(const char *message, ...)
 	    "  -v        raise verbosity level when printing maps\n"
 	    "  -V        display the version of %s and exit\n"
 	    "  -w file   write disk and partition info to file\n"
+	    "  -x        display numbers in hexadecimal\n"
 	    "  -z size   sector size in bytes\n",
 	    up_getname(), PACKAGE_NAME);
 

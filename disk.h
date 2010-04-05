@@ -66,6 +66,9 @@ struct disk {
 typedef int (*up_disk_iterfunc_t)(const struct disk *,
     const struct disk_sect *, void *);
 
+/* Returns the currently-open disk, or NULL */
+struct disk	*current_disk(void);
+
 /* Open the disk device, must call up_disk_setup() after this */
 struct disk	*up_disk_open(const char *);
 

@@ -25,6 +25,14 @@ static int	sectcmp(struct disk_sect *, struct disk_sect *);
 
 RB_GENERATE_STATIC(disk_sect_map, disk_sect, link, sectcmp)
 
+static struct disk *st_curdisk;
+
+struct disk *
+current_disk(void)
+{
+	return (st_curdisk);
+}
+
 struct disk *
 up_disk_open(const char *name)
 {
@@ -107,6 +115,7 @@ up_disk_open(const char *name)
 		disk->img = img;
 	}
 
+	st_curdisk = disk;
 	return (disk);
 }
 
@@ -320,6 +329,8 @@ up_disk_close(struct disk *disk)
     free(disk->name);
     free(disk->path);
     free(disk);
+    if (disk == st_curdisk)
+	    st_curdisk = NULL;
 }
 
 static int

@@ -1,9 +1,9 @@
 jre-mica-wd0.img: 149GB (312581808 sectors of 512 bytes)
 
-MBR partition table in sector 0 of jre-mica-wd0.img:
+MBR partition table at sector 0 of jre-mica-wd0.img:
                  Start            Size A Type
 0:                  63        83886080   OpenBSD (0xa6)
- OpenBSD disklabel in sector 63 (offset 1) of jre-mica-wd0.img:
+ OpenBSD disklabel at sector 63 (offset 1) of jre-mica-wd0.img:
                   Start            Size Type
  a:                  63         1058337 4.2BSD
  b:             1058400         5246640 swap

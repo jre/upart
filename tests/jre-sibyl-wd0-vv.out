@@ -8,11 +8,11 @@ jre-sibyl-wd0.img: 74.5GB (156301488 sectors of 512 bytes)
     sectors per track:   63 (sectors)
 
 
-MBR partition table in sector 0 of jre-sibyl-wd0.img:
+MBR partition table at sector 0 of jre-sibyl-wd0.img:
                  Start            Size A    C   H  S    C   H  S Type
 0:                  63        39058988      0/  1/ 1-1023/ 64/59 Apple HFS+ (0xaf)
 1:            39086145        78156225   1023/ 15/ 1-1023/ 29/63 Solaris (0xbf)
- Sun x86 disk label in sector 39086145 (offset 1) of jre-sibyl-wd0.img:
+ Sun x86 disk label at sector 39086145 (offset 1) of jre-sibyl-wd0.img:
   name: 
   bytes/sector: 512
   partition count: 16

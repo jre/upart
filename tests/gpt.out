@@ -1,11 +1,11 @@
 gpt.img: 960MB (1966080 sectors of 512 bytes)
 
-EFI GPT partition table in sectors 1 and 1966079 of gpt.img:
+EFI GPT partition table at sector 1 (backup at sector 1966079) of gpt.img:
                  Start            Size Type
 1:                  40          491519 Apple HFS+
 2:              491560          491519 Microsoft Data
 3:              983080          491519 Apple UFS
 4:             1474600          491439 Solaris /usr or Apple ZFS
-MBR partition table in sector 0 of gpt.img:
+MBR partition table at sector 0 of gpt.img:
                  Start            Size A Type
 0:                   1         1966079   EFI GPT (0xee)

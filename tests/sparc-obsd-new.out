@@ -1,6 +1,6 @@
 sparc-obsd-new.img: 16.9GB (35378533 sectors of 512 bytes)
 
-Sun sparc disklabel (OpenBSD extensions) in sector 0 of sparc-obsd-new.img:
+Sun sparc disklabel (OpenBSD extensions) at sector 0 of sparc-obsd-new.img:
                  Start            Size Type
 a:                   0          527744 4.2BSD
 b:              527744         1055488 swap

@@ -1,9 +1,9 @@
 jre-sibyl-wd2.img: 149GB (312581808 sectors of 512 bytes)
 
-MBR partition table in sector 0 of jre-sibyl-wd2.img:
+MBR partition table at sector 0 of jre-sibyl-wd2.img:
                  Start            Size A Type
 0:                  63        36699201   NetBSD (0xa9)
- BSD disklabel in sector 63 (offset 1) of jre-sibyl-wd2.img:
+ BSD disklabel at sector 63 (offset 1) of jre-sibyl-wd2.img:
                   Start            Size Type
  a:                  63        35648928 4.2BSD
  b:            35648991         1050273 swap
@@ -17,7 +17,7 @@ MBR partition table in sector 0 of jre-sibyl-wd2.img:
  j:   X       146799135        41942817 4.2BSD
  k:   X       188742015       123839730 4.2BSD
 1:            36699264        36699264   FreeBSD or DragonFly (0xa5)
- BSD disklabel in sector 36699264 (offset 1) of jre-sibyl-wd2.img:
+ BSD disklabel at sector 36699264 (offset 1) of jre-sibyl-wd2.img:
                   Start            Size Type
  a:            36699280          524272 4.2BSD
  b:            37223552         1048576 swap
@@ -26,7 +26,7 @@ MBR partition table in sector 0 of jre-sibyl-wd2.img:
  e:            39320704        34077808 4.2BSD
 2:            73398528        31457664 * NTFS or HPFS (0x07)
 3:           104856192       207725616   OpenBSD (0xa6)
- OpenBSD disklabel in sector 104856192 (offset 1) of jre-sibyl-wd2.img:
+ OpenBSD disklabel at sector 104856192 (offset 1) of jre-sibyl-wd2.img:
                   Start            Size Type
  a:           104856192          525168 4.2BSD
  b:           105381360         1049328 swap

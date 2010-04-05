@@ -8,7 +8,7 @@ mac68k.img: 1.97GB (4124736 sectors of 512 bytes)
     sectors per track:   151 (sectors)
 
 
-Apple partition map in sector 0 of mac68k.img:
+Apple partition map at sector 0 of mac68k.img:
                  Start            Size Type                     Name                     Status     A/UX boot data
 1:                   1              63 Apple_partition_map      Apple                    0x00000003
 2:                  64              32 Apple_Driver43           Macintosh                0x0000007f

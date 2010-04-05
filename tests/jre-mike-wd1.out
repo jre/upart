@@ -1,6 +1,6 @@
 jre-mike-wd1.img: 112GB (234441648 sectors of 512 bytes)
 
-Apple partition map in sector 0 of jre-mike-wd1.img:
+Apple partition map at sector 0 of jre-mike-wd1.img:
                  Start            Size Type                     Name
 1:                   1              63 Apple_partition_map      Apple
 2:                  64              56 Apple_Driver43           Macintosh
@@ -23,7 +23,7 @@ Apple partition map in sector 0 of jre-mike-wd1.img:
 19:          119580448        19922944 Apple_UNIX_SVR2          NetBSD root
 20:          139503392         1048576 Apple_UNIX_SVR2          NetBSD swap
 21:          140551968        20971520 OpenBSD                  OpenBSD
- OpenBSD disklabel in sector 140551968 (offset 0) of jre-mike-wd1.img:
+ OpenBSD disklabel at sector 140551968 (offset 0) of jre-mike-wd1.img:
                   Start            Size Type
  a:           140551968          524688 4.2BSD
  b:   X       139503392         1048576 swap

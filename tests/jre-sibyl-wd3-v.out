@@ -8,10 +8,10 @@ jre-sibyl-wd3.img: 149GB (312581808 sectors of 512 bytes)
     sectors per track:   63 (sectors)
 
 
-MBR partition table in sector 0 of jre-sibyl-wd3.img:
+MBR partition table at sector 0 of jre-sibyl-wd3.img:
                  Start            Size A    C   H  S    C   H  S Type
 0:                  63        83886080 *    0/  1/ 1-1023/  6/ 5 OpenBSD (0xa6)
- OpenBSD disklabel in sector 63 (offset 1) of jre-sibyl-wd3.img:
+ OpenBSD disklabel at sector 63 (offset 1) of jre-sibyl-wd3.img:
   version: 1
   type: ESDI (5)
   disk: ESDI/IDE disk
@@ -50,7 +50,7 @@ MBR partition table in sector 0 of jre-sibyl-wd3.img:
  o:   X               0               0 unused
  p:   X               0               0 unused
 1:            83886143        41943040   1023/  6/ 6-1023/  8/39 Linux Filesystem (0x83)
- BSD disklabel in sector 83886143 (offset 1) of jre-sibyl-wd3.img:
+ BSD disklabel at sector 83886143 (offset 1) of jre-sibyl-wd3.img:
   type: unknown (0)
   disk: amnesiac
   label: 

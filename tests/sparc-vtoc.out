@@ -1,6 +1,6 @@
 sparc-vtoc.img: 68.4GB (143374738 sectors of 512 bytes)
 
-Sun sparc disklabel (Sun VTOC) in sector 0 of sparc-vtoc.img:
+Sun sparc disklabel (Sun VTOC) at sector 0 of sparc-vtoc.img:
                  Start            Size Flags Type
 0:             1058304        89884608 wm    root
 1:                   0         1058304 wu    swap

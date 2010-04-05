@@ -8,10 +8,10 @@ jre-sibyl-wd2.img: 149GB (312581808 sectors of 512 bytes)
     sectors per track:   63 (sectors)
 
 
-MBR partition table in sector 0 of jre-sibyl-wd2.img:
+MBR partition table at sector 0 of jre-sibyl-wd2.img:
                  Start            Size A    C   H  S    C   H  S Type
 0:                  63        36699201      0/  1/ 1-1023/ 15/63 NetBSD (0xa9)
- BSD disklabel in sector 63 (offset 1) of jre-sibyl-wd2.img:
+ BSD disklabel at sector 63 (offset 1) of jre-sibyl-wd2.img:
   type: unknown (0)
   disk: SAMSUNG SP1614C
   label: 
@@ -49,7 +49,7 @@ MBR partition table in sector 0 of jre-sibyl-wd2.img:
  o:   X               0               0 unused
  p:   X               0               0 unused
 1:            36699264        36699264   1023/  0/ 1-1023/ 15/63 FreeBSD or DragonFly (0xa5)
- BSD disklabel in sector 36699264 (offset 1) of jre-sibyl-wd2.img:
+ BSD disklabel at sector 36699264 (offset 1) of jre-sibyl-wd2.img:
   type: unknown (0)
   disk: amnesiac
   label: 
@@ -80,7 +80,7 @@ MBR partition table in sector 0 of jre-sibyl-wd2.img:
  h:   X               0               0 unused
 2:            73398528        31457664 * 1023/  0/ 1-1023/ 15/63 NTFS or HPFS (0x07)
 3:           104856192       207725616   1023/  0/ 1-1023/ 15/63 OpenBSD (0xa6)
- OpenBSD disklabel in sector 104856192 (offset 1) of jre-sibyl-wd2.img:
+ OpenBSD disklabel at sector 104856192 (offset 1) of jre-sibyl-wd2.img:
   version: 1
   type: ESDI (5)
   disk: ESDI/IDE disk

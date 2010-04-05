@@ -8,7 +8,7 @@ openbsd-48bit-label.img: 3.00TB (6442450177 sectors of 512 bytes)
     sectors per track:   63 (sectors)
 
 
-OpenBSD disklabel in sector 0 (offset 1) of openbsd-48bit-label.img:
+OpenBSD disklabel at sector 0 (offset 1) of openbsd-48bit-label.img:
   version: 1
   type: SCSI (4)
   disk: SCSI disk

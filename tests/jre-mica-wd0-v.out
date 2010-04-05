@@ -8,10 +8,10 @@ jre-mica-wd0.img: 149GB (312581808 sectors of 512 bytes)
     sectors per track:   63 (sectors)
 
 
-MBR partition table in sector 0 of jre-mica-wd0.img:
+MBR partition table at sector 0 of jre-mica-wd0.img:
                  Start            Size A    C   H  S    C   H  S Type
 0:                  63        83886080      0/  1/ 1-1023/239/63 OpenBSD (0xa6)
- OpenBSD disklabel in sector 63 (offset 1) of jre-mica-wd0.img:
+ OpenBSD disklabel at sector 63 (offset 1) of jre-mica-wd0.img:
   version: 1
   type: ESDI (5)
   disk: ESDI/IDE disk

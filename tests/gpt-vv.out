@@ -8,7 +8,7 @@ gpt.img: 960MB (1966080 sectors of 512 bytes)
     sectors per track:   63 (sectors)
 
 
-EFI GPT partition table in sectors 1 and 1966079 of gpt.img:
+EFI GPT partition table at sector 1 (backup at sector 1966079) of gpt.img:
   size:                 92
   primary gpt sector:   1
   backup gpt sector:    1966079
@@ -145,7 +145,7 @@ EFI GPT partition table in sectors 1 and 1966079 of gpt.img:
 122: X               0               0 00000000-0000-0000-0000-000000000000 00000000-0000-0000-0000-000000000000 unused
 123: X               0               0 00000000-0000-0000-0000-000000000000 00000000-0000-0000-0000-000000000000 unused
 124: X               0               0 00000000-0000-0000-0000-000000000000 00000000-0000-0000-0000-000000000000 unused
-MBR partition table in sector 0 of gpt.img:
+MBR partition table at sector 0 of gpt.img:
                  Start            Size A    C   H  S    C   H  S Type
 0:                   1         1966079   1023/254/63-1023/254/63 EFI GPT (0xee)
 1:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)

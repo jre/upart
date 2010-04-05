@@ -8,7 +8,7 @@ sparc-plain.img: 17.0GB (35566478 sectors of 512 bytes)
     sectors per track:   478 (sectors)
 
 
-Sun sparc disklabel in sector 0 of sparc-plain.img:
+Sun sparc disklabel at sector 0 of sparc-plain.img:
   rpm: 15000
   physical cylinders: 17163
   alternates/cylinder: 0

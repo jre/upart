@@ -8,10 +8,10 @@ jre-ruby-wd2.img: 233GB (488397168 sectors of 512 bytes)
     sectors per track:   63 (sectors)
 
 
-MBR partition table in sector 0 of jre-ruby-wd2.img:
+MBR partition table at sector 0 of jre-ruby-wd2.img:
                  Start            Size A    C   H  S    C   H  S Type
 0:                  63       244198526 *    0/  1/ 1-1023/168/ 5 OpenBSD (0xa6)
- OpenBSD disklabel in sector 63 (offset 1) of jre-ruby-wd2.img:
+ OpenBSD disklabel at sector 63 (offset 1) of jre-ruby-wd2.img:
   version: 1
   type: ESDI (5)
   disk: ESDI/IDE disk
@@ -50,7 +50,7 @@ MBR partition table in sector 0 of jre-ruby-wd2.img:
  o:   X               0               0 unused
  p:   X               0               0 unused
 1:           244198589       244198579   1023/168/ 6-1023/ 80/63 FreeBSD or DragonFly (0xa5)
- BSD disklabel in sector 244198589 (offset 1) of jre-ruby-wd2.img:
+ BSD disklabel at sector 244198589 (offset 1) of jre-ruby-wd2.img:
   type: unknown (0)
   disk: amnesiac
   label: 
@@ -81,7 +81,7 @@ MBR partition table in sector 0 of jre-ruby-wd2.img:
  h:   X               0               0 unused
 2:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
 3:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
-OpenBSD disklabel in sector 0 (offset 1) of jre-ruby-wd2.img:
+OpenBSD disklabel at sector 0 (offset 1) of jre-ruby-wd2.img:
   version: 1
   type: ESDI (5)
   disk: ESDI/IDE disk

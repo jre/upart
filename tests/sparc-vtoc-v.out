@@ -8,7 +8,7 @@ sparc-vtoc.img: 68.4GB (143374738 sectors of 512 bytes)
     sectors per track:   424 (sectors)
 
 
-Sun sparc disklabel (Sun VTOC) in sector 0 of sparc-vtoc.img:
+Sun sparc disklabel (Sun VTOC) at sector 0 of sparc-vtoc.img:
   rpm: 10025
   physical cylinders: 14089
   alternates/cylinder: 0

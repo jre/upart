@@ -8,13 +8,13 @@ jre-ruby-wd1.img: 298GB (625142448 sectors of 512 bytes)
     sectors per track:   63 (sectors)
 
 
-MBR partition table in sector 0 of jre-ruby-wd1.img:
+MBR partition table at sector 0 of jre-ruby-wd1.img:
                  Start            Size A    C   H  S    C   H  S Type
 0:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
 1:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
 2:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
 3:                  63       625142385 *    0/  1/ 1-1023/ 15/63 OpenBSD (0xa6)
- OpenBSD disklabel in sector 63 (offset 1) of jre-ruby-wd1.img:
+ OpenBSD disklabel at sector 63 (offset 1) of jre-ruby-wd1.img:
   version: 1
   type: ESDI (5)
   disk: ESDI/IDE disk

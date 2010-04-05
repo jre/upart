@@ -8,7 +8,7 @@ sparc-linux.img: 16.9GB (35378533 sectors of 512 bytes)
     sectors per track:   248 (sectors)
 
 
-Sun sparc disklabel (Sun VTOC) in sector 0 of sparc-linux.img:
+Sun sparc disklabel (Sun VTOC) at sector 0 of sparc-linux.img:
   rpm: 5400
   physical cylinders: 2202
   alternates/cylinder: 0

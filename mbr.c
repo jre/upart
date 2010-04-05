@@ -246,8 +246,7 @@ mbr_getinfo(const struct map *map, FILE *stream)
 	if (!UP_NOISY(NORMAL))
 		return (0);
 
-	/* XXX in -> at */
-	if (fprintf(stream, "%s partition table in ", up_map_label(map)) < 0 ||
+	if (fprintf(stream, "%s partition table at ", up_map_label(map)) < 0 ||
 	    printsect_verbose(map->start, stream) < 0 ||
 	    fprintf(stream, " of %s:\n", UP_DISK_PATH(map->disk)) < 0)
 		return (-1);

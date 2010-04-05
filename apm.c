@@ -208,8 +208,7 @@ apm_info(const struct map *map, FILE *stream)
 		return (0);
 
 	/* XXX display driver info here like pdisk does? */
-	/* XXX change "in" to "at" */
-	if (fprintf(stream, "%s in ", up_map_label(map)) < 0 ||
+	if (fprintf(stream, "%s at ", up_map_label(map)) < 0 ||
 	    printsect_verbose(map->start, stream)  < 0 ||
 	    fprintf(stream, " of %s:\n", UP_DISK_PATH(map->disk)) < 0)
 		return (-1);

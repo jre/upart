@@ -197,23 +197,18 @@ sun_x86_info(const struct map *map, FILE *stream)
 	priv = map->priv;
 	packed = &priv->packed;
 
-	/* XXX unify verbose and non-verbose header lines */
+	if (fprintf(stream, "%s at ", up_map_label(map)) < 0 ||
+	    printsect_verbose(map->start, stream) < 0 ||
+	    fprintf(stream, " (offset %d) of %s:\n",
+		SUNX86_OFF, UP_DISK_PATH(map->disk)) < 0)
+		return (-1);
 
-	if (!UP_NOISY(EXTRA)) {
-		/* XXX in -> at */
-		if (fprintf(stream, "%s in ", up_map_label(map)) < 0 ||
-		    printsect_verbose(map->start, stream) < 0 ||
-		    fprintf(stream, " of %s:\n", UP_DISK_PATH(map->disk)) < 0)
-			return (-1);
+	if (!UP_NOISY(EXTRA))
 		return (1);
-	}
 
         memcpy(name, packed->name, sizeof(packed->name));
         name[sizeof(name)-1] = 0;
-	/* XXX in -> at */
-	if (fprintf(stream, "%s in ", up_map_label(map)) < 0 ||
-	    printsect_verbose(map->start, stream) < 0 ||
-	    fprintf(stream, " (offset %d) of %s:\n"
+	if (fprintf(stream,
 		"  name: %s\n"
 		"  bytes/sector: %u\n"
 		"  partition count: %u\n"
@@ -229,7 +224,6 @@ sun_x86_info(const struct map *map, FILE *stream)
 		"  rpm: %u\n"
 		"  write sectskip: %u\n"
 		"  read sectskip: %u\n\n",
-		SUNX86_OFF, UP_DISK_PATH(map->disk),
 		name,
 		UP_LETOH16(packed->sectsize),
 		UP_LETOH16(packed->partcount),

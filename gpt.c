@@ -229,13 +229,12 @@ gpt_getinfo(const struct map *map, FILE *stream)
 
 	gpt = map->priv;
 
-	/* XXX in -> at and switch to _verbose */
-	if (fprintf(stream, "%s partition table in sectors ",
+	if (fprintf(stream, "%s partition table at ",
 		up_map_label(map)) < 0 ||
-	    printsect(GPT_PRIOFF(map->start, map->size), stream) < 0 ||
-	    fputs(" and ", stream) == EOF ||
-	    printsect(GPT_SECOFF(map->start, map->size), stream) < 0 ||
-	    fprintf(stream, " of %s:\n", UP_DISK_PATH(map->disk)) < 0)
+	    printsect_verbose(GPT_PRIOFF(map->start, map->size), stream) < 0 ||
+	    fputs(" (backup at ", stream) == EOF ||
+	    printsect_verbose(GPT_SECOFF(map->start, map->size), stream) < 0 ||
+	    fprintf(stream, ") of %s:\n", UP_DISK_PATH(map->disk)) < 0)
 		return (-1);
 
 	if (UP_NOISY(EXTRA)) 

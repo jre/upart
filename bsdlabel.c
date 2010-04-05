@@ -370,8 +370,7 @@ bsdlabel_info(const struct map *map, FILE *stream)
 		labeltype = up_map_label(map);
 
 	if (!UP_NOISY(EXTRA)) {
-		/* XXX in -> at */
-		if (fprintf(stream, "%s in ", labeltype) < 0 ||
+		if (fprintf(stream, "%s at ", labeltype) < 0 ||
 		    printsect_verbose(map->start, stream) < 0 ||
 		    fprintf(stream, " (offset %d) of %s:\n",
                         priv->sectoff, UP_DISK_PATH(map->disk)) < 0)
@@ -391,8 +390,7 @@ bsdlabel_info(const struct map *map, FILE *stream)
 		sectcount |= (uint64_t)LABEL_LGETINT16(priv, v1_sectcount_h) << 32;
 	}
 
-	/* XXX in -> at */
-	if (fprintf(stream, "%s in ", labeltype) < 0 ||
+	if (fprintf(stream, "%s at ", labeltype) < 0 ||
 	    printsect_verbose(map->start, stream) < 0 ||
 	    fprintf(stream, " (offset %d) of %s:\n",
 		priv->sectoff, UP_DISK_PATH(map->disk)) < 0)

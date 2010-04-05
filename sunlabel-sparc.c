@@ -251,7 +251,7 @@ sparc_info(const struct map *map, FILE *stream)
 	else
 		extstr = "";
 
-	if (fprintf(stream, "%s%s in ", up_map_label(map), extstr) < 0 ||
+	if (fprintf(stream, "%s%s at ", up_map_label(map), extstr) < 0 ||
 	    printsect_verbose(map->start, stream) < 0 ||
 	    fprintf(stream, " of %s:\n", UP_DISK_PATH(map->disk)) < 0)
 		return (-1);

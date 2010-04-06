@@ -18,23 +18,23 @@ Sun sparc disklabel (OpenBSD extensions) at sector 0 of sparc-obsd-new.img:
   tracks/cylinder: 19
   sectors/track: 248
 
-                 Start            Size Type    fsize bsize   cpg
-a:                   0          527744 4.2BSD   2048 16384     1
-b:              527744         1055488 swap
-c:                   0        35378533 unused      0     0
-d:             1583232          301568 4.2BSD   2048 16384     1
-e:             1884800        10554880 4.2BSD   2048 16384     1
-f:            12439680        10554880 4.2BSD   2048 16384     1
-g:            22994560        12364288 4.2BSD   2048 16384     1
-h:   X               0               0 unused
-i:   X               0               0 unused
-j:   X               0               0 unused
-k:   X               0               0 unused
-l:   X               0               0 unused
-m:   X               0               0 unused
-n:   X               0               0 unused
-o:   X               0               0 unused
-p:            35358848           18848 4.2BSD   2048 16384     1
+          Start     Size Type    fsize bsize   cpg
+a:            0   527744 4.2BSD   2048 16384     1
+b:       527744  1055488 swap
+c:            0 35378533 unused      0     0
+d:      1583232   301568 4.2BSD   2048 16384     1
+e:      1884800 10554880 4.2BSD   2048 16384     1
+f:     12439680 10554880 4.2BSD   2048 16384     1
+g:     22994560 12364288 4.2BSD   2048 16384     1
+h:   X        0        0 unused
+i:   X        0        0 unused
+j:   X        0        0 unused
+k:   X        0        0 unused
+l:   X        0        0 unused
+m:   X        0        0 unused
+n:   X        0        0 unused
+o:   X        0        0 unused
+p:     35358848    18848 4.2BSD   2048 16384     1
 
 
 Dump of sparc-obsd-new.img Sun sparc disklabel at sector 0 (0x0):

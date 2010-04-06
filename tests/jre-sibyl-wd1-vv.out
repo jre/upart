@@ -9,8 +9,8 @@ jre-sibyl-wd1.img: 37.3GB (78165360 sectors of 512 bytes)
 
 
 MBR partition table at sector 0 of jre-sibyl-wd1.img:
-                 Start            Size A    C   H  S    C   H  S Type
-0:                  63         9770985      0/  1/ 1- 608/ 55/63 OpenBSD (0xa6)
+          Start     Size A    C   H  S    C   H  S Type
+0:           63  9770985      0/  1/ 1- 608/ 55/63 OpenBSD (0xa6)
  BSD disklabel at sector 63 (offset 1) of jre-sibyl-wd1.img:
   type: ESDI (5)
   disk: ESDI/IDE disk
@@ -31,24 +31,24 @@ MBR partition table at sector 0 of jre-sibyl-wd1.img:
   byte order: little endian
   partition count: 16
 
-                  Start            Size Type    fsize bsize   cpg
- a:                  63          262017 4.2BSD   2048 16384   260
- b:   X               0               0 unused
- c:   X               0        78165360 unused      0     0
- d:              262080           65520 4.2BSD   2048 16384    66
- e:              327600          131040 4.2BSD   2048 16384   130
- f:              458640         7340256 4.2BSD   2048 16384   328
- g:             7798896         1972152 4.2BSD   2048 16384   328
- h:   X        39083247         9770481 4.2BSD   2048 16384   328
- i:   X               0               0 unused
- j:   X               0               0 unused
- k:   X               0               0 unused
- l:   X               0               0 unused
- m:   X               0               0 unused
- n:   X               0               0 unused
- o:   X               0               0 unused
- p:   X               0               0 unused
-1:             9771048        14342328 * 1023/255/63-1023/255/63 FreeBSD or DragonFly (0xa5)
+           Start     Size Type    fsize bsize   cpg
+ a:           63   262017 4.2BSD   2048 16384   260
+ b:   X        0        0 unused
+ c:   X        0 78165360 unused      0     0
+ d:       262080    65520 4.2BSD   2048 16384    66
+ e:       327600   131040 4.2BSD   2048 16384   130
+ f:       458640  7340256 4.2BSD   2048 16384   328
+ g:      7798896  1972152 4.2BSD   2048 16384   328
+ h:   X 39083247  9770481 4.2BSD   2048 16384   328
+ i:   X        0        0 unused
+ j:   X        0        0 unused
+ k:   X        0        0 unused
+ l:   X        0        0 unused
+ m:   X        0        0 unused
+ n:   X        0        0 unused
+ o:   X        0        0 unused
+ p:   X        0        0 unused
+1:      9771048 14342328 * 1023/255/63-1023/255/63 FreeBSD or DragonFly (0xa5)
  BSD disklabel at sector 9771048 (offset 1) of jre-sibyl-wd1.img:
   type: unknown (0)
   disk: amnesiac
@@ -69,24 +69,24 @@ MBR partition table at sector 0 of jre-sibyl-wd1.img:
   byte order: little endian
   partition count: 16
 
-                  Start            Size Type    fsize bsize   cpg
- a:             9771048          524288 4.2BSD      0     0     0
- b:            10295336         1048576 swap
- c:             9771048        14342328 unused      0     0
- d:            11343912          524288 4.2BSD      0     0     0
- e:            11868200          524288 4.2BSD      0     0     0
- f:            12392488         6291456 4.2BSD      0     0     0
- g:            18683944         5429432 4.2BSD      0     0     0
- h:   X               0               0 unused
- i:   X               0               0 unused
- j:   X               0               0 unused
- k:   X               0               0 unused
- l:   X               0               0 unused
- m:   X               0               0 unused
- n:   X               0               0 unused
- o:   X               0               0 unused
- p:   X               0               0 unused
-2:            24113565        14956515   1023/255/63-1023/254/63 FreeBSD or DragonFly (0xa5)
+           Start     Size Type    fsize bsize   cpg
+ a:      9771048   524288 4.2BSD      0     0     0
+ b:     10295336  1048576 swap
+ c:      9771048 14342328 unused      0     0
+ d:     11343912   524288 4.2BSD      0     0     0
+ e:     11868200   524288 4.2BSD      0     0     0
+ f:     12392488  6291456 4.2BSD      0     0     0
+ g:     18683944  5429432 4.2BSD      0     0     0
+ h:   X        0        0 unused
+ i:   X        0        0 unused
+ j:   X        0        0 unused
+ k:   X        0        0 unused
+ l:   X        0        0 unused
+ m:   X        0        0 unused
+ n:   X        0        0 unused
+ o:   X        0        0 unused
+ p:   X        0        0 unused
+2:     24113565 14956515   1023/255/63-1023/254/63 FreeBSD or DragonFly (0xa5)
  BSD disklabel at sector 24113565 (offset 1) of jre-sibyl-wd1.img:
   type: ESDI (5)
   disk: ad3s3
@@ -107,19 +107,19 @@ MBR partition table at sector 0 of jre-sibyl-wd1.img:
   byte order: little endian
   partition count: 8
 
-                  Start            Size Type    fsize bsize   cpg
- a:            24113565         1048576 4.2BSD   2048 16384     8
- b:            25162141         1048576 swap
- c:            24113565        14956515 unused      0     0
- d:            26210717          524288 4.2BSD   2048 16384 32776
- e:            26735005          524288 4.2BSD   2048 16384 32776
- f:            27259293        11810787 4.2BSD   2048 16384 28552
- g:   X               0               0 unused
- h:   X               0               0 unused
-3:            39083184        39082176   1023/255/63-1023/144/63 DOS Extended (0x05)
- 4:            39083247         9770481   1023/255/63-1023/255/63 BeOS (0xeb)
- 5:            48853791         9770481   1023/ 17/ 1-1023/255/63 Syllable (0x2a)
- 6:            58624335        19541025   1023/239/63-1023/239/63 NTFS or HPFS (0x07)
+           Start     Size Type    fsize bsize   cpg
+ a:     24113565  1048576 4.2BSD   2048 16384     8
+ b:     25162141  1048576 swap
+ c:     24113565 14956515 unused      0     0
+ d:     26210717   524288 4.2BSD   2048 16384 32776
+ e:     26735005   524288 4.2BSD   2048 16384 32776
+ f:     27259293 11810787 4.2BSD   2048 16384 28552
+ g:   X        0        0 unused
+ h:   X        0        0 unused
+3:     39083184 39082176   1023/255/63-1023/144/63 DOS Extended (0x05)
+ 4:     39083247  9770481   1023/255/63-1023/255/63 BeOS (0xeb)
+ 5:     48853791  9770481   1023/ 17/ 1-1023/255/63 Syllable (0x2a)
+ 6:     58624335 19541025   1023/239/63-1023/239/63 NTFS or HPFS (0x07)
  BSD disklabel at sector 39083184 (offset 1) of jre-sibyl-wd1.img:
   type: unknown (0)
   disk: amnesiac
@@ -140,15 +140,15 @@ MBR partition table at sector 0 of jre-sibyl-wd1.img:
   byte order: little endian
   partition count: 8
 
-                  Start            Size Type    fsize bsize   cpg
- a:            39083184          512000 4.2BSD   2048 16384    94
- b:            39595184          536576 swap
- c:            39083184        19541088 unused      0     0
- d:   X               0               0 unused
- e:            40131760          524288 4.2BSD   2048 16384    94
- f:            40656048          524288 4.2BSD   2048 16384    94
- g:            41180336        17443936 4.2BSD   2048 16384    89
- h:   X               0               0 unused
+           Start     Size Type    fsize bsize   cpg
+ a:     39083184   512000 4.2BSD   2048 16384    94
+ b:     39595184   536576 swap
+ c:     39083184 19541088 unused      0     0
+ d:   X        0        0 unused
+ e:     40131760   524288 4.2BSD   2048 16384    94
+ f:     40656048   524288 4.2BSD   2048 16384    94
+ g:     41180336 17443936 4.2BSD   2048 16384    89
+ h:   X        0        0 unused
 
 
 Dump of jre-sibyl-wd1.img MBR at sector 0 (0x0):

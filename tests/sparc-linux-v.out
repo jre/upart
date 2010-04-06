@@ -22,12 +22,12 @@ Sun sparc disklabel (Sun VTOC) at sector 0 of sparc-linux.img:
   read sector skip: 0
   write sector skip: 0
 
-                 Start            Size Flags Type
-0:                   0          192780 wm    boot
-1:              192780        33720435 wm    Linux Filesystem
-2:                   0        35375130 wm    backup
-3:            33913215         1461915 wm    Linux Swap
-4:   X               0               0 wm    unassigned
-5:   X               0               0 wm    unassigned
-6:   X               0               0 wm    unassigned
-7:   X               0               0 wm    unassigned
+          Start     Size Flags Type
+0:            0   192780 wm    boot
+1:       192780 33720435 wm    Linux Filesystem
+2:            0 35375130 wm    backup
+3:     33913215  1461915 wm    Linux Swap
+4:   X        0        0 wm    unassigned
+5:   X        0        0 wm    unassigned
+6:   X        0        0 wm    unassigned
+7:   X        0        0 wm    unassigned

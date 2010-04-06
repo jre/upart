@@ -1,8 +1,8 @@
 sparc-linux.img: 16.9GB (35378533 sectors of 512 bytes)
 
 Sun sparc disklabel (Sun VTOC) at sector 0 of sparc-linux.img:
-                 Start            Size Flags Type
-0:                   0          192780 wm    boot
-1:              192780        33720435 wm    Linux Filesystem
-2:                   0        35375130 wm    backup
-3:            33913215         1461915 wm    Linux Swap
+          Start     Size Flags Type
+0:            0   192780 wm    boot
+1:       192780 33720435 wm    Linux Filesystem
+2:            0 35375130 wm    backup
+3:     33913215  1461915 wm    Linux Swap

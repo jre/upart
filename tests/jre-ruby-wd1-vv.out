@@ -9,11 +9,11 @@ jre-ruby-wd1.img: 298GB (625142448 sectors of 512 bytes)
 
 
 MBR partition table at sector 0 of jre-ruby-wd1.img:
-                 Start            Size A    C   H  S    C   H  S Type
-0:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
-1:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
-2:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
-3:                  63       625142385 *    0/  1/ 1-1023/ 15/63 OpenBSD (0xa6)
+           Start      Size A    C   H  S    C   H  S Type
+0:   X         0         0      0/  0/ 0-   0/  0/ 0 unused (0x00)
+1:   X         0         0      0/  0/ 0-   0/  0/ 0 unused (0x00)
+2:   X         0         0      0/  0/ 0-   0/  0/ 0 unused (0x00)
+3:            63 625142385 *    0/  1/ 1-1023/ 15/63 OpenBSD (0xa6)
  OpenBSD disklabel at sector 63 (offset 1) of jre-ruby-wd1.img:
   version: 1
   type: ESDI (5)
@@ -35,23 +35,23 @@ MBR partition table at sector 0 of jre-ruby-wd1.img:
   byte order: little endian
   partition count: 16
 
-                  Start            Size Type    fsize bsize   cpg
- a:                  63       625142385 4.2BSD   2048 16384     1
- b:   X               0               0 unused
- c:   X               0       625142448 unused      0     0
- d:   X               0               0 unused
- e:   X               0               0 unused
- f:   X               0               0 unused
- g:   X               0               0 unused
- h:   X               0               0 unused
- i:   X               0               0 unused
- j:   X               0               0 unused
- k:   X               0               0 unused
- l:   X               0               0 unused
- m:   X               0               0 unused
- n:   X               0               0 unused
- o:   X               0               0 unused
- p:   X               0               0 unused
+            Start      Size Type    fsize bsize   cpg
+ a:            63 625142385 4.2BSD   2048 16384     1
+ b:   X         0         0 unused
+ c:   X         0 625142448 unused      0     0
+ d:   X         0         0 unused
+ e:   X         0         0 unused
+ f:   X         0         0 unused
+ g:   X         0         0 unused
+ h:   X         0         0 unused
+ i:   X         0         0 unused
+ j:   X         0         0 unused
+ k:   X         0         0 unused
+ l:   X         0         0 unused
+ m:   X         0         0 unused
+ n:   X         0         0 unused
+ o:   X         0         0 unused
+ p:   X         0         0 unused
 
 
 Dump of jre-ruby-wd1.img MBR at sector 0 (0x0):

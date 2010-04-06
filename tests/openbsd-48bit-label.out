@@ -1,6 +1,6 @@
 openbsd-48bit-label.img: 3.00TB (6442450177 sectors of 512 bytes)
 
 OpenBSD disklabel at sector 0 (offset 1) of openbsd-48bit-label.img:
-                 Start            Size Type
-a:                  63      6442450114 4.2BSD
-c:                   0      6442450177 unused
+            Start       Size Type
+a:             63 6442450114 4.2BSD
+c:              0 6442450177 unused

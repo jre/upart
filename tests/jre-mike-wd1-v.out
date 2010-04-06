@@ -9,28 +9,28 @@ jre-mike-wd1.img: 112GB (234441648 sectors of 512 bytes)
 
 
 Apple partition map at sector 0 of jre-mike-wd1.img:
-                 Start            Size Type                     Name                     Status     A/UX boot data
-1:                   1              63 Apple_partition_map      Apple                    0x00000003
-2:                  64              56 Apple_Driver43           Macintosh                0x0000077f
-3:                 120              56 Apple_Driver43           Macintosh                0x0000037f
-4:                 176              56 Apple_Driver_ATA         Macintosh                0x0000077f
-5:                 232              56 Apple_Driver_ATA         Macintosh                0x0000037f
-6:                 288             512 Apple_FWDriver           Macintosh                0x00000003
-7:                 800             512 Apple_Driver_IOKit       Macintosh                0x00000003
-8:                1312             512 Apple_Patches            Patch Partition          0x00000003
-9:                1824           40960 Apple_Boot               Boot                     0x40000033
-10:              42784         2097152 Apple_HFS                OS8                      0x4000037f
-11:            2139936         2097152 Apple_HFS                OS9                      0x4000037f
-12:            4237088        10485760 Apple_HFS                Jaguar                   0x4000037f
-13:           14722848        20971520 Apple_HFS                Panther                  0x4000037f
-14:           35694368        41943040 Apple_HFS                Tiger                    0x4000037f
-15:           77637408          262144 Apple_Boot               Booter                   0xc0000023
-16:           77899552        20709376 Apple_HFSX               Apple_HFSX_Untitled_2    0x4000037f
-17:           98608928        19922944 Apple_UNIX_SVR2          Linux root               0x00000033
-18:          118531872         1048576 Apple_UNIX_SVR2          Linux swap               0x00000033
-19:          119580448        19922944 Apple_UNIX_SVR2          NetBSD root              0x40000373 
-20:          139503392         1048576 Apple_UNIX_SVR2          NetBSD swap              0x40000373 
-21:          140551968        20971520 OpenBSD                  OpenBSD                  0x40000373
+           Start      Size Type                     Name                     Status     A/UX boot data
+1:             1        63 Apple_partition_map      Apple                    0x00000003
+2:            64        56 Apple_Driver43           Macintosh                0x0000077f
+3:           120        56 Apple_Driver43           Macintosh                0x0000037f
+4:           176        56 Apple_Driver_ATA         Macintosh                0x0000077f
+5:           232        56 Apple_Driver_ATA         Macintosh                0x0000037f
+6:           288       512 Apple_FWDriver           Macintosh                0x00000003
+7:           800       512 Apple_Driver_IOKit       Macintosh                0x00000003
+8:          1312       512 Apple_Patches            Patch Partition          0x00000003
+9:          1824     40960 Apple_Boot               Boot                     0x40000033
+10:        42784   2097152 Apple_HFS                OS8                      0x4000037f
+11:      2139936   2097152 Apple_HFS                OS9                      0x4000037f
+12:      4237088  10485760 Apple_HFS                Jaguar                   0x4000037f
+13:     14722848  20971520 Apple_HFS                Panther                  0x4000037f
+14:     35694368  41943040 Apple_HFS                Tiger                    0x4000037f
+15:     77637408    262144 Apple_Boot               Booter                   0xc0000023
+16:     77899552  20709376 Apple_HFSX               Apple_HFSX_Untitled_2    0x4000037f
+17:     98608928  19922944 Apple_UNIX_SVR2          Linux root               0x00000033
+18:    118531872   1048576 Apple_UNIX_SVR2          Linux swap               0x00000033
+19:    119580448  19922944 Apple_UNIX_SVR2          NetBSD root              0x40000373 
+20:    139503392   1048576 Apple_UNIX_SVR2          NetBSD swap              0x40000373 
+21:    140551968  20971520 OpenBSD                  OpenBSD                  0x40000373
  OpenBSD disklabel at sector 140551968 (offset 0) of jre-mike-wd1.img:
   version: 1
   type: ESDI (5)
@@ -52,21 +52,21 @@ Apple partition map at sector 0 of jre-mike-wd1.img:
   byte order: big endian
   partition count: 16
 
-                  Start            Size Type    fsize bsize   cpg
- a:           140551968          524688 4.2BSD   2048 16384    16
- b:   X       139503392         1048576 swap
- c:   X               0       234441648 unused      0     0
- d:           141076656          525168 4.2BSD   2048 16384    16
- e:           141601824          525168 4.2BSD   2048 16384    16
- f:           142126992        10486224 4.2BSD   2048 16384    16
- g:           152613216         8910272 4.2BSD   2048 16384    16
- h:   X               0               0 unused
- i:   X           42784         2097152 HFS/raid
- j:   X         2139936         2097152 HFS/raid
- k:   X         4237088        10485760 HFS/raid
- l:   X        14722848        20971520 HFS/raid
- m:   X        35694368        41943040 HFS/raid
- n:   X        77637408        20971520 HFS/raid
- o:   X       161523488        72918160 HFS/raid
- p:   X               0               0 unused
-22:          161523488        72918160 Apple_HFS                Chicago                  0x4000037f
+            Start      Size Type    fsize bsize   cpg
+ a:     140551968    524688 4.2BSD   2048 16384    16
+ b:   X 139503392   1048576 swap
+ c:   X         0 234441648 unused      0     0
+ d:     141076656    525168 4.2BSD   2048 16384    16
+ e:     141601824    525168 4.2BSD   2048 16384    16
+ f:     142126992  10486224 4.2BSD   2048 16384    16
+ g:     152613216   8910272 4.2BSD   2048 16384    16
+ h:   X         0         0 unused
+ i:   X     42784   2097152 HFS/raid
+ j:   X   2139936   2097152 HFS/raid
+ k:   X   4237088  10485760 HFS/raid
+ l:   X  14722848  20971520 HFS/raid
+ m:   X  35694368  41943040 HFS/raid
+ n:   X  77637408  20971520 HFS/raid
+ o:   X 161523488  72918160 HFS/raid
+ p:   X         0         0 unused
+22:    161523488  72918160 Apple_HFS                Chicago                  0x4000037f

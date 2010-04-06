@@ -1,15 +1,15 @@
 jre-sibyl-wd0.img: 74.5GB (156301488 sectors of 512 bytes)
 
 MBR partition table at sector 0 of jre-sibyl-wd0.img:
-                 Start            Size A Type
-0:                  63        39058988   Apple HFS+ (0xaf)
-1:            39086145        78156225   Solaris (0xbf)
+           Start      Size A Type
+0:            63  39058988   Apple HFS+ (0xaf)
+1:      39086145  78156225   Solaris (0xbf)
  Sun x86 disk label at sector 39086145 (offset 1) of jre-sibyl-wd0.img:
-                  Start            Size Flags Type
- 0:            40194630        14683410 wm    root
- 1:            39134340         1060290 wu    swap
- 2:            39086145        78124095 wm    backup
- 7:            54878040        62332200 wm    home
- 8:            39086145           16065 wu    boot
- 9:            39102210           32130 wu    altsctr
-2:           117242370        39059118   Apple HFS+ (0xaf)
+            Start      Size Flags Type
+ 0:      40194630  14683410 wm    root
+ 1:      39134340   1060290 wu    swap
+ 2:      39086145  78124095 wm    backup
+ 7:      54878040  62332200 wm    home
+ 8:      39086145     16065 wu    boot
+ 9:      39102210     32130 wu    altsctr
+2:     117242370  39059118   Apple HFS+ (0xaf)

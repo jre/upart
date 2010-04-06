@@ -9,9 +9,9 @@ jre-sibyl-wd0.img: 74.5GB (156301488 sectors of 512 bytes)
 
 
 MBR partition table at sector 0 of jre-sibyl-wd0.img:
-                 Start            Size A    C   H  S    C   H  S Type
-0:                  63        39058988      0/  1/ 1-1023/ 64/59 Apple HFS+ (0xaf)
-1:            39086145        78156225   1023/ 15/ 1-1023/ 29/63 Solaris (0xbf)
+           Start      Size A    C   H  S    C   H  S Type
+0:            63  39058988      0/  1/ 1-1023/ 64/59 Apple HFS+ (0xaf)
+1:      39086145  78156225   1023/ 15/ 1-1023/ 29/63 Solaris (0xbf)
  Sun x86 disk label at sector 39086145 (offset 1) of jre-sibyl-wd0.img:
   name: 
   bytes/sector: 512
@@ -29,22 +29,22 @@ MBR partition table at sector 0 of jre-sibyl-wd0.img:
   write sectskip: 0
   read sectskip: 0
 
-                  Start            Size Flags Type
- 0:            40194630        14683410 wm    root
- 1:            39134340         1060290 wu    swap
- 2:            39086145        78124095 wm    backup
- 3:   X        39086145               0 wm    unassigned
- 4:   X        39086145               0 wm    unassigned
- 5:   X        39086145               0 wm    unassigned
- 6:   X        39086145               0 wm    unassigned
- 7:            54878040        62332200 wm    home
- 8:            39086145           16065 wu    boot
- 9:            39102210           32130 wu    altsctr
- 10:  X        39086145               0 wm    unassigned
- 11:  X        39086145               0 wm    unassigned
- 12:  X        39086145               0 wm    unassigned
- 13:  X        39086145               0 wm    unassigned
- 14:  X        39086145               0 wm    unassigned
- 15:  X        39086145               0 wm    unassigned
-2:           117242370        39059118   1023/ 30/ 1-1023/ 95/63 Apple HFS+ (0xaf)
-3:   X               0               0      0/  0/ 0-   0/  0/ 0 unused (0x00)
+            Start      Size Flags Type
+ 0:      40194630  14683410 wm    root
+ 1:      39134340   1060290 wu    swap
+ 2:      39086145  78124095 wm    backup
+ 3:   X  39086145         0 wm    unassigned
+ 4:   X  39086145         0 wm    unassigned
+ 5:   X  39086145         0 wm    unassigned
+ 6:   X  39086145         0 wm    unassigned
+ 7:      54878040  62332200 wm    home
+ 8:      39086145     16065 wu    boot
+ 9:      39102210     32130 wu    altsctr
+ 10:  X  39086145         0 wm    unassigned
+ 11:  X  39086145         0 wm    unassigned
+ 12:  X  39086145         0 wm    unassigned
+ 13:  X  39086145         0 wm    unassigned
+ 14:  X  39086145         0 wm    unassigned
+ 15:  X  39086145         0 wm    unassigned
+2:     117242370  39059118   1023/ 30/ 1-1023/ 95/63 Apple HFS+ (0xaf)
+3:   X         0         0      0/  0/ 0-   0/  0/ 0 unused (0x00)

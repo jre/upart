@@ -1,12 +1,12 @@
 sparc-obsd-old.img: 16.9GB (35378533 sectors of 512 bytes)
 
 Sun sparc disklabel (OpenBSD partitions) at sector 0 of sparc-obsd-old.img:
-                 Start            Size
-a:                   0          523032
-b:              523032          523032
-c:                   0        35378533
-d:             1046064          523032
-e:             1569096        11266392
-f:            12835488        11266392
-g:            24101880        11266392
-p:            35368272            9424
+          Start     Size
+a:            0   523032
+b:       523032   523032
+c:            0 35378533
+d:      1046064   523032
+e:      1569096 11266392
+f:     12835488 11266392
+g:     24101880 11266392
+p:     35368272     9424

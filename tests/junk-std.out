@@ -1,5 +1,5 @@
 junk-std.img: 9.84MB (20160 sectors of 512 bytes)
 
 MBR partition table at sector 0 of junk-std.img:
-                 Start            Size A Type
-3:                  63           20097 * OpenBSD (0xa6)
+       Start  Size A Type
+3:        63 20097 * OpenBSD (0xa6)

@@ -9,8 +9,8 @@ jre-mica-wd1.img: 149GB (312581808 sectors of 512 bytes)
 
 
 MBR partition table at sector 0 of jre-mica-wd1.img:
-                 Start            Size A    C   H  S    C   H  S Type
-0:               16065        83891430 *    1/  0/ 1-1023/254/63 Solaris (0xbf)
+           Start      Size A    C   H  S    C   H  S Type
+0:         16065  83891430 *    1/  0/ 1-1023/254/63 Solaris (0xbf)
  Sun x86 disk label at sector 16065 (offset 1) of jre-mica-wd1.img:
   name: 
   bytes/sector: 512
@@ -28,23 +28,23 @@ MBR partition table at sector 0 of jre-mica-wd1.img:
   write sectskip: 0
   read sectskip: 0
 
-                  Start            Size Flags Type
- 0:            42588315        41287050 wm    root
- 1:               64260         1237005 wu    swap
- 2:               16065        83859300 wm    backup
- 3:   X           16065               0 wm    unassigned
- 4:   X           16065               0 wm    unassigned
- 5:   X           16065               0 wm    unassigned
- 6:   X           16065               0 wm    unassigned
- 7:             1301265        41287050 wm    home
- 8:               16065           16065 wu    boot
- 9:               32130           32130 wu    altsctr
- 10:  X           16065               0 wm    unassigned
- 11:  X           16065               0 wm    unassigned
- 12:  X           16065               0 wm    unassigned
- 13:  X           16065               0 wm    unassigned
- 14:  X           16065               0 wm    unassigned
- 15:  X           16065               0 wm    unassigned
-1:            83907495        20971520   1023/  0/ 1-1023/106/17 OpenBSD (0xa6)
-2:           104879015        20971520   1023/106/18-1023/212/34 FreeBSD or DragonFly (0xa5)
-3:           125850535       186731273   1023/212/35-1023/ 80/63 Windows Extended (LBA) (0x0f)
+            Start      Size Flags Type
+ 0:      42588315  41287050 wm    root
+ 1:         64260   1237005 wu    swap
+ 2:         16065  83859300 wm    backup
+ 3:   X     16065         0 wm    unassigned
+ 4:   X     16065         0 wm    unassigned
+ 5:   X     16065         0 wm    unassigned
+ 6:   X     16065         0 wm    unassigned
+ 7:       1301265  41287050 wm    home
+ 8:         16065     16065 wu    boot
+ 9:         32130     32130 wu    altsctr
+ 10:  X     16065         0 wm    unassigned
+ 11:  X     16065         0 wm    unassigned
+ 12:  X     16065         0 wm    unassigned
+ 13:  X     16065         0 wm    unassigned
+ 14:  X     16065         0 wm    unassigned
+ 15:  X     16065         0 wm    unassigned
+1:      83907495  20971520   1023/  0/ 1-1023/106/17 OpenBSD (0xa6)
+2:     104879015  20971520   1023/106/18-1023/212/34 FreeBSD or DragonFly (0xa5)
+3:     125850535 186731273   1023/212/35-1023/ 80/63 Windows Extended (LBA) (0x0f)

@@ -1,20 +1,20 @@
 jre-mica-wd0.img: 149GB (312581808 sectors of 512 bytes)
 
 MBR partition table at sector 0 of jre-mica-wd0.img:
-                 Start            Size A Type
-0:                  63        83886080   OpenBSD (0xa6)
+           Start      Size A Type
+0:            63  83886080   OpenBSD (0xa6)
  OpenBSD disklabel at sector 63 (offset 1) of jre-mica-wd0.img:
-                  Start            Size Type
- a:                  63         1058337 4.2BSD
- b:             1058400         5246640 swap
- c:   X               0       312581808 unused
- d:             6305040         1058400 4.2BSD
- e:             7363440         2101680 4.2BSD
- f:             9465120        31464720 4.2BSD
- g:            40929840        42956303 4.2BSD
-1:            83886143        83885377 * NTFS or HPFS (0x07)
-2:           167771520        20971520   NetBSD (0xa9)
-3:           188758080       123802560   Windows Extended (LBA) (0x0f)
- 4:           188758143        20971377   FreeBSD or DragonFly (0xa5)
- 5:           209729583        20971377   Linux Filesystem (0x83)
- 6:           230701023        20971377   Windows FAT16 (LBA) (0x0e)
+            Start      Size Type
+ a:            63   1058337 4.2BSD
+ b:       1058400   5246640 swap
+ c:   X         0 312581808 unused
+ d:       6305040   1058400 4.2BSD
+ e:       7363440   2101680 4.2BSD
+ f:       9465120  31464720 4.2BSD
+ g:      40929840  42956303 4.2BSD
+1:      83886143  83885377 * NTFS or HPFS (0x07)
+2:     167771520  20971520   NetBSD (0xa9)
+3:     188758080 123802560   Windows Extended (LBA) (0x0f)
+ 4:     188758143  20971377   FreeBSD or DragonFly (0xa5)
+ 5:     209729583  20971377   Linux Filesystem (0x83)
+ 6:     230701023  20971377   Windows FAT16 (LBA) (0x0e)

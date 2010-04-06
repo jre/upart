@@ -22,15 +22,15 @@ Sun sparc disklabel (Sun VTOC) at sector 0 of sparc-vtoc.img:
   read sector skip: 0
   write sector skip: 0
 
-                 Start            Size Flags Type
-0:             1058304        89884608 wm    root
-1:                   0         1058304 wu    swap
-2:                   0       143349312 wm    backup
-3:   X               0               0 wm    unassigned
-4:   X               0               0 wm    unassigned
-5:   X               0               0 wm    unassigned
-6:   X               0               0 wm    unassigned
-7:            90942912        52406400 wm    home
+           Start      Size Flags Type
+0:       1058304  89884608 wm    root
+1:             0   1058304 wu    swap
+2:             0 143349312 wm    backup
+3:   X         0         0 wm    unassigned
+4:   X         0         0 wm    unassigned
+5:   X         0         0 wm    unassigned
+6:   X         0         0 wm    unassigned
+7:      90942912  52406400 wm    home
 
 
 Dump of sparc-vtoc.img Sun sparc disklabel at sector 0 (0x0):

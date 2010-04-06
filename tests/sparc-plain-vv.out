@@ -18,15 +18,15 @@ Sun sparc disklabel at sector 0 of sparc-plain.img:
   tracks/cylinder: 4
   sectors/track: 518
 
-                 Start            Size
-0:                   0          524216
-1:              524216          524216
-2:                   0        35566478
-3:             1048432          524216
-4:             1572648        11329696
-5:            12902344        11329696
-6:            24232040        11329696
-7:   X               0               0
+          Start     Size
+0:            0   524216
+1:       524216   524216
+2:            0 35566478
+3:      1048432   524216
+4:      1572648 11329696
+5:     12902344 11329696
+6:     24232040 11329696
+7:   X        0        0
 
 
 Dump of sparc-plain.img Sun sparc disklabel at sector 0 (0x0):

@@ -1,55 +1,55 @@
 jre-anubis-wd0.img: 74.5GB (156301488 sectors of 512 bytes)
 
 MBR partition table at sector 0 of jre-anubis-wd0.img:
-                 Start            Size A Type
-0:                  63        78156162 * OpenBSD (0xa6)
+           Start      Size A Type
+0:            63  78156162 * OpenBSD (0xa6)
  OpenBSD disklabel at sector 63 (offset 1) of jre-anubis-wd0.img:
-                  Start            Size Type
- a:                  63          530082 4.2BSD
- b:              530145         2104515 swap
- c:   X               0       156301488 unused
- d:             2634660          530145 4.2BSD
- e:             3164805         1060290 4.2BSD
- f:             4225095        10490445 4.2BSD
- g:            14715540        63440685 4.2BSD
- h:   X        78156225          917504 4.2BSD
- i:   X        81429293         1638400 4.2BSD
- j:   X        83919661        13771604 4.2BSD
- k:   X        97691265          524288 4.2BSD
- l:   X       100312705          524288 4.2BSD
- m:   X       101361281         6291456 4.2BSD
- n:   X       107652737         9572623 4.2BSD
- o:   X       117226368        19270944 4.2BSD
- p:   X       136761408        18538947 ext2fs
-1:            78156225        19535040   FreeBSD or DragonFly (0xa5)
+            Start      Size Type
+ a:            63    530082 4.2BSD
+ b:        530145   2104515 swap
+ c:   X         0 156301488 unused
+ d:       2634660    530145 4.2BSD
+ e:       3164805   1060290 4.2BSD
+ f:       4225095  10490445 4.2BSD
+ g:      14715540  63440685 4.2BSD
+ h:   X  78156225    917504 4.2BSD
+ i:   X  81429293   1638400 4.2BSD
+ j:   X  83919661  13771604 4.2BSD
+ k:   X  97691265    524288 4.2BSD
+ l:   X 100312705    524288 4.2BSD
+ m:   X 101361281   6291456 4.2BSD
+ n:   X 107652737   9572623 4.2BSD
+ o:   X 117226368  19270944 4.2BSD
+ p:   X 136761408  18538947 ext2fs
+1:      78156225  19535040   FreeBSD or DragonFly (0xa5)
  BSD disklabel at sector 78156225 (offset 1) of jre-anubis-wd0.img:
-                  Start            Size Type
- a:            78156225          917504 4.2BSD
- b:            79073729         2355564 swap
- c:            78156225        19535040 unused
- d:            81429293         1638400 4.2BSD
- e:            83067693          851968 4.2BSD
- f:            83919661        13771604 4.2BSD
-2:            97691265        19534095   FreeBSD or DragonFly (0xa5)
+            Start      Size Type
+ a:      78156225    917504 4.2BSD
+ b:      79073729   2355564 swap
+ c:      78156225  19535040 unused
+ d:      81429293   1638400 4.2BSD
+ e:      83067693    851968 4.2BSD
+ f:      83919661  13771604 4.2BSD
+2:      97691265  19534095   FreeBSD or DragonFly (0xa5)
  BSD disklabel at sector 97691265 (offset 1) of jre-anubis-wd0.img:
-                  Start            Size Type
- a:            97691265          524288 4.2BSD
- b:            98215553         2097152 swap
- c:            97691265        19534095 unused
- d:           100312705          524288 4.2BSD
- e:           100836993          524288 4.2BSD
- f:           101361281         6291456 4.2BSD
- g:           107652737         9572623 4.2BSD
-3:           117226305        39070080   DOS Extended (0x05)
- 4:           117226368        19534977   NetBSD (0xa9)
+            Start      Size Type
+ a:      97691265    524288 4.2BSD
+ b:      98215553   2097152 swap
+ c:      97691265  19534095 unused
+ d:     100312705    524288 4.2BSD
+ e:     100836993    524288 4.2BSD
+ f:     101361281   6291456 4.2BSD
+ g:     107652737   9572623 4.2BSD
+3:     117226305  39070080   DOS Extended (0x05)
+ 4:     117226368  19534977   NetBSD (0xa9)
   BSD disklabel at sector 117226368 (offset 1) of jre-anubis-wd0.img:
-                   Start            Size Type
-  a:           117226368        19270944 4.2BSD
-  b:           136497312          264033 swap
-  c:           117226368        19534977 unused
-  d:   X               0       156301488 unused
-  e:   X              63        78156162 unknown
-  f:   X        78156225        19535040 4.2BSD
-  g:   X        97691265        19535040 4.2BSD
- 5:           136761408        18538947   Linux Filesystem (0x83)
- 6:           155300418          995967   Linux Swap (0x82)
+             Start      Size Type
+  a:     117226368  19270944 4.2BSD
+  b:     136497312    264033 swap
+  c:     117226368  19534977 unused
+  d:   X         0 156301488 unused
+  e:   X        63  78156162 unknown
+  f:   X  78156225  19535040 4.2BSD
+  g:   X  97691265  19535040 4.2BSD
+ 5:     136761408  18538947   Linux Filesystem (0x83)
+ 6:     155300418    995967   Linux Swap (0x82)

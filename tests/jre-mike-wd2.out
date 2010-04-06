@@ -1,25 +1,25 @@
 jre-mike-wd2.img: 57.3GB (120103200 sectors of 512 bytes)
 
 Apple partition map at sector 0 of jre-mike-wd2.img:
-                 Start            Size Type                     Name
-1:                   1              63 Apple_partition_map      Apple
-2:                  64              56 Apple_Driver43           Macintosh
-3:                 120              56 Apple_Driver43           Macintosh
-4:                 176              56 Apple_Driver_ATA         Macintosh
-5:                 232              56 Apple_Driver_ATA         Macintosh
-6:                 288             512 Apple_FWDriver           Macintosh
-7:                 800             512 Apple_Driver_IOKit       Macintosh
-8:                1312             512 Apple_Patches            Patch Partition
-9:                1824           37544 Apple_Bootstrap          Boot
-10:              39368        73662464 Apple_HFS                Leopard
-11:           73701832        46401368 OpenBSD                  OpenBSD
+          Start     Size Type                     Name
+1:            1       63 Apple_partition_map      Apple
+2:           64       56 Apple_Driver43           Macintosh
+3:          120       56 Apple_Driver43           Macintosh
+4:          176       56 Apple_Driver_ATA         Macintosh
+5:          232       56 Apple_Driver_ATA         Macintosh
+6:          288      512 Apple_FWDriver           Macintosh
+7:          800      512 Apple_Driver_IOKit       Macintosh
+8:         1312      512 Apple_Patches            Patch Partition
+9:         1824    37544 Apple_Bootstrap          Boot
+10:       39368 73662464 Apple_HFS                Leopard
+11:    73701832 46401368 OpenBSD                  OpenBSD
  OpenBSD disklabel at sector 73701832 (offset 0) of jre-mike-wd2.img:
-                  Start            Size Type
- a:            73701832          524264 4.2BSD
- b:            74226096          525168 swap
- c:   X               0       120103200 unused
- d:            74751264          525168 4.2BSD
- e:            75276432          525168 4.2BSD
- f:            75801600        20972448 4.2BSD
- g:            96774048        23329152 4.2BSD
- i:   X           39368        73662464 HFS/raid
+           Start     Size Type
+ a:     73701832   524264 4.2BSD
+ b:     74226096   525168 swap
+ c:   X        0 120103200 unused
+ d:     74751264   525168 4.2BSD
+ e:     75276432   525168 4.2BSD
+ f:     75801600 20972448 4.2BSD
+ g:     96774048 23329152 4.2BSD
+ i:   X    39368 73662464 HFS/raid

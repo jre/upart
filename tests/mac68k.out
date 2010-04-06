@@ -1,13 +1,13 @@
 mac68k.img: 1.97GB (4124736 sectors of 512 bytes)
 
 Apple partition map at sector 0 of mac68k.img:
-                 Start            Size Type                     Name
-1:                   1              63 Apple_partition_map      Apple
-2:                  64              32 Apple_Driver43           Macintosh
-3:                  96           40960 Apple_HFS                MacOS
-4:               41056          196608 Apple_UNIX_SVR2          root
-5:              237664          458752 Apple_UNIX_SVR2          swap
-6:              696416          196608 Apple_UNIX_SVR2          tmp
-7:              893024          196608 Apple_UNIX_SVR2          var
-8:             1089632         2097152 Apple_UNIX_SVR2          usr
-9:             3186784          937952 Apple_UNIX_SVR2          home
+         Start    Size Type                     Name
+1:           1      63 Apple_partition_map      Apple
+2:          64      32 Apple_Driver43           Macintosh
+3:          96   40960 Apple_HFS                MacOS
+4:       41056  196608 Apple_UNIX_SVR2          root
+5:      237664  458752 Apple_UNIX_SVR2          swap
+6:      696416  196608 Apple_UNIX_SVR2          tmp
+7:      893024  196608 Apple_UNIX_SVR2          var
+8:     1089632 2097152 Apple_UNIX_SVR2          usr
+9:     3186784  937952 Apple_UNIX_SVR2          home

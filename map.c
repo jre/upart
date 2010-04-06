@@ -23,7 +23,8 @@ static struct part	*map_newcontainer(int64_t);
 static void		 map_freecontainer(struct disk *, struct part *);
 static struct map	*map_new(struct disk *, struct part *, enum mapid,
     void *);
-static void		 map_printcontainer(const struct part *, FILE *);
+static void		 map_print(const struct map *, int, FILE *);
+static void		 map_printcontainer(const struct part *, int, FILE *);
 static void		 map_indent(int, FILE *);
 
 static struct map_funcs st_types[UP_MAP_ID_COUNT];
@@ -312,8 +313,8 @@ up_map_label(const struct map *map)
     return st_types[map->type].label;
 }
 
-void
-up_map_print(const struct map *map, FILE *stream, int recurse)
+static void
+map_print(const struct map *map, int sizewidth, FILE *stream)
 {
 	struct map_funcs *funcs;
 	const struct part *part;
@@ -339,9 +340,9 @@ up_map_print(const struct map *map, FILE *stream, int recurse)
 	if (!(UP_TYPE_NOPRINTHDR & funcs->flags)) {
 		if (!indented)
 			map_indent(map->depth, stream);
-		fprintf(stream, "       %15s %15s",
-		    (opts->swapcols ?  "Size" : "Start"),
-		    (opts->swapcols ?  "Start" : "Size"));
+		fprintf(stream, "       %*s %*s",
+		    sizewidth, (opts->swapcols ?  "Size" : "Start"),
+		    sizewidth, (opts->swapcols ?  "Start" : "Size"));
 		if (funcs->print_extrahdr != NULL)
 			funcs->print_extrahdr(map, stream);
 		putc('\n', stream);
@@ -369,34 +370,50 @@ up_map_print(const struct map *map, FILE *stream, int recurse)
 
 		fprintf(stream, "%-4s %c ", idx, flag);
 		printsect_pad((opts->swapcols ? part->size : part->start),
-		    15, stream);
+		    sizewidth, stream);
 		putc(' ', stream);
 		printsect_pad((opts->swapcols ? part->start : part->size),
-		    15, stream);
+		    sizewidth, stream);
 		if (funcs->print_extra != NULL)
 			funcs->print_extra(part, stream);
 		putc('\n', stream);
 		indented = 0;
 
 		/* recurse */
-		if (recurse)
-			map_printcontainer(part, stream);
+		map_printcontainer(part, sizewidth, stream);
 	}
 }
 
 void
 up_map_printall(const struct disk *disk, void *stream)
 {
-	map_printcontainer(disk->maps, stream);
+	map_printcontainer(disk->maps, 0, stream);
 }
 
 static void
-map_printcontainer(const struct part *container, FILE *stream)
+map_printcontainer(const struct part *up, int width, FILE *stream)
 {
-	const struct map *ii;
+	const struct map *map;
+	const struct part *part;
+	int64_t size;
 
-	for (ii = up_map_firstmap(container); ii; ii = up_map_nextmap(ii))
-		up_map_print(ii, stream, 1);
+	if (width <= 0) {
+		size = 0;
+		for (map = up_map_firstmap(up); map != NULL;
+		     map = up_map_nextmap(map)) {
+			for (part = up_map_first(map); part != NULL;
+			     part = up_map_next(part)) {
+				if (size < part->start || size < part->size)
+					size = MAX(part->start, part->size);
+			}
+		}
+		width = printsect(size, NULL);
+		if (width <= 0)
+			width = 15;
+	}
+
+	for (map = up_map_firstmap(up); map != NULL; map = up_map_nextmap(map))
+		map_print(map, width, stream);
 }
 
 static void

@@ -105,7 +105,6 @@ void		 up_map_freeprivmap_def(struct map *, void *);
 void		 up_map_freeprivpart_def(struct part *, void *);
 
 const char	*up_map_label(const struct map *);
-void		 up_map_print(const struct map *, FILE *, int);
 void		 up_map_dumpsect(const struct map *, FILE *, int64_t,
     int64_t, const void *, int);
 void		 up_map_printall(const struct disk *, void *);

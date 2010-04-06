@@ -258,19 +258,29 @@ printsect_pad(uint64_t num, int padding, FILE *stream)
 		size = up_fmtsize(num * (disk == NULL ?
 			512 : UP_DISK_1SECT(disk)), &unit);
 		padding = MAX(0, padding - strlen(unit));
+		if (stream == NULL)
+			return (6);
 		return (fprintf(stream, "%*.*f%s",
 			padding, UP_BESTDECIMAL(size), size, unit));
 	}
-	else if (opts->printhex)
-		return (fprintf(stream, "%#*"PRIx64, padding, num));
-	else
-		return (fprintf(stream, "%*"PRId64, padding, num));
+	else if (opts->printhex) {
+		if (stream == NULL)
+			return (snprintf(NULL, 0, "%#*"PRIx64, padding, num));
+		else
+			return (fprintf(stream, "%#*"PRIx64, padding, num));
+	}
+	else {
+		if (stream == NULL)
+			return (snprintf(NULL, 0, "%*"PRId64, padding, num));
+		else
+			return (fprintf(stream, "%*"PRId64, padding, num));
+	}
 }
 
 int
 printsect_verbose(uint64_t num, FILE *stream)
 {
-	if (!opts->humansize &&
+	if (!opts->humansize && stream != NULL &&
 	    fputs("sector ", stream) == EOF)
 		return (-1);
 	return (printsect_pad(num, 0, stream));

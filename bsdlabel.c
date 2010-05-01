@@ -373,6 +373,7 @@ bsdlabel_info(const struct map *map, FILE *stream)
 	uint64_t sectcount;
 	uint16_t disktype;
 	char *disktypestr;
+	int uid, i;
 
 	if (!UP_NOISY(NORMAL))
 		return (0);
@@ -401,8 +402,16 @@ bsdlabel_info(const struct map *map, FILE *stream)
         memcpy(packname, priv->label.packname, sizeof(priv->label.packname));
         packname[sizeof(packname)-1] = 0;
 	sectcount = LABEL_LGETINT32(priv, sectcount);
+	uid = 0;
 	if (priv->version > 0) {
-		sectcount |= (uint64_t)LABEL_LGETINT16(priv, v1_sectcount_h) << 32;
+		sectcount |= (uint64_t)LABEL_LGETINT16(priv, v1_sectcount_h)
+		    << 32;
+		for (i = 0; i < sizeof(priv->label.u_uid.s_uid.uid); i++) {
+			if (priv->label.u_uid.s_uid.uid[i] != 0) {
+				uid = 1;
+				break;
+			}
+		}
 	}
 
 	if (fprintf(stream,
@@ -426,39 +435,55 @@ bsdlabel_info(const struct map *map, FILE *stream)
 		sectcount) < 0)
 		return (-1);
 
-        if (fprintf(stream,
-		"  rpm: %u\n"
-		"  interleave: %u\n"
-		"  trackskew: %u\n"
-		"  cylinderskew: %u\n"
-		"  headswitch: %u\n"
-		"  track-to-track seek: %u\n",
-		LABEL_LGETINT16(priv, u_uid.s_nouid.rpm),
-		LABEL_LGETINT16(priv, u_uid.s_nouid.interleave),
-		LABEL_LGETINT16(priv, trackskew),
-		LABEL_LGETINT16(priv, cylskew),
-		LABEL_LGETINT32(priv, headswitch),
-		LABEL_LGETINT32(priv, trackseek)) < 0)
-		return (-1);
-
-	if (priv->version > 0) {
-		uint8_t *uid;
-		int i, max;
-
-		uid = priv->label.u_uid.s_uid.uid;
-		max = sizeof(priv->label.u_uid.s_uid.uid);
-		for (i = 0; i < max; i++)
-			if (uid[i] != 0)
-				break;
-		if (i < max) {
-			if (fprintf(stream, "  uid: ") < 0)
+        if (UP_NOISY(SPAM)) {
+		if (uid && fprintf(stream,
+			"  alternate cylinders: %u\n",
+			LABEL_LGETINT16(priv, u_uid.s_uid.uid_altcyls)) < 0)
+			return (-1);
+		if (!uid && fprintf(stream,
+			"  spares/track: %u\n"
+			"  spares/cylinder: %u\n"
+			"  alternate cylinders: %u\n"
+			"  rpm: %u\n"
+			"  interleave: %u\n",
+			LABEL_LGETINT32(priv, u_uid.s_nouid.sparepertrack),
+			LABEL_LGETINT32(priv, u_uid.s_nouid.sparepercyl),
+			LABEL_LGETINT32(priv, u_uid.s_nouid.altcyls),
+			LABEL_LGETINT16(priv, u_uid.s_nouid.rpm),
+			LABEL_LGETINT16(priv, u_uid.s_nouid.interleave)) < 0)
+			return (-1);
+		if (fprintf(stream,
+			"  trackskew: %u\n"
+			"  cylinderskew: %u\n"
+			"  headswitch: %u\n"
+			"  track-to-track seek: %u\n"
+			"  bootsize: %u\n"
+			"  superblock max size: %u\n"
+			"  drivedata:",
+			LABEL_LGETINT16(priv, trackskew),
+			LABEL_LGETINT16(priv, cylskew),
+			LABEL_LGETINT32(priv, headswitch),
+			LABEL_LGETINT32(priv, trackseek),
+			LABEL_LGETINT32(priv, bootsize),
+			LABEL_LGETINT32(priv, superblockmax)) < 0)
+			return (-1);
+		for (i = 0; i < NITEMS(priv->label.drivedata); i++)
+			if (fprintf(stream, " %d",
+				LABEL_LGETINT32(priv, drivedata[i])) < 0)
 				return (-1);
-			for (i = 0; i < max; i++)
-				if (fprintf(stream, "%02x", uid[i]) < 0)
-					return (-1);
-			if (fprintf(stream, "\n") < 0)
+		if (fprintf(stream, "\n") < 0)
+			return (-1);
+	}
+
+	if (uid) {
+		if (fprintf(stream, "  uid: ") < 0)
+			return (-1);
+		for (i = 0; i < sizeof(priv->label.u_uid.s_uid.uid); i++)
+			if (fprintf(stream, "%02x",
+				priv->label.u_uid.s_uid.uid[i]) < 0)
 				return (-1);
-		}
+		if (fprintf(stream, "\n") < 0)
+			return (-1);
 	}
 
         return (fprintf(stream,

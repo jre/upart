@@ -26,12 +26,6 @@ MBR partition table at sector 0 of jre-ruby-wd1.img:
   sectors/cylinder: 1008
   cylinders: 620181
   total sectors: 625142448
-  rpm: 3600
-  interleave: 1
-  trackskew: 0
-  cylinderskew: 0
-  headswitch: 0
-  track-to-track seek: 0
   byte order: little endian
   partition count: 16
 

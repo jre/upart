@@ -22,12 +22,6 @@ MBR partition table at sector 0 of jre-sibyl-wd1.img:
   sectors/cylinder: 1008
   cylinders: 16383
   total sectors: 78165360
-  rpm: 3600
-  interleave: 1
-  trackskew: 0
-  cylinderskew: 0
-  headswitch: 0
-  track-to-track seek: 0
   byte order: little endian
   partition count: 16
 
@@ -60,12 +54,6 @@ MBR partition table at sector 0 of jre-sibyl-wd1.img:
   sectors/cylinder: 8064
   cylinders: 1778
   total sectors: 14342328
-  rpm: 3600
-  interleave: 1
-  trackskew: 0
-  cylinderskew: 0
-  headswitch: 0
-  track-to-track seek: 0
   byte order: little endian
   partition count: 16
 
@@ -98,12 +86,6 @@ MBR partition table at sector 0 of jre-sibyl-wd1.img:
   sectors/cylinder: 16065
   cylinders: 4865
   total sectors: 78165360
-  rpm: 3600
-  interleave: 1
-  trackskew: 0
-  cylinderskew: 0
-  headswitch: 0
-  track-to-track seek: 0
   byte order: little endian
   partition count: 8
 
@@ -131,12 +113,6 @@ MBR partition table at sector 0 of jre-sibyl-wd1.img:
   sectors/cylinder: 1008
   cylinders: 19386
   total sectors: 19541088
-  rpm: 3600
-  interleave: 1
-  trackskew: 0
-  cylinderskew: 0
-  headswitch: 0
-  track-to-track seek: 0
   byte order: little endian
   partition count: 8
 

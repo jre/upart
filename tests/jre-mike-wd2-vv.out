@@ -33,12 +33,18 @@ Apple partition map at sector 0 of jre-mike-wd2.img:
   sectors/cylinder: 1008
   cylinders: 119150
   total sectors: 120103200
+  spares/track: 0
+  spares/cylinder: 0
+  alternate cylinders: 0
   rpm: 3600
   interleave: 1
   trackskew: 0
   cylinderskew: 0
   headswitch: 0
   track-to-track seek: 0
+  bootsize: 8192
+  superblock max size: 65536
+  drivedata: 0 0 0 0 0
   byte order: big endian
   partition count: 16
 

@@ -26,12 +26,6 @@ MBR partition table at sector 0 of openbsd-uuid.img:
   sectors/cylinder: 16065
   cylinders: 19457
   total sectors: 312581808
-  rpm: 3600
-  interleave: 1
-  trackskew: 0
-  cylinderskew: 0
-  headswitch: 63
-  track-to-track seek: 312576705
   uid: efbf7fc84d9da34b
   byte order: little endian
   partition count: 16

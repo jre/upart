@@ -23,12 +23,18 @@ MBR partition table at sector 0 of jre-sibyl-wd3.img:
   sectors/cylinder: 1008
   cylinders: 16383
   total sectors: 312581808
+  spares/track: 0
+  spares/cylinder: 0
+  alternate cylinders: 0
   rpm: 3600
   interleave: 1
   trackskew: 0
   cylinderskew: 0
   headswitch: 0
   track-to-track seek: 0
+  bootsize: 8192
+  superblock max size: 8192
+  drivedata: 0 0 0 0 0
   byte order: little endian
   partition count: 16
 
@@ -61,12 +67,18 @@ MBR partition table at sector 0 of jre-sibyl-wd3.img:
   sectors/cylinder: 1008
   cylinders: 2080
   total sectors: 2097152
+  spares/track: 0
+  spares/cylinder: 0
+  alternate cylinders: 0
   rpm: 3600
   interleave: 1
   trackskew: 0
   cylinderskew: 0
   headswitch: 0
   track-to-track seek: 0
+  bootsize: 8192
+  superblock max size: 0
+  drivedata: 0 0 0 0 0
   byte order: little endian
   partition count: 8
 

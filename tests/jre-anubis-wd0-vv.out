@@ -23,12 +23,18 @@ MBR partition table at sector 0 of jre-anubis-wd0.img:
   sectors/cylinder: 16065
   cylinders: 9729
   total sectors: 156301488
+  spares/track: 0
+  spares/cylinder: 0
+  alternate cylinders: 0
   rpm: 3600
   interleave: 1
   trackskew: 0
   cylinderskew: 0
   headswitch: 0
   track-to-track seek: 0
+  bootsize: 8192
+  superblock max size: 65536
+  drivedata: 0 0 0 0 0
   byte order: little endian
   partition count: 16
 
@@ -61,12 +67,18 @@ MBR partition table at sector 0 of jre-anubis-wd0.img:
   sectors/cylinder: 1008
   cylinders: 155061
   total sectors: 156301488
+  spares/track: 0
+  spares/cylinder: 0
+  alternate cylinders: 0
   rpm: 3600
   interleave: 1
   trackskew: 0
   cylinderskew: 0
   headswitch: 0
   track-to-track seek: 0
+  bootsize: 8192
+  superblock max size: 0
+  drivedata: 0 0 0 0 0
   byte order: little endian
   partition count: 8
 
@@ -91,12 +103,18 @@ MBR partition table at sector 0 of jre-anubis-wd0.img:
   sectors/cylinder: 8001
   cylinders: 2441
   total sectors: 19534095
+  spares/track: 0
+  spares/cylinder: 0
+  alternate cylinders: 0
   rpm: 3600
   interleave: 1
   trackskew: 0
   cylinderskew: 0
   headswitch: 0
   track-to-track seek: 0
+  bootsize: 8192
+  superblock max size: 8192
+  drivedata: 0 0 0 0 0
   byte order: little endian
   partition count: 16
 
@@ -130,12 +148,18 @@ MBR partition table at sector 0 of jre-anubis-wd0.img:
   sectors/cylinder: 1008
   cylinders: 155061
   total sectors: 156301488
+  spares/track: 0
+  spares/cylinder: 0
+  alternate cylinders: 0
   rpm: 3600
   interleave: 1
   trackskew: 0
   cylinderskew: 0
   headswitch: 0
   track-to-track seek: 0
+  bootsize: 8192
+  superblock max size: 8192
+  drivedata: 0 0 0 0 0
   byte order: little endian
   partition count: 16
 

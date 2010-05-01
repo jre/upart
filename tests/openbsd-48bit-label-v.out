@@ -20,12 +20,6 @@ OpenBSD disklabel at sector 0 (offset 1) of openbsd-48bit-label.img:
   sectors/cylinder: 130305
   cylinders: 49441
   total sectors: 6442450177
-  rpm: 3600
-  interleave: 1
-  trackskew: 0
-  cylinderskew: 1
-  headswitch: 0
-  track-to-track seek: 2147482881
   byte order: little endian
   partition count: 16
 

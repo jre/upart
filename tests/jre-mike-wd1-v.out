@@ -43,12 +43,6 @@ Apple partition map at sector 0 of jre-mike-wd1.img:
   sectors/cylinder: 1008
   cylinders: 232581
   total sectors: 234441648
-  rpm: 3600
-  interleave: 1
-  trackskew: 0
-  cylinderskew: 0
-  headswitch: 0
-  track-to-track seek: 0
   byte order: big endian
   partition count: 16
 

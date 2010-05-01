@@ -1,9 +1,9 @@
-openbsd-uuid.img: 149GB (312581808 sectors of 512 bytes)
+openbsd-uid.img: 149GB (312581808 sectors of 512 bytes)
 
-MBR partition table at sector 0 of openbsd-uuid.img:
+MBR partition table at sector 0 of openbsd-uid.img:
            Start      Size A Type
 3:            63 312576642 * OpenBSD (0xa6)
- OpenBSD disklabel at sector 63 (offset 1) of openbsd-uuid.img:
+ OpenBSD disklabel at sector 63 (offset 1) of openbsd-uid.img:
             Start      Size Type
  a:            63    530082 4.2BSD
  b:        530145   2104515 swap

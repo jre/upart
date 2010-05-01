@@ -1,6 +1,6 @@
-openbsd-uuid.img: 149GB (312581808 sectors of 512 bytes)
-    label:               openbsd-uuid.img
-    device path:         openbsd-uuid.img
+openbsd-uid.img: 149GB (312581808 sectors of 512 bytes)
+    label:               openbsd-uid.img
+    device path:         openbsd-uid.img
     sector size:         512
     total sectors:       312581808
     total cylinders:     19457 (cylinders)
@@ -8,13 +8,13 @@ openbsd-uuid.img: 149GB (312581808 sectors of 512 bytes)
     sectors per track:   63 (sectors)
 
 
-MBR partition table at sector 0 of openbsd-uuid.img:
+MBR partition table at sector 0 of openbsd-uid.img:
            Start      Size A    C   H  S    C   H  S Type
 0:   X         0         0      0/  0/ 0-   0/  0/ 0 unused (0x00)
 1:   X         0         0      0/  0/ 0-   0/  0/ 0 unused (0x00)
 2:   X         0         0      0/  0/ 0-   0/  0/ 0 unused (0x00)
 3:            63 312576642 *    0/  1/ 1-1023/254/63 OpenBSD (0xa6)
- OpenBSD disklabel at sector 63 (offset 1) of openbsd-uuid.img:
+ OpenBSD disklabel at sector 63 (offset 1) of openbsd-uid.img:
   version: 1
   type: SCSI (4)
   disk: SCSI disk

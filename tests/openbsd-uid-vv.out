@@ -1,6 +1,6 @@
-openbsd-uuid.img: 149GB (312581808 sectors of 512 bytes)
-    label:               openbsd-uuid.img
-    device path:         openbsd-uuid.img
+openbsd-uid.img: 149GB (312581808 sectors of 512 bytes)
+    label:               openbsd-uid.img
+    device path:         openbsd-uid.img
     sector size:         512
     total sectors:       312581808
     total cylinders:     19457 (cylinders)
@@ -8,13 +8,13 @@ openbsd-uuid.img: 149GB (312581808 sectors of 512 bytes)
     sectors per track:   63 (sectors)
 
 
-MBR partition table at sector 0 of openbsd-uuid.img:
+MBR partition table at sector 0 of openbsd-uid.img:
            Start      Size A    C   H  S    C   H  S Type
 0:   X         0         0      0/  0/ 0-   0/  0/ 0 unused (0x00)
 1:   X         0         0      0/  0/ 0-   0/  0/ 0 unused (0x00)
 2:   X         0         0      0/  0/ 0-   0/  0/ 0 unused (0x00)
 3:            63 312576642 *    0/  1/ 1-1023/254/63 OpenBSD (0xa6)
- OpenBSD disklabel at sector 63 (offset 1) of openbsd-uuid.img:
+ OpenBSD disklabel at sector 63 (offset 1) of openbsd-uid.img:
   version: 1
   type: SCSI (4)
   disk: SCSI disk
@@ -57,7 +57,7 @@ MBR partition table at sector 0 of openbsd-uuid.img:
  p:   X         0         0 unused
 
 
-Dump of openbsd-uuid.img MBR at sector 0 (0x0):
+Dump of openbsd-uid.img MBR at sector 0 (0x0):
 000000000000  ea 05 00 c0 07 8c c8 8e  d0 bc fc ff 8e d8 b8 a0  |................|
 000000000010  07 8e c0 31 f6 31 ff b9  00 02 fc f3 a4 ea 22 00  |...1.1........".|
 000000000020  a0 07 1e 07 0e 1f b4 02  cd 16 a8 03 74 0a b0 07  |............t...|
@@ -93,7 +93,7 @@ Dump of openbsd-uuid.img MBR at sector 0 (0x0):
 000000000200
 
 
-Dump of openbsd-uuid.img BSD disklabel at sector 64 (0x40) offset 0 (0x0):
+Dump of openbsd-uid.img BSD disklabel at sector 64 (0x40) offset 0 (0x0):
 000000008000  57 45 56 82 04 00 00 00  53 43 53 49 20 64 69 73  |WEV.....SCSI dis|
 000000008010  6b 00 00 00 00 00 00 00  53 41 4d 53 55 4e 47 20  |k.......SAMSUNG |
 000000008020  53 50 31 36 31 34 43 20  00 02 00 00 3f 00 00 00  |SP1614C ....?...|

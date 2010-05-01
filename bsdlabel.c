@@ -39,74 +39,89 @@
 
 #pragma pack(1)
 
-struct up_bsd_p
-{
-    uint32_t            magic1;
-    uint16_t            disktype;
-    uint16_t            subtype;
-    char                typename[16];
-    char                packname[16];
-    uint32_t            sectsize;
-    uint32_t            sectpertrack;
-    uint32_t            trackpercyl;
-    uint32_t            cylcount;
-    uint32_t            sectpercyl;
-    uint32_t            sectcount;
-    uint16_t            sparepertrack;
-    uint16_t            sparepercyl;
-    uint32_t            altcyls;
-    uint16_t            rpm;
-    uint16_t            interleave;
-    uint16_t            trackskew;
-    uint16_t            cylskew;
-    uint32_t            headswitch;
-    uint32_t            trackseek;
-    uint32_t            flags;
-    uint32_t            drivedata[5];
-    uint16_t            v1_sectcount_h;
-    uint16_t            obsd_version;
-    uint32_t            spare[4];
-    uint32_t            magic2;
-    uint16_t            checksum;
-    uint16_t            maxpart;
-    uint32_t            bootsize;
-    uint32_t            superblockmax;
+struct up_bsd_p {
+	uint32_t magic1;			/* d_magic */
+	uint16_t disktype;			/* d_type */
+	uint16_t subtype;			/* d_subtype */
+	char typename[16];			/* d_typename */
+	char packname[16];			/* d_packname */
+	uint32_t sectsize;			/* d_secsize */
+	uint32_t sectpertrack;			/* d_nsectors */
+	uint32_t trackpercyl;			/* d_ntracks */
+	uint32_t cylcount;			/* d_ncylinders */
+	uint32_t sectpercyl;			/* d_secpercyl */
+	uint32_t sectcount;			/* d_secperunit */
+
+	/* OpenBSD changed things here to add a UID */
+	union {
+		/* traditional BSD layout */
+		struct {
+			uint16_t sparepertrack;	/* d_sparespertrack */
+			uint16_t sparepercyl;	/* d_sparespercyl */
+			uint32_t altcyls;	/* d_acylinders */
+			uint16_t rpm;		/* d_rpm */
+			uint16_t interleave;	/* d_interleave */
+		} u_no_uid;
+		/* OpenBSD with unique identifier */
+		struct {
+			uint8_t uid[8];		/* d_uid */
+			uint32_t uid_altcyls;	/* d_acylinders */
+		} u_have_uid;
+	} u_maybe_uid;
+
+	/* these fields are now garbage in OpenBSD labels */
+	uint16_t trackskew;			/* d_trackskew */
+	uint16_t cylskew;			/* d_cylskew */
+	uint32_t headswitch;			/* d_headswitch */
+	uint32_t trackseek;			/* d_trkseek */
+
+	uint32_t flags;				/* d_flags */
+	uint32_t drivedata[5];			/* d_drivedata */
+
+	/* OpenBSD used a spare field to add these */
+	uint16_t v1_sectcount_h;		/* d_secperunith */
+	uint16_t obsd_version;			/* d_version */
+
+	uint32_t spare[4];			/* d_spare */
+	uint32_t magic2;			/* d_magic2 */
+	uint16_t checksum;			/* d_checksum */
+	uint16_t maxpart;			/* d_npartitions */
+	uint32_t bootsize;			/* d_bbsize */
+	uint32_t superblockmax;			/* d_sbsize */
 };
 
-struct up_bsdpart0_p
-{
-    uint32_t            size;
-    uint32_t            start;
-    uint32_t            fsize;
-    uint8_t             type;
-    uint8_t             frags;
-    uint16_t            cpg;
+/* traditional BSD layout */
+struct up_bsdpart0_p {
+	uint32_t size;				/* p_size */
+	uint32_t start;				/* p_offset */
+	uint32_t fsize;				/* p_fsize */
+	uint8_t type;				/* p_fstype */
+	uint8_t frags;				/* p_frag */
+	uint16_t cpg;				/* p_cpg */
 };
 
-struct up_bsdpart1_p
-{
-    uint32_t            size_l;
-    uint32_t            start_l;
-    uint16_t            start_h;
-    uint16_t            size_h;
-    uint8_t             type;
-    uint8_t             bf;
-    uint16_t            cpg;
+/* OpenBSD version 1 layout */
+struct up_bsdpart1_p {
+	uint32_t size_l;			/* p_size */
+	uint32_t start_l;			/* p_offset */
+	uint16_t start_h;			/* p_offseth */
+	uint16_t size_h;			/* p_sizeh */
+	uint8_t type;				/* p_fstype */
+	uint8_t bf;				/* p_fragblock */
+	uint16_t cpg;				/* p_cpg */
 };
 
 #pragma pack()
 
-struct up_bsd
-{
-    int                 sectoff;
-    int                 byteoff;
-    int                 endian;
-	int		version;
-    struct up_bsd_p     label;
+struct up_bsd {
+	int sectoff;
+	int byteoff;
+	int endian;
+	int version;
+	struct up_bsd_p label;
 };
 
-struct up_bsdpart
-{
+struct up_bsdpart {
 	uint32_t fsize;
 	int type;
 	int frags;
@@ -355,7 +370,6 @@ bsdlabel_info(const struct map *map, FILE *stream)
 	struct up_bsd *priv;
 	char typename[sizeof(priv->label.typename)+1];
 	char packname[sizeof(priv->label.packname)+1];
-	const char *labeltype;
 	uint64_t sectcount;
 	uint16_t disktype;
 	char *disktypestr;
@@ -364,19 +378,20 @@ bsdlabel_info(const struct map *map, FILE *stream)
 		return (0);
 
 	priv = map->priv;
-	if (priv->version > 0)
-		labeltype = "OpenBSD disklabel";
-	else
-		labeltype = up_map_label(map);
 
-	if (!UP_NOISY(EXTRA)) {
-		if (fprintf(stream, "%s at ", labeltype) < 0 ||
-		    printsect_verbose(map->start, stream) < 0 ||
-		    fprintf(stream, " (offset %d) of %s:\n",
-                        priv->sectoff, UP_DISK_PATH(map->disk)) < 0)
-			return (-1);
+	if (fprintf(stream, "%s at ", (priv->version > 0 ?
+		    "OpenBSD disklabel" : up_map_label(map))) < 0 ||
+	    printsect_verbose(map->start, stream) < 0 ||
+	    fprintf(stream, " (offset %d) of %s:\n",
+		priv->sectoff, UP_DISK_PATH(map->disk)) < 0)
+		return (-1);
+
+	if (!UP_NOISY(EXTRA))
 		return (1);
-	}
+
+	if (priv->version > 0 &&
+	    fprintf(stream, "  version: %u\n", priv->version) < 0)
+		return (-1);
 
         disktype = LABEL_LGETINT16(priv, disktype);
         disktypestr = (disktype < sizeof(up_disktypes) /
@@ -390,16 +405,7 @@ bsdlabel_info(const struct map *map, FILE *stream)
 		sectcount |= (uint64_t)LABEL_LGETINT16(priv, v1_sectcount_h) << 32;
 	}
 
-	if (fprintf(stream, "%s at ", labeltype) < 0 ||
-	    printsect_verbose(map->start, stream) < 0 ||
-	    fprintf(stream, " (offset %d) of %s:\n",
-		priv->sectoff, UP_DISK_PATH(map->disk)) < 0)
-		return (-1);
-	if (priv->version > 0 &&
-	    fprintf(stream, "  version: %u\n", priv->version) < 0)
-		return (-1);
-
-        return (fprintf(stream,
+	if (fprintf(stream,
 		"  type: %s (%u)\n"
 		"  disk: %s\n"
 		"  label: %s\n"
@@ -409,31 +415,35 @@ bsdlabel_info(const struct map *map, FILE *stream)
 		"  tracks/cylinder: %u\n"
 		"  sectors/cylinder: %u\n"
 		"  cylinders: %u\n"
-		"  total sectors: %"PRId64"\n"
-		"  rpm: %u\n"
-		"  interleave: %u\n"
-		"  trackskew: %u\n"
-		"  cylinderskew: %u\n"
-		"  headswitch: %u\n"
-		"  track-to-track seek: %u\n"
-		"  byte order: %s endian\n"
-		"  partition count: %u\n\n",
-		disktypestr, disktype,
-		typename,
-		packname,
+		"  total sectors: %"PRId64"\n",
+		disktypestr, disktype, typename, packname,
 		LABEL_LGETINT32(priv, flags),
 		LABEL_LGETINT32(priv, sectsize),
 		LABEL_LGETINT32(priv, sectpertrack),
 		LABEL_LGETINT32(priv, trackpercyl),
 		LABEL_LGETINT32(priv, sectpercyl),
 		LABEL_LGETINT32(priv, cylcount),
-		sectcount,
-		LABEL_LGETINT16(priv, rpm),
-		LABEL_LGETINT16(priv, interleave),
+		sectcount) < 0)
+		return (-1);
+
+        if (fprintf(stream,
+		"  rpm: %u\n"
+		"  interleave: %u\n"
+		"  trackskew: %u\n"
+		"  cylinderskew: %u\n"
+		"  headswitch: %u\n"
+		"  track-to-track seek: %u\n",
+		LABEL_LGETINT16(priv, u_maybe_uid.u_no_uid.rpm),
+		LABEL_LGETINT16(priv, u_maybe_uid.u_no_uid.interleave),
 		LABEL_LGETINT16(priv, trackskew),
 		LABEL_LGETINT16(priv, cylskew),
 		LABEL_LGETINT32(priv, headswitch),
-		LABEL_LGETINT32(priv, trackseek),
+		LABEL_LGETINT32(priv, trackseek)) < 0)
+		return (-1);
+
+        return (fprintf(stream,
+		"  byte order: %s endian\n"
+		"  partition count: %u\n\n",
 		(UP_ENDIAN_BIG == priv->endian ? "big" : "little"),
 		LABEL_LGETINT16(priv, maxpart)));
 }

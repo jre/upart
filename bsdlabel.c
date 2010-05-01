@@ -61,13 +61,13 @@ struct up_bsd_p {
 			uint32_t altcyls;	/* d_acylinders */
 			uint16_t rpm;		/* d_rpm */
 			uint16_t interleave;	/* d_interleave */
-		} u_no_uid;
+		} s_nouid;
 		/* OpenBSD with unique identifier */
 		struct {
 			uint8_t uid[8];		/* d_uid */
 			uint32_t uid_altcyls;	/* d_acylinders */
-		} u_have_uid;
-	} u_maybe_uid;
+		} s_uid;
+	} u_uid;
 
 	/* these fields are now garbage in OpenBSD labels */
 	uint16_t trackskew;			/* d_trackskew */
@@ -433,13 +433,33 @@ bsdlabel_info(const struct map *map, FILE *stream)
 		"  cylinderskew: %u\n"
 		"  headswitch: %u\n"
 		"  track-to-track seek: %u\n",
-		LABEL_LGETINT16(priv, u_maybe_uid.u_no_uid.rpm),
-		LABEL_LGETINT16(priv, u_maybe_uid.u_no_uid.interleave),
+		LABEL_LGETINT16(priv, u_uid.s_nouid.rpm),
+		LABEL_LGETINT16(priv, u_uid.s_nouid.interleave),
 		LABEL_LGETINT16(priv, trackskew),
 		LABEL_LGETINT16(priv, cylskew),
 		LABEL_LGETINT32(priv, headswitch),
 		LABEL_LGETINT32(priv, trackseek)) < 0)
 		return (-1);
+
+	if (priv->version > 0) {
+		uint8_t *uid;
+		int i, max;
+
+		uid = priv->label.u_uid.s_uid.uid;
+		max = sizeof(priv->label.u_uid.s_uid.uid);
+		for (i = 0; i < max; i++)
+			if (uid[i] != 0)
+				break;
+		if (i < max) {
+			if (fprintf(stream, "  uid: ") < 0)
+				return (-1);
+			for (i = 0; i < max; i++)
+				if (fprintf(stream, "%02x", uid[i]) < 0)
+					return (-1);
+			if (fprintf(stream, "\n") < 0)
+				return (-1);
+		}
+	}
 
         return (fprintf(stream,
 		"  byte order: %s endian\n"

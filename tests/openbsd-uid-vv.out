@@ -26,7 +26,7 @@ MBR partition table at sector 0 of openbsd-uid.img:
   sectors/cylinder: 16065
   cylinders: 19457
   total sectors: 312581808
-  alternate cylinders: 3600
+  alternate cylinders: 69136
   trackskew: 0
   cylinderskew: 0
   headswitch: 63

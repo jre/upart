@@ -438,7 +438,7 @@ bsdlabel_info(const struct map *map, FILE *stream)
         if (UP_NOISY(SPAM)) {
 		if (uid && fprintf(stream,
 			"  alternate cylinders: %u\n",
-			LABEL_LGETINT16(priv, u_uid.s_uid.uid_altcyls)) < 0)
+			LABEL_LGETINT32(priv, u_uid.s_uid.uid_altcyls)) < 0)
 			return (-1);
 		if (!uid && fprintf(stream,
 			"  spares/track: %u\n"

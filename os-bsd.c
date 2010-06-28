@@ -101,6 +101,24 @@ os_opendisk_opendisk(const char *name, int flags, char *buf, size_t buflen,
 }
 #endif /* HAVE_OPENDISK */
 
+#if HAVE_OPENDEV
+int
+os_opendisk_opendev(const char *name, int oflags, char *buf, size_t buflen,
+    int cooked)
+{
+	char *realname = NULL;
+	int dflags = OPENDEV_PART;
+	int ret;
+
+	buf[0] = '\0';
+	if (cooked)
+		dflags |= OPENDEV_BLCK;
+	if ((ret = opendev((char*)name, oflags, dflags, &realname)) >= 0)
+		strlcpy(buf, realname, buflen);
+	return (ret);
+}
+#endif /* HAVE_OPENDEV */
+
 #if defined(HAVE_SYS_DISKLABEL_H) && \
     (defined(DIOCGPDINFO) || defined(DIOCGDINFO))
 int

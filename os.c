@@ -60,6 +60,7 @@ int
 up_os_opendisk(const char *name, const char **path)
 {
 	static int (*funcs[])(const char *, int, char *, size_t, int) = {
+		OS_OPENDISK_OPENDEV,
 		OS_OPENDISK_OPENDISK,
 		OS_OPENDISK_HAIKU,
 		OS_OPENDISK_SOLARIS,

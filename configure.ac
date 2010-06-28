@@ -1,4 +1,4 @@
-AC_INIT([upart], [0.2.2])
+AC_INIT([upart], [0.2.3])
 dnl need 2.60 for AC_PROG_MKDIR_P
 AC_PREREQ([2.60])
 AC_CONFIG_HEADERS([config.h])
@@ -35,6 +35,11 @@ AC_CHECK_HEADERS([sys/vtoc.h])
 
 dnl freebsd headers
 AC_CHECK_HEADERS([sys/disk.h])
+
+dnl look for opendev() in libutil
+AC_SEARCH_LIBS([opendev], [util],
+[AC_CHECK_HEADERS([util.h])
+AC_DEFINE([HAVE_OPENDEV])])
 
 dnl look for opendisk() in libutil
 AC_SEARCH_LIBS([opendisk], [util],

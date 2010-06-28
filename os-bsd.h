@@ -37,6 +37,13 @@ int	os_opendisk_opendisk(const char *, int, char *, size_t, int);
 #define OS_OPENDISK_OPENDISK	(0)
 #endif
 
+#ifdef HAVE_OPENDEV
+#define OS_OPENDISK_OPENDEV	(os_opendisk_opendev)
+int	os_opendisk_opendev(const char *, int, char *, size_t, int);
+#else
+#define OS_OPENDISK_OPENDEV	(0)
+#endif
+
 #if defined(HAVE_SYS_DISKLABEL_H) && \
     (defined(DIOCGPDINFO) || defined(DIOCGDINFO))
 #define OS_GETPARAMS_DISKLABEL	(os_getparams_disklabel)

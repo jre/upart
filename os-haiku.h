@@ -9,7 +9,7 @@
 #define OS_LISTDEV_HAIKU	(os_listdev_haiku)
 #define OS_OPENDISK_HAIKU	(os_opendisk_haiku)
 #define OS_GETPARAMS_HAIKU	(os_getparams_haiku)
-int	os_listdev_haiku(FILE *);
+int	os_listdev_haiku(int (*)(const char *, void *), void *);
 int	os_opendisk_haiku(const char *, int, char *, size_t, int);
 int	os_getparams_haiku(int, struct disk_params *, const char *);
 #else

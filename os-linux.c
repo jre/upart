@@ -15,12 +15,11 @@
 
 #ifdef OS_HAVE_LINUX
 int
-os_listdev_linux(FILE *stream)
+os_listdev_linux(int (*func)(const char *, void *), void *arg)
 {
 	static const char letters[] = "abcdefghijklmnopqrstuvwxyz";
 	struct dirent *ent;
 	DIR *dir;
-	int once;
 
 	/* XXX ugh, there has to be a better way to do this */
 
@@ -28,7 +27,7 @@ os_listdev_linux(FILE *stream)
 		up_warn("failed to list /dev: %s", strerror(errno));
 		return (-1);
 	}
-	once = 0;
+
 	while ((ent = readdir(dir)) != NULL) {
 		size_t end;
 		if (ent->d_type != DT_BLK ||
@@ -43,16 +42,10 @@ os_listdev_linux(FILE *stream)
 			continue;
 		}
 		if ((end = strspn(ent->d_name + 2, letters)) > 0 &&
-		    ent->d_name[2+end] == '\0') {
-			if (once)
-				putc(' ', stream);
-			fputs(ent->d_name, stream);
-			once = 1;
-		}
+		    ent->d_name[2+end] == '\0')
+			func(ent->d_name, arg);
 	}
 	closedir(dir);
-	if (once)
-		putc('\n', stream);
 	return (0);
 }
 #endif

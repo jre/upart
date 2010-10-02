@@ -27,7 +27,7 @@
     defined(kIOMediaClass) && defined(kIOBSDNameKey)
 #define OS_HAVE_IOKIT
 #define OS_LISTDEV_IOKIT	(os_listdev_iokit)
-int	os_listdev_iokit(FILE *);
+int	os_listdev_iokit(int (*)(const char *, void *), void *);
 #else
 #define OS_LISTDEV_IOKIT	(NULL)
 #endif

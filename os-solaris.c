@@ -32,13 +32,13 @@
 #ifdef OS_HAVE_SOLARIS
 
 int
-os_listdev_solaris(FILE *stream)
+os_listdev_solaris(int (*func)(const char *, void *), void *arg)
 {
 	static const char hex[] = "0123456789ABCDEF";
 	static const char num[] = "0123456789";
 	struct dirent *ent;
-	int once, fd;
 	DIR *dir;
+	int fd;
 
 	/* XXX this sucks */
 
@@ -48,7 +48,6 @@ os_listdev_solaris(FILE *stream)
 		return (-1);
 	}
 
-	once = 0;
 	while ((ent = readdir(dir)) != NULL) {
 		size_t off, inc;
 		if (ent->d_name[0] != 'c' ||
@@ -71,16 +70,11 @@ os_listdev_solaris(FILE *stream)
 			close(fd);
 		else if (errno == ENOENT)
 			continue;
-		if (once)
-			putc(' ', stream);
-		once = 1;
 		ent->d_name[off] = '\0';
-		fputs(ent->d_name, stream);
+		func(ent->d_name, arg);
 		ent->d_name[off] = 's';
 	}
 	closedir(dir);
-	if (once)
-		putc('\n', stream);
 
 	return (0);
 }

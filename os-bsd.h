@@ -25,7 +25,7 @@
 
 #if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYSCTL)
 #define OS_LISTDEV_SYSCTL	(os_listdev_sysctl)
-int	os_listdev_sysctl(FILE *);
+int	os_listdev_sysctl(int (*)(const char *, void *), void *);
 #else
 #define OS_LISTDEV_SYSCTL	(NULL)
 #endif

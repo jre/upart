@@ -12,14 +12,13 @@
 #ifdef OS_HAVE_IOKIT
 #include <mach/mach_error.h>
 int
-os_listdev_iokit(FILE *stream)
+os_listdev_iokit(int (*func)(const char *, void *), void *arg)
 {
 	CFMutableDictionaryRef dict;
 	io_iterator_t iter;
 	kern_return_t ret;
 	io_object_t serv;
 	CFStringRef name;
-	int once;
 
 	if ((dict = IOServiceMatching(kIOMediaClass)) == NULL) {
 		/* XXX does this set errno? */
@@ -35,7 +34,7 @@ os_listdev_iokit(FILE *stream)
 		    mach_error_string(ret));
 		return (-1);
 	}
-	once = 0;
+
 	while ((serv = IOIteratorNext(iter))) {
 		char *suchAFuckingPainInTheAss;
 		CFIndex len;
@@ -50,8 +49,6 @@ os_listdev_iokit(FILE *stream)
 			continue;
 		}
 
-		if (once)
-			putc(' ', stream);
 		len = CFStringGetLength(name) + 1;
 		if ((suchAFuckingPainInTheAss = malloc(len)) == NULL) {
 			perror("malloc");
@@ -65,16 +62,13 @@ os_listdev_iokit(FILE *stream)
 			up_warn("failed to convert string: %s",
 			    strerror(errno));
 		} else {
-			fputs(suchAFuckingPainInTheAss, stream);
-			once = 1;
+			func(suchAFuckingPainInTheAss, arg);
 		}
 		free(suchAFuckingPainInTheAss);
 		IOObjectRelease(serv);
 		CFRelease(name);
 	}
 	IOObjectRelease(iter);
-	if (once)
-		putc('\n', stream);
 
 	return (0);
 }

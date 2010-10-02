@@ -97,24 +97,20 @@ stat_disk_id(partition_id id, size_t size)
 }
 
 int
-os_listdev_haiku(FILE *stream)
+os_listdev_haiku(int (*func)(const char *, void *), void *arg)
 {
 	int32 cookie;
 	partition_id id;
 	size_t size;
 	struct user_disk_device_data *dev;
-	int once;
+	char buf[32];
 
-	once = 0;
 	cookie = 0;
 	for (;;) {
 		size = 0;
 		id = _kern_get_next_disk_device_id(&cookie, &size);
-		if (id < 0) {
-			if (once)
-				putc('\n', stream);
+		if (id < 0)
 			return (0);
-		}
 		dev = stat_disk_id(id, size);
 		if (dev == NULL) {
 			up_warn("failed to get device parameters for %ld: %s",
@@ -125,19 +121,17 @@ os_listdev_haiku(FILE *stream)
 			char *start, *end;
 			size_t plen;
 
-			if (once)
-				putc(' ', stream);
-			once = 1;
 			plen = strlen(DEV_PREFIX);
 			start = dev->path + plen;
 			if (strncmp(dev->path, DEV_PREFIX, plen) != 0 ||
 			    (end = strrchr(start, '/')) == NULL ||
 			    end == start ||
-			    strcmp(end, DEV_SUFFIX) != 0)
-				fprintf(stream, "%ld", id);
-			else {
+			    strcmp(end, DEV_SUFFIX) != 0) {
+				snprintf(buf, sizeof(buf), "%ld", id);
+				func(buf, arg);
+			} else {
 				*end = '\0';
-				fputs(start, stream);
+				func(start, arg);
 				*end = '/';
 			}
 		}

@@ -15,7 +15,7 @@
 #if defined(linux) || defined(__linux) || defined(__linux__)
 #define OS_HAVE_LINUX
 #define OS_LISTDEV_LINUX	(os_listdev_linux)
-int	os_listdev_linux(FILE *);
+int	os_listdev_linux(int (*)(const char *, void *), void *);
 #else
 #define OS_LISTDEV_LINUX	(NULL)
 #endif

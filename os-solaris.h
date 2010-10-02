@@ -14,7 +14,7 @@
 #define OS_HAVE_SOLARIS
 #define OS_LISTDEV_SOLARIS	(os_listdev_solaris)
 #define OS_OPENDISK_SOLARIS	(os_opendisk_solaris)
-int	os_listdev_solaris(FILE *);
+int	os_listdev_solaris(int (*)(const char *, void *), void *);
 int	os_opendisk_solaris(const char *, int, char *, size_t, int);
 #else
 #define OS_LISTDEV_SOLARIS	(NULL)

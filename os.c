@@ -25,35 +25,59 @@
 #define OPENFLAGS(flags)        (flags)
 #endif
 
+static int	listdev_print(const char *, void *);
 static int	opendisk_generic(const char *, int, char *, size_t, int);
 
 #define DEVPREFIX		"/dev/"
 
+struct listdev_print {
+	FILE *stream;
+	int once;
+};
+
 int
 os_list_devices(void *stream)
 {
-	static int (*funcs[])(FILE *) = {
+	static int (*funcs[])(int (*)(const char *, void *), void *) = {
 		OS_LISTDEV_IOKIT,
 		OS_LISTDEV_LINUX,
 		OS_LISTDEV_HAIKU,
 		OS_LISTDEV_SOLARIS,
 		/* sysctl compiles but doesn't work on linux and darwin */
+		/* XXX the order these are called in is no longer as important */
 		OS_LISTDEV_SYSCTL,
 	};
-	int once, i;
+	struct listdev_print arg;
+	int i;
 
-	once = 0;
-	for (i = 0; i < NITEMS(funcs); i++) {
-		if (funcs[i] != NULL) {
-			once = 1;
-			if ((funcs[i])(stream) == 0)
-				return (0);
-		}
+	arg.stream = stream;
+	arg.once = 0;
+	for (i = 0; i < NITEMS(funcs); i++)
+		if (funcs[i] != NULL &&
+		    (funcs[i])(listdev_print, &arg) == 0)
+			break;
+	if (arg.once) {
+		putc('\n', stream);
+		return (0);
 	}
-	if (!once)
-		up_err("don't know how to list devices on this platform");
+
+	up_err("don't know how to list devices on this platform");
 
 	return (-1);
+}
+
+int
+listdev_print(const char *name, void *_arg)
+{
+	struct listdev_print *arg = _arg;
+
+	if (arg->once)
+		putc(' ', arg->stream);
+	else
+		arg->once = 1;
+	fputs(name, arg->stream);
+
+	return (1);
 }
 
 int

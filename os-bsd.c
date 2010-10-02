@@ -49,7 +49,8 @@ os_listdev_sysctl(FILE *stream)
 #if defined(CTL_HW) && defined(HW_DISKNAMES)
 	{
 		int mib[2] = { CTL_HW, HW_DISKNAMES };
-		size_t i;
+		char *begin, *end;
+		int once = 0;
 		names = sysctl_disk_names(mib, 2);
 		if (names == NULL && errno != ENOENT) {
 			if (errno == ENOMEM)
@@ -59,10 +60,18 @@ os_listdev_sysctl(FILE *stream)
 				    "sysctl: %s", strerror(errno));
 			return (-1);
 		}
-		if (names != NULL)
-			for (i = 0; names[i] != '\0'; i++)
-				if (names[i] == ',')
-					names[i] = ' ';
+		for (begin = names; begin != NULL; begin = end) {
+			if ((end = strchr(begin, ':')) != NULL)
+				*(end++) = '\0';
+			if ((end = strchr(end == NULL ? begin : end, ',')) != NULL)
+				*(end++) = '\0';
+			if (once)
+				putc(' ', stream);
+			once = 1;
+			fputs(begin, stream);
+		}
+		if (once)
+			putc('\n', stream);
 	}
 #endif /* CTL_HW && HW_DISKNAMES */
 
@@ -79,13 +88,14 @@ os_listdev_sysctl(FILE *stream)
 				    "sysctl: %s", strerror(errno));
 			return (-1);
 		}
+		if (names != NULL)
+			fprintf(stream, "%s\n", names);
 	}
 #endif
 
 	if (names == NULL)
 		return (-1);
 
-	fprintf(stream, "%s\n", names);
 	free(names);
 	return (0);
 }

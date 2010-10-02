@@ -25,15 +25,22 @@
 #define OPENFLAGS(flags)        (flags)
 #endif
 
-static int	listdev_print(const char *, void *);
-static int	opendisk_generic(const char *, int, char *, size_t, int);
-
 #define DEVPREFIX		"/dev/"
 
-struct listdev_print {
-	FILE *stream;
-	int once;
+struct os_listdev_node {
+	char *name;
+	RB_ENTRY(os_listdev_node) entry;
 };
+
+RB_HEAD(os_listdev_map, os_listdev_node);
+
+static int	opendisk_generic(const char *, int, char *, size_t, int);
+static int	sortdisk(struct os_listdev_node *, struct os_listdev_node *);
+static int	listdev_add(const char *, void *);
+static int	listdev_print(struct os_listdev_map *, FILE *);
+static void	listdev_free(struct os_listdev_map *);
+
+RB_GENERATE_STATIC(os_listdev_map, os_listdev_node, entry, sortdisk)
 
 int
 os_list_devices(void *stream)
@@ -47,37 +54,22 @@ os_list_devices(void *stream)
 		/* XXX the order these are called in is no longer as important */
 		OS_LISTDEV_SYSCTL,
 	};
-	struct listdev_print arg;
+	struct os_listdev_map map;
 	int i;
 
-	arg.stream = stream;
-	arg.once = 0;
+	RB_INIT(&map);
 	for (i = 0; i < NITEMS(funcs); i++)
 		if (funcs[i] != NULL &&
-		    (funcs[i])(listdev_print, &arg) == 0)
+		    (funcs[i])(listdev_add, &map) == 0)
 			break;
-	if (arg.once) {
-		putc('\n', stream);
-		return (0);
+	if (RB_EMPTY(&map)) {
+		up_err("don't know how to list devices on this platform");
+		return (-1);
 	}
 
-	up_err("don't know how to list devices on this platform");
-
-	return (-1);
-}
-
-int
-listdev_print(const char *name, void *_arg)
-{
-	struct listdev_print *arg = _arg;
-
-	if (arg->once)
-		putc(' ', arg->stream);
-	else
-		arg->once = 1;
-	fputs(name, arg->stream);
-
-	return (1);
+	listdev_print(&map, stream);
+	listdev_free(&map);
+	return (0);
 }
 
 int
@@ -161,4 +153,67 @@ opendisk_generic(const char *name, int flags, char *buf, size_t buflen,
 		return (-1);
 	}
 	return (open(buf, flags));
+}
+
+static int
+sortdisk(struct os_listdev_node *a, struct os_listdev_node *b)
+{
+	return (strcmp(a->name, b->name));
+}
+
+static int
+listdev_add(const char *name, void *arg)
+{
+	struct os_listdev_map *map = arg;
+	struct os_listdev_node key, *new;
+
+	key.name = (char *)name;
+	if (RB_FIND(os_listdev_map, map, &key) != NULL)
+		return (0);
+
+	if ((new = malloc(sizeof(*new))) == NULL) {
+		perror("malloc");
+		return (-1);
+	}
+	if ((new->name = strdup(name)) == NULL) {
+		perror("malloc");
+		free(new);
+		return (-1);
+	}
+	RB_INSERT(os_listdev_map, map, new);
+
+	return (0);
+}
+
+static void
+listdev_free(struct os_listdev_map *map)
+{
+	struct os_listdev_node *dead, *next;
+
+	for (dead = RB_MIN(os_listdev_map, map); dead != NULL; dead = next) {
+		next = RB_NEXT(os_listdev_map, map, dead);
+		RB_REMOVE(os_listdev_map, map, dead);
+		free(dead->name);
+		free(dead);
+	}
+}
+
+static int
+listdev_print(struct os_listdev_map *map, FILE *stream)
+{
+	struct os_listdev_node *node;
+	int once;
+
+	once = 0;
+	RB_FOREACH(node, os_listdev_map, map) {
+		if (once)
+			putc(' ', stream);
+		else
+			once = 1;
+		fputs(node->name, stream);
+	}
+	if (once)
+		putc('\n', stream);
+
+	return (0);
 }

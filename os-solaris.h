@@ -10,6 +10,7 @@
 #endif
 
 #if defined(sun) || defined(__sun) || defined(__sun__)
+#error "Solaris is too broken to run this program, sorry."
 #define OS_HAVE_SOLARIS
 #define OS_LISTDEV_SOLARIS	(os_listdev_solaris)
 #define OS_OPENDISK_SOLARIS	(os_opendisk_solaris)

@@ -111,6 +111,7 @@ up_os_getparams(int fd, struct disk_params *params, const char *name)
 	};
 	int once, i;
 
+	once = 0;
 	for (i = 0; i < NITEMS(funcs); i++) {
 		switch (funcs[i](fd, params, name)) {
 		case 0:

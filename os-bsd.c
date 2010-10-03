@@ -108,16 +108,17 @@ os_bsd_listdev_hw_disknames(int (*func)(const char *, void *), void *arg)
 int
 os_bsd_listdev_kern_disks(int (*func)(const char *, void *), void *arg)
 {
-	char *name, *begin, *end;
+	char *names, *begin, *end;
 	int mib[2];
 	size_t len;
 
 	len = 2;
-	if (sysctlnametomib("kern.disks", mib, &i) < 0 ||
+	names = NULL;
+	if (sysctlnametomib("kern.disks", mib, &len) < 0 ||
 	    (names = os_bsd_sysctl_alloc(mib, len)) == NULL) {
 		if (errno == ENOMEM)
 			perror("malloc");
-		else
+		else if (errno != ENOENT)
 			up_warn("failed to retrieve kern.disks "
 			    "sysctl: %s", strerror(errno));
 		return (-1);

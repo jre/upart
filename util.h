@@ -146,6 +146,16 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 size_t strlcat(char *dst, const char *src, size_t siz);
 #endif
 
+/* see getopt(3) manpage */
+#ifndef HAVE_GETOPT
+extern	char *optarg;
+extern	int opterr;
+extern	int optind;
+extern	int optopt;
+extern	int optreset;
+int	getopt(int, char * const *, const char *);
+#endif
+
 struct opts
 {
 	const char *serialize;

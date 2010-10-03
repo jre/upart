@@ -2,15 +2,33 @@
 #include "config.h"
 #endif
 
+#if defined(HAVE_SYS_DISK_H)
+#include <sys/disk.h>
+#endif
+#ifdef HAVE_COREFOUNDATION_COREFOUNDATION_H
+#include <CoreFoundation/CoreFoundation.h>
+#endif
+#ifdef HAVE_IOKIT_IOKITLIB_H
+#include <IOKit/IOKitLib.h>
+#endif
+#ifdef HAVE_IOKIT_IOBSD_H
+#include <IOKit/IOBSD.h>
+#endif
+#ifdef HAVE_IOKIT_STORAGE_IOMEDIA_H
+#include <IOKit/storage/IOMedia.h>
+#endif
+
 #include <stdio.h>
 
-#define MINIMAL_NAMESPACE_POLLUTION_PLEASE
-#include "disk.h"
-#include "os-darwin.h"
+#include "os-private.h"
 #include "util.h"
 
-#ifdef OS_HAVE_IOKIT
+#if defined(HAVE_COREFOUNDATION_COREFOUNDATION_H) && \
+    defined(HAVE_IOKIT_IOKITLIB_H) && \
+    defined(kIOMediaClass) && defined(kIOBSDNameKey)
+
 #include <mach/mach_error.h>
+
 int
 os_listdev_iokit(int (*func)(const char *, void *), void *arg)
 {
@@ -72,6 +90,9 @@ os_listdev_iokit(int (*func)(const char *, void *), void *arg)
 
 	return (0);
 }
+
+#else
+OS_GENERATE_LISTDEV_STUB(os_listdev_iokit)
 #endif
 
 #if defined(HAVE_SYS_DISK_H) && defined(DKIOCGETBLOCKSIZE)
@@ -94,4 +115,6 @@ os_getparams_darwin(int fd, struct disk_params *params, const char *name)
 
 	return (0);
 }
-#endif /* HAVE_GETPARAMS_DARWIN */
+#else
+OS_GENERATE_GETPARAMS_STUB(os_getparams_darwin)
+#endif

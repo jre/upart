@@ -2,20 +2,20 @@
 #include "config.h"
 #endif
 
-#ifdef __HAIKU__
-
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+#ifdef __HAIKU__
 #include <DiskDeviceDefs.h>
 #include <OS.h>
+#endif
 
-#define MINIMAL_NAMESPACE_POLLUTION_PLEASE
-#include "disk.h"
-#include "os-haiku.h"
+#include "os-private.h"
 #include "util.h"
+
+#ifdef __HAIKU__
 
 /* XXX copy/pasting from private headers sucks */
 
@@ -248,4 +248,8 @@ os_getparams_haiku(int fd, struct disk_params *params, const char *name)
 	return (0);
 }
 
+#else /* __HAIKU__ */
+OS_GENERATE_LISTDEV_STUB(os_listdev_haiku)
+OS_GENERATE_OPENDISK_STUB(os_opendisk_haiku)
+OS_GENERATE_GETPARAMS_STUB(os_getparams_haiku)
 #endif /* __HAIKU__ */

@@ -1,17 +1,8 @@
 #ifndef HDR_UPART_DISK
 #define HDR_UPART_DISK
 
-struct disk_params {
-	int64_t cyls;		/* total number of cylinders */
-	int64_t heads;		/* number of tracks per cylinder */
-	int64_t sects;		/* number of sectors per track */
-	int64_t size;		/* total number of sects */
-	int sectsize;		/* size of a sector in bytes */
-};
-
-#ifndef MINIMAL_NAMESPACE_POLLUTION_PLEASE
-
 #include "bsdtree.h"
+#include "os-private.h"
 
 struct map;
 struct part;
@@ -118,5 +109,4 @@ void up_disk_print(const struct disk *disk, void *_stream);
 /* Print hexdump of sectors with partition information to STREAM. */
 void up_disk_dump(const struct disk *disk, void *_stream);
 
-#endif /* MINIMAL_NAMESPACE_POLLUTION_PLEASE */
 #endif /* HDR_UPART_DISK */

@@ -3,6 +3,23 @@
 #endif
 
 #include <sys/ioctl.h>
+
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+#if defined(HAVE_SYS_DISKLABEL_H)
+#include <sys/disklabel.h>
+#endif
+#ifdef HAVE_SYS_DKIO_H
+#include <sys/dkio.h>
+#endif
+#if defined(HAVE_SYS_DISK_H)
+#include <sys/disk.h>
+#endif
+#ifdef HAVE_SYS_SYSCTL_H
+#include <sys/sysctl.h>
+#endif
+
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -11,10 +28,9 @@
 #include <util.h>
 #endif
 
-#define MINIMAL_NAMESPACE_POLLUTION_PLEASE
-#include "disk.h"
-#include "os-bsd.h"
+#include "os-private.h"
 #include "util.h"
+
 
 #if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYSCTL)
 
@@ -124,20 +140,23 @@ os_listdev_sysctl(int (*func)(const char *, void *), void *arg)
 {
 	int ret = -1;
 
-#    if defined(CTL_HW) && defined(HW_DISKNAMES)
+#if defined(CTL_HW) && defined(HW_DISKNAMES)
 	if (os_bsd_listdev_hw_disknames(func, arg) == 0)
 		ret = 0;
-#    endif
+#endif
 
-#    ifdef HAVE_SYSCTLNAMETOMIB
+#ifdef HAVE_SYSCTLNAMETOMIB
 	if (os_bsd_listdev_kern_disks(func, arg) == 0)
 		ret = 0;
-#    endif
+#endif
 
 	return (ret);
 }
 
-#endif /* HAVE_SYSCTL_H && HAVE_SYSCTL */
+#else /* HAVE_SYS_SYSCTL_H && HAVE_SYSCTL */
+OS_GENERATE_LISTDEV_STUB(os_listdev_sysctl)
+#endif /* HAVE_SYS_SYSCTL_H && HAVE_SYSCTL */
+
 
 #if HAVE_OPENDISK
 int
@@ -147,6 +166,8 @@ os_opendisk_opendisk(const char *name, int flags, char *buf, size_t buflen,
 	buf[0] = '\0';
 	return (opendisk(name, flags, buf, buflen, cooked));
 }
+#else /* HAVE_OPENDISK */
+OS_GENERATE_OPENDISK_STUB(os_opendisk_opendisk)
 #endif /* HAVE_OPENDISK */
 
 #if HAVE_OPENDEV
@@ -165,6 +186,8 @@ os_opendisk_opendev(const char *name, int oflags, char *buf, size_t buflen,
 		strlcpy(buf, realname, buflen);
 	return (ret);
 }
+#else /* HAVE_OPENDEV */
+OS_GENERATE_OPENDISK_STUB(os_opendisk_opendev)
 #endif /* HAVE_OPENDEV */
 
 #if defined(HAVE_SYS_DISKLABEL_H) && \
@@ -200,7 +223,9 @@ os_getparams_disklabel(int fd, struct disk_params *params, const char *name)
 
 	return (0);
 }
-#endif /* HAVE_SYS_DISKLABEL_H && (DIOCGPDINFO || DIOCGDINFO) */
+#else
+OS_GENERATE_GETPARAMS_STUB(os_getparams_disklabel)
+#endif
 
 #if defined(HAVE_SYS_DISK_H) && defined(DIOCGSECTORSIZE)
 int
@@ -235,4 +260,6 @@ os_getparams_freebsd(int fd, struct disk_params *params, const char *name)
 
 	return (0);
 }
+#else
+OS_GENERATE_GETPARAMS_STUB(os_getparams_freebsd)
 #endif

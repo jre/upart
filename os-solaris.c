@@ -20,16 +20,16 @@
 #include <string.h>
 #include <unistd.h>
 
-#define MINIMAL_NAMESPACE_POLLUTION_PLEASE
-#include "disk.h"
-#include "os-solaris.h"
+#include "os-private.h"
 #include "util.h"
+
+#if defined(sun) || defined(__sun) || defined(__sun__)
+
+#error "Solaris is too broken to run this program, sorry."
 
 #define DEVPATH_COOKED		"/dev/dsk/"
 #define DEVPATH_RAW		"/dev/rdsk/"
 #define WHOLE_PART		"s2"
-
-#ifdef OS_HAVE_SOLARIS
 
 int
 os_listdev_solaris(int (*func)(const char *, void *), void *arg)
@@ -121,7 +121,10 @@ trunc:
 	return (-1);
 }
 
-#endif /* OS_HAVE_SOLARIS */
+#else
+OS_GENERATE_LISTDEV_STUB(os_listdev_solaris)
+OS_GENERATE_OPENDISK_STUB(os_opendisk_solaris)
+#endif
 
 #if defined(HAVE_SYS_DKIO_H) && \
     (defined(DKIOCGGEOM) || defined(DKIOCGMEDIAINFO))
@@ -171,4 +174,6 @@ os_getparams_solaris(int fd, struct disk_params *params, const char *name)
 
 	return (0);
 }
-#endif /* HAVE_SYS_DKIO_H && DKIOCGGEOM */
+#else
+OS_GENERATE_GETPARAMS_STUB(os_getparams_solaris)
+#endif

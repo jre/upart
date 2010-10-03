@@ -3,20 +3,26 @@
 #endif
 
 #include <sys/ioctl.h>
+
+#ifdef HAVE_LINUX_FS_H
+#include <linux/fs.h>
+#endif
+#ifdef HAVE_LINUX_HDREG_H
+#include <linux/hdreg.h>
+#endif
+
 #include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
-#define MINIMAL_NAMESPACE_POLLUTION_PLEASE
-#include "disk.h"
-#include "os-linux.h"
+#include "os-private.h"
 #include "util.h"
 
-#ifdef OS_HAVE_LINUX
 int
 os_listdev_linux(int (*func)(const char *, void *), void *arg)
 {
+#if defined(linux) || defined(__linux) || defined(__linux__)
 	static const char letters[] = "abcdefghijklmnopqrstuvwxyz";
 	struct dirent *ent;
 	DIR *dir;
@@ -47,13 +53,15 @@ os_listdev_linux(int (*func)(const char *, void *), void *arg)
 	}
 	closedir(dir);
 	return (0);
-}
+#else
+	return (-1);
 #endif
+}
 
-#if defined(HAVE_LINUX_FS_H) || defined(HAVE_LINUX_HDREG_H)
 int
 os_getparams_linux(int fd, struct disk_params *params, const char *name)
 {
+#if defined(HAVE_LINUX_FS_H) || defined(HAVE_LINUX_HDREG_H)
 	struct hd_geometry geom;
 	int smallsize;
 	uint64_t bigsize;
@@ -79,5 +87,7 @@ os_getparams_linux(int fd, struct disk_params *params, const char *name)
 	}
 
 	return (0);
-}
+#else
+	return (-1);
 #endif
+}

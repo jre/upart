@@ -2,6 +2,9 @@
 #include "config.h"
 #endif
 
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -9,14 +12,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#define MINIMAL_NAMESPACE_POLLUTION_PLEASE
-#include "disk.h"
+#include "bsdtree.h"
 #include "os.h"
-#include "os-bsd.h"
-#include "os-darwin.h"
-#include "os-haiku.h"
-#include "os-linux.h"
-#include "os-solaris.h"
+#include "os-private.h"
 #include "util.h"
 
 #ifdef O_LARGEFILE
@@ -46,21 +44,18 @@ int
 os_list_devices(void *stream)
 {
 	static int (*funcs[])(int (*)(const char *, void *), void *) = {
-		OS_LISTDEV_IOKIT,
-		OS_LISTDEV_LINUX,
-		OS_LISTDEV_HAIKU,
-		OS_LISTDEV_SOLARIS,
-		/* sysctl compiles but doesn't work on linux and darwin */
-		/* XXX the order these are called in is no longer as important */
-		OS_LISTDEV_SYSCTL,
+		os_listdev_sysctl,
+		os_listdev_iokit,
+		os_listdev_linux,
+		os_listdev_haiku,
+		os_listdev_solaris,
 	};
 	struct os_listdev_map map;
 	int i;
 
 	RB_INIT(&map);
 	for (i = 0; i < NITEMS(funcs); i++)
-		if (funcs[i] != NULL &&
-		    (funcs[i])(listdev_add, &map) == 0)
+		if ((funcs[i])(listdev_add, &map) == 0)
 			break;
 	if (RB_EMPTY(&map)) {
 		up_err("don't know how to list devices on this platform");
@@ -76,10 +71,10 @@ int
 up_os_opendisk(const char *name, const char **path)
 {
 	static int (*funcs[])(const char *, int, char *, size_t, int) = {
-		OS_OPENDISK_OPENDEV,
-		OS_OPENDISK_OPENDISK,
-		OS_OPENDISK_HAIKU,
-		OS_OPENDISK_SOLARIS,
+		os_opendisk_opendev,
+		os_opendisk_opendisk,
+		os_opendisk_haiku,
+		os_opendisk_solaris,
 		opendisk_generic,
 	};
 	static char buf[MAXPATHLEN];
@@ -92,9 +87,9 @@ up_os_opendisk(const char *name, const char **path)
 		return open(name, flags);
 
 	for (i = 0; i < NITEMS(funcs); i++) {
-		if (funcs[i] == NULL)
-			continue;
 		ret = (funcs[i])(name, flags, buf, sizeof(buf), 0);
+		if (ret == INT_MAX)
+			continue;
 		if (ret >= 0 && buf[0] != '\0')
 			*path = buf;
 		return (ret);
@@ -107,22 +102,24 @@ int
 up_os_getparams(int fd, struct disk_params *params, const char *name)
 {
 	static int (*funcs[])(int, struct disk_params *, const char *) = {
-	    OS_GETPARAMS_FREEBSD,
-	    /* disklabel compiles but doesn't work on freebsd */
-	    OS_GETPARAMS_DISKLABEL,
-	    OS_GETPARAMS_LINUX,
-	    OS_GETPARAMS_DARWIN,
-	    OS_GETPARAMS_SOLARIS,
-	    OS_GETPARAMS_HAIKU,
+	    os_getparams_disklabel,
+	    os_getparams_freebsd,
+	    os_getparams_linux,
+	    os_getparams_darwin,
+	    os_getparams_solaris,
+	    os_getparams_haiku,
 	};
 	int once, i;
 
-	once = 0;
 	for (i = 0; i < NITEMS(funcs); i++) {
-		if (funcs[i] != NULL) {
+		switch (funcs[i](fd, params, name)) {
+		case 0:
+			return (0);
+		case INT_MAX:
+			break;
+		default:
 			once = 1;
-			if ((funcs[i])(fd, params, name) == 0)
-				return (0);
+			break;
 		}
 	}
 	if (!once)

@@ -24,18 +24,29 @@ struct disk_sect {
 
 RB_HEAD(disk_sect_map, disk_sect);
 
+enum disk_type {
+	DT_UNKNOWN = 0,
+	DT_DEVICE,
+	DT_FILE,
+	DT_IMAGE
+};
+
+union disk_handle {
+	int dev;
+	FILE *file;
+	struct img *img;
+};
+
 struct disk {
 	char *name;		/* disk name supplied by user */
 	char *path;		/* path to opened device node */
 	struct disk_params params;
 
-	unsigned int f_setup : 1;
-	unsigned int f_plainfile : 1;
-
 	/* don't touch any of these */
-	int fd;
+	unsigned setup_done;
+	enum disk_type type;
+	union disk_handle handle;
 	uint8_t *buf;
-	struct img *img;
 	struct part *maps;
 	struct disk_sect_map sectsused;
 	int64_t sectsused_count;
@@ -51,8 +62,6 @@ struct disk {
 /* XXX should handle overflow here and anywhere sects are converted to bytes */
 #define UP_DISK_SIZEBYTES(disk) \
     ((disk)->params.size * (disk)->params.sectsize)
-#define UP_DISK_IS_IMG(disk)    (NULL != (disk)->img)
-#define UP_DISK_IS_FILE(disk)   ((disk)->f_plainfile)
 
 typedef int (*up_disk_iterfunc_t)(const struct disk *,
     const struct disk_sect *, void *);

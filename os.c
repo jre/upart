@@ -5,6 +5,7 @@
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
+#include <sys/stat.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -13,6 +14,7 @@
 #include <unistd.h>
 
 #include "bsdtree.h"
+#include "disk.h"
 #include "os.h"
 #include "os-private.h"
 #include "util.h"
@@ -41,7 +43,7 @@ static void	listdev_free(struct os_listdev_map *);
 RB_GENERATE_STATIC(os_listdev_map, os_listdev_node, entry, sortdisk)
 
 int
-os_list_devices(void *stream)
+os_list_devices(FILE *stream)
 {
 	static int (*funcs[])(int (*)(const char *, void *), void *) = {
 		os_listdev_sysctl,
@@ -67,8 +69,8 @@ os_list_devices(void *stream)
 	return (0);
 }
 
-int
-up_os_opendisk(const char *name, const char **path)
+enum disk_type
+os_open_device(const char *name, const char **path, int *devfd)
 {
 	static int (*funcs[])(const char *, int, char *, size_t, int) = {
 		os_opendisk_opendev,
@@ -78,21 +80,43 @@ up_os_opendisk(const char *name, const char **path)
 		opendisk_generic,
 	};
 	static char buf[MAXPATHLEN];
-	int flags, i, ret;
+	struct stat sb;
+	int i, ret;
 
 	*path = NULL;
-	flags = OPENFLAGS(O_RDONLY);
+	*devfd = -1;
 
 	if (opts->plainfile)
-		return open(name, flags);
+		return (DT_FILE);
 
 	for (i = 0; i < NITEMS(funcs); i++) {
-		ret = (funcs[i])(name, flags, buf, sizeof(buf), 0);
+		ret = (funcs[i])(name, OPENFLAGS(O_RDONLY),
+		    buf, sizeof(buf), 0);
 		if (ret == INT_MAX)
 			continue;
-		if (ret >= 0 && buf[0] != '\0')
-			*path = buf;
-		return (ret);
+		else if (ret < 0)
+			return (DT_UNKNOWN);
+		else if (fstat(ret, &sb) != 0) {
+			i = errno;
+			close(ret);
+			errno = i;
+			return (DT_UNKNOWN);
+		}
+		else if (S_ISREG(sb.st_mode)) {
+			close(ret);
+			return (DT_FILE);
+		}
+		else if (!S_ISCHR(sb.st_mode) && !S_ISBLK(sb.st_mode)) {
+			close(ret);
+			errno = EINVAL;
+			return (DT_UNKNOWN);
+		}
+		else {
+			if (buf[0] != '\0')
+				*path = buf;
+			*devfd = ret;
+			return (DT_DEVICE);
+		}
 	}
 
 	return (-1);

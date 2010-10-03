@@ -17,6 +17,9 @@ typedef int os_handle;
 
 #endif
 
+#define OS_HANDLE_IN(e)		((os_handle)(size_t)(e))
+#define OS_HANDLE_OUT(i)	((os_device_handle)(size_t)(i))
+
 typedef int (*os_list_callback_func)(const char *, void *);
 typedef int (*os_list_func)(os_list_callback_func, void *);
 typedef int (*os_open_func)(const char *, int, char *, size_t, os_handle *);
@@ -46,6 +49,9 @@ int	os_getparams_linux(os_handle, struct disk_params *, const char *);
 int	os_listdev_solaris(os_list_callback_func, void *);
 int	os_opendisk_solaris(const char *, int, char *, size_t, os_handle *);
 int	os_getparams_solaris(os_handle, struct disk_params *, const char *);
+
+/* os-unix.c */
+int	os_opendisk_unix(const char *, int, char *, size_t, os_handle *);
 
 #define OS_GENERATE_LISTDEV_STUB(fn) \
 	int fn(os_list_callback_func f, void *a) { return (0); }

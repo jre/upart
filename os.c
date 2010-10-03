@@ -5,35 +5,16 @@
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
-#ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
-#endif
 #include <assert.h>
-#include <errno.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 
 #include "bsdtree.h"
 #include "disk.h"
 #include "os.h"
 #include "os-private.h"
 #include "util.h"
-
-#ifdef O_LARGEFILE
-#define OPENFLAGS(flags)        (O_LARGEFILE | (flags))
-#else
-#define OPENFLAGS(flags)        (flags)
-#endif
-
-#define OS_HANDLE_IN(e)		((os_handle)(size_t)(e))
-#define OS_HANDLE_OUT(i)	((os_device_handle)(size_t)(i))
-
-#define DEVPREFIX		"/dev/"
 
 struct os_listdev_node {
 	char *name;
@@ -42,7 +23,6 @@ struct os_listdev_node {
 
 RB_HEAD(os_listdev_map, os_listdev_node);
 
-static int	opendisk_generic(const char *, int, char *, size_t, int *);
 static int	sortdisk(struct os_listdev_node *, struct os_listdev_node *);
 static int	listdev_add(const char *, void *);
 static int	listdev_print(struct os_listdev_map *, FILE *);
@@ -85,23 +65,23 @@ os_dev_open(const char *name, const char **path, os_device_handle *ret)
 		os_opendisk_opendisk,
 		os_opendisk_haiku,
 		os_opendisk_solaris,
-		opendisk_generic,
+		os_opendisk_unix,
 	};
 	static char buf[MAXPATHLEN];
 	enum disk_type type;
 	os_handle hand;
-	int i;
+	int i, flags;
 
 	assert(sizeof(os_device_handle) >= sizeof(os_handle));
 
 	*path = NULL;
+	flags = os_open_flags("r");
 
 	if (opts->plainfile)
 		return (DT_FILE);
 
 	for (i = 0; i < NITEMS(funcs); i++) {
-		switch((funcs[i])(name, OPENFLAGS(O_RDONLY),
-			buf, sizeof(buf), &hand)) {
+		switch((funcs[i])(name, flags, buf, sizeof(buf), &hand)) {
 		case -1:
 			return (DT_UNKNOWN);
 		case 0:
@@ -114,17 +94,13 @@ os_dev_open(const char *name, const char **path, os_device_handle *ret)
 		}
 
 		if (os_handle_type(OS_HANDLE_OUT(hand), &type) < 0) {
-			/* XXX trashing errno */
+			os_error saved = os_lasterr();
 			os_dev_close(OS_HANDLE_OUT(hand));
+			os_setlasterr(saved);
 			return (DT_UNKNOWN);
 		}
 
 		switch(type) {
-		case DT_UNKNOWN:
-			os_dev_close(OS_HANDLE_OUT(hand));
-			/* XXX need "wrong type" error code */
-			errno = EINVAL;
-			break;
 		case DT_FILE:
 			os_dev_close(OS_HANDLE_OUT(hand));
 			break;
@@ -180,29 +156,6 @@ os_dev_params(os_device_handle ehand, struct disk_params *params, const char *na
 		up_err("don't know how to get disk parameters "
 		    "on this platform");
 
-	return (-1);
-}
-
-static int
-opendisk_generic(const char *name, int flags, char *buf, size_t buflen,
-    int *ret)
-{
-	if (strlcpy(buf, name, buflen) >= buflen) {
-		errno = ENOMEM;
-		return (-1);
-	}
-	if ((*ret = open(name, flags)) >= 0)
-		return (1);
-	if (errno != ENOENT || strchr(name, '/') != NULL)
-		return (-1);
-
-	if (strlcpy(buf, DEVPREFIX, buflen) >= buflen ||
-	    strlcat(buf, name, buflen) >= buflen) {
-		errno = ENOMEM;
-		return (-1);
-	}
-	if ((*ret = open(buf, flags)) >= 0)
-		return (1);
 	return (-1);
 }
 
@@ -264,62 +217,4 @@ listdev_print(struct os_listdev_map *map, FILE *stream)
 		putc('\n', stream);
 
 	return (0);
-}
-
-ssize_t
-os_dev_read(os_device_handle ehand, void *buf, size_t size, off_t off)
-{
-	return (pread(OS_HANDLE_IN(ehand), buf, size, off));
-}
-
-int
-os_dev_close(os_device_handle ehand)
-{
-	return (close(OS_HANDLE_IN(ehand)));
-}
-
-int64_t
-os_file_size(FILE *file)
-{
-	struct stat sb;
-
-	if (fstat(fileno(file), &sb) < 0)
-		return (-1);
-	return (sb.st_size);
-}
-
-int
-os_handle_type(os_device_handle ehand, enum disk_type *type)
-{
-	struct stat sb;
-
-	if (fstat(OS_HANDLE_IN(ehand), &sb) < 0)
-		return (-1);
-
-	if (S_ISCHR(sb.st_mode) || S_ISBLK(sb.st_mode)) 
-		*type = DT_DEVICE;
-	else if (S_ISREG(sb.st_mode))
-		*type = DT_FILE;
-	else
-		*type = DT_UNKNOWN;
-
-	return (0);
-}
-
-os_error
-os_lasterr(void)
-{
-	return (errno);
-}
-
-const char
-*os_lasterrstr(void)
-{
-	return (strerror(errno));
-}
-
-const char
-*os_errstr(os_error num)
-{
-	return (strerror(num));
 }

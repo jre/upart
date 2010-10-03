@@ -15,7 +15,9 @@ ssize_t		 os_dev_read(os_device_handle, void *, size_t, off_t);
 int		 os_dev_close(os_device_handle);
 int64_t		 os_file_size(FILE *);
 int		 os_handle_type(os_device_handle, enum disk_type *);
+int		 os_open_flags(const char *);
 os_error	 os_lasterr(void);
+void		 os_setlasterr(os_error);
 const char	*os_lasterrstr(void);
 const char	*os_errstr(os_error);
 

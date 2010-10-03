@@ -21,7 +21,9 @@
 #include <sys/sysctl.h>
 #endif
 
+#ifdef HAVE_ERRNO_H
 #include <errno.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

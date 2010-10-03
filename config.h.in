@@ -16,6 +16,8 @@
 #undef HAVE_SYS_IOCTL_H
 #undef HAVE_SYS_STAT_H
 #undef HAVE_DIRENT_H
+#undef HAVE_ERRNO_H
+#undef HAVE_FCNTL_H
 #undef HAVE_INTTYPES_H
 #undef HAVE_STDINT_H
 #undef HAVE_UNISTD_H

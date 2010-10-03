@@ -18,6 +18,9 @@
 #include <IOKit/storage/IOMedia.h>
 #endif
 
+#ifdef HAVE_ERRNO_H
+#include <errno.h>
+#endif
 #include <stdio.h>
 
 #define UPART_DISK_PARAMS_ONLY

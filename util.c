@@ -2,7 +2,6 @@
 #include "config.h"
 #endif
 
-#include <sys/types.h>
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>

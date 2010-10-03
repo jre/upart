@@ -5,13 +5,10 @@
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#include <sys/stat.h>
 #include <assert.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "disk.h"
 #include "img.h"
@@ -80,7 +77,7 @@ up_disk_setup(struct disk *disk, const struct disk_params *params)
 		break;
 	case DT_DEVICE:
 		/* try to get drive parameters via OS-dependent interfaces */
-		if (up_os_getparams(disk->handle.dev, &disk->params,
+		if (os_dev_params(disk->handle.dev, &disk->params,
 			UP_DISK_PATH(disk)) < 0)
 			return (-1);
 		break;
@@ -125,7 +122,7 @@ up_disk_read(const struct disk *disk, int64_t sect_off, int64_t sect_count,
 		return (0);
 	if (INT64_MAX / UP_DISK_1SECT(disk) < sect_off ||
 	    SIZE_MAX / UP_DISK_1SECT(disk) < sect_count) {
-		errno = EINVAL;
+		up_err("failed to read from disk: address out of range");
 		return (-1);
 	}
 	byte_off = sect_off * UP_DISK_1SECT(disk);
@@ -148,7 +145,7 @@ up_disk_read(const struct disk *disk, int64_t sect_off, int64_t sect_count,
 		break;
 	case DT_DEVICE:
 		/* otherwise try to read from the device */
-		res = pread(disk->handle.dev, buf, byte_count, byte_off);
+		res = os_dev_read(disk->handle.dev, buf, byte_count, byte_off);
 		break;
 	default:
 		assert(!"unknown disk type");
@@ -163,7 +160,7 @@ up_disk_read(const struct disk *disk, int64_t sect_off, int64_t sect_count,
 			    "read from %s failed: %"PRIu64" sector(s) of %u "
 			    "bytes at offset %"PRIu64": %s",
 			    UP_DISK_PATH(disk), sect_count,
-			    UP_DISK_1SECT(disk), sect_off, strerror(errno));
+			    UP_DISK_1SECT(disk), sect_off, os_lasterrstr());
 		if (!opts->sloppyio)
 			return (-1);
 		res = byte_count;
@@ -303,7 +300,7 @@ up_disk_close(struct disk *disk)
 	    break;
     case DT_DEVICE:
 	    assert(0 <= disk->handle.dev);
-	    close(disk->handle.dev);
+	    os_dev_close(disk->handle.dev);
 	    break;
     case DT_FILE:
 	    fclose(disk->handle.file);
@@ -328,22 +325,22 @@ open_thing(const char *name, union disk_handle *handle, const char **path)
 {
 	enum disk_type type;
 	struct img *img;
+	os_device_handle dev;
 	FILE *fh;
-	int fd;
 
-	switch (type = os_open_device(name, path, &fd)) {
+	switch (type = os_dev_open(name, path, &dev)) {
 	case DT_UNKNOWN:
 		if (UP_NOISY(QUIET))
 			up_err("failed to open device %s for reading: %s",
-			    (*path ? *path : name), strerror(errno));
+			    (*path ? *path : name), os_lasterrstr());
 		break;
 	case DT_DEVICE:
-		handle->dev = fd;
+		handle->dev = dev;
 		break;
 	case DT_FILE:
 		if ((fh = fopen(name, "rb")) == NULL) {
 			up_err("failed to open file %s for reading: %s",
-			    name, strerror(errno));
+			    name, os_lasterrstr());
 			return (DT_UNKNOWN);
 		}
 
@@ -379,8 +376,6 @@ open_thing(const char *name, union disk_handle *handle, const char **path)
 static int
 fixparams(struct disk *disk, const struct disk_params *params)
 {
-	struct stat sb;
-
 	/* command-line options override any other values */
 	if (params->sectsize > 0)
 		disk->params.sectsize = params->sectsize;
@@ -401,8 +396,8 @@ fixparams(struct disk *disk, const struct disk_params *params)
 	/* we can get the total size for a plain file */
 	if (disk->params.size <= 0 &&
 	    disk->type == DT_FILE &&
-	    fstat(fileno(disk->handle.file), &sb) == 0)
-		disk->params.size = sb.st_size / disk->params.sectsize;
+	    (disk->params.size = os_file_size(disk->handle.file)) > 0)
+		disk->params.size /= disk->params.sectsize;
 
 	/* is that good enough? */
 	if (fixparams_checkone(&disk->params) == 0)

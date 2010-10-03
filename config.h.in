@@ -13,8 +13,16 @@
 /* standard headers */
 #undef HAVE_SYS_TYPES_H
 #undef HAVE_SYS_PARAM_H
-#undef HAVE_STDINT_H
+#undef HAVE_SYS_IOCTL_H
+#undef HAVE_SYS_STAT_H
+#undef HAVE_DIRENT_H
 #undef HAVE_INTTYPES_H
+#undef HAVE_STDINT_H
+#undef HAVE_UNISTD_H
+
+/* standard functions */
+#undef HAVE_GETOPT
+#undef HAVE_PREAD
 
 /* bsd disklabel */
 #undef HAVE_SYS_DISKLABEL_H

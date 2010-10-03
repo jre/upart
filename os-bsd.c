@@ -2,18 +2,19 @@
 #include "config.h"
 #endif
 
-#include <sys/ioctl.h>
-
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
-#if defined(HAVE_SYS_DISKLABEL_H)
+#ifdef HAVE_SYS_IOCTL_H
+#include <sys/ioctl.h>
+#endif
+#ifdef HAVE_SYS_DISKLABEL_H
 #include <sys/disklabel.h>
 #endif
 #ifdef HAVE_SYS_DKIO_H
 #include <sys/dkio.h>
 #endif
-#if defined(HAVE_SYS_DISK_H)
+#ifdef HAVE_SYS_DISK_H
 #include <sys/disk.h>
 #endif
 #ifdef HAVE_SYS_SYSCTL_H
@@ -28,6 +29,8 @@
 #include <util.h>
 #endif
 
+#define UPART_DISK_PARAMS_ONLY
+#include "disk.h"
 #include "os-private.h"
 #include "util.h"
 
@@ -54,7 +57,6 @@ os_bsd_sysctl_alloc(int *name, unsigned int namelen)
 }
 
 #    if defined(CTL_HW) && defined(HW_DISKNAMES)
-
 /*
   The hw.disknames sysctl works on OpenBSD and NetBSD. FreeBSD has the
   CTL_HW and HW_DISKNAMES macros but fails with ENOENT. Linux doesn't
@@ -66,12 +68,12 @@ os_bsd_sysctl_alloc(int *name, unsigned int namelen)
   colon and an optional disk UID to the device name, eg:
   "wd0:a1d0642fc8eba9f5,cd0:,sd0:3e5540338a09c700,sd1:".
 */
-
 int
-os_bsd_listdev_hw_disknames(int (*func)(const char *, void *), void *arg)
+os_bsd_listdev_hw_disknames(os_list_callback_func func, void *arg)
 {
 	int mib[2] = { CTL_HW, HW_DISKNAMES };
 	char *names, *begin, *end;
+	int count;
 
 	if ((names = os_bsd_sysctl_alloc(mib, 2)) == NULL) {
 		if (errno == ENOMEM)
@@ -82,34 +84,34 @@ os_bsd_listdev_hw_disknames(int (*func)(const char *, void *), void *arg)
 		return (-1);
 	}
 
+	count = 0;
 	for (begin = names; begin != NULL; begin = end) {
 		if ((end = strchr(begin, ':')) != NULL)
 			*(end++) = '\0';
 		if ((end = strchr(end == NULL ? begin : end, ',')) != NULL)
 			*(end++) = '\0';
-		func(begin, arg);
+		if (*begin != '\0') {
+			count++;
+			func(begin, arg);
+		}
 	}
 
 	free(names);
-	return (0);
+	return (count);
 }
-
 #    endif /* CTL_HW && HW_DISKNAMES */
 
-
 #    ifdef HAVE_SYSCTLNAMETOMIB
-
 /*
   On FreeBSD, the kern.disks sysctl, available only through
   sysctlbyname() or sysctlnametomib(), returns a space-separated list
   of short device names.
  */
-
 int
-os_bsd_listdev_kern_disks(int (*func)(const char *, void *), void *arg)
+os_bsd_listdev_kern_disks(os_list_callback_func func, void *arg)
 {
 	char *names, *begin, *end;
-	int mib[2];
+	int mib[2], count;
 	size_t len;
 
 	len = 2;
@@ -124,31 +126,39 @@ os_bsd_listdev_kern_disks(int (*func)(const char *, void *), void *arg)
 		return (-1);
 	}
 
+	count = 0;
 	for (begin = names; begin != NULL; begin = end) {
 		if ((end = strchr(begin, ' ')) != NULL)
 			*(end++) = '\0';
-		func(begin, arg);
+		if (*begin != '\0') {
+			count++;
+			func(begin, arg);
+		}
 	}
 
 	free(names);
-	return (0);
+	return (count);
 }
-
 #    endif /* HAVE_SYSCTLNAMETOMIB */
 
 int
-os_listdev_sysctl(int (*func)(const char *, void *), void *arg)
+os_listdev_sysctl(os_list_callback_func func, void *arg)
 {
-	int ret = -1;
+	int saved = 0;
+	int ret = 0;
 
 #if defined(CTL_HW) && defined(HW_DISKNAMES)
-	if (os_bsd_listdev_hw_disknames(func, arg) == 0)
-		ret = 0;
+	if ((ret = os_bsd_listdev_hw_disknames(func, arg)) < 0)
+		saved = errno;
 #endif
 
 #ifdef HAVE_SYSCTLNAMETOMIB
-	if (os_bsd_listdev_kern_disks(func, arg) == 0)
-		ret = 0;
+	if (ret <= 0)
+		ret = os_bsd_listdev_kern_disks(func, arg);
+	if (ret == 0 && saved != 0) {
+		ret = -1;
+		errno = saved;
+	}
 #endif
 
 	return (ret);
@@ -162,10 +172,12 @@ OS_GENERATE_LISTDEV_STUB(os_listdev_sysctl)
 #if HAVE_OPENDISK
 int
 os_opendisk_opendisk(const char *name, int flags, char *buf, size_t buflen,
-    int cooked)
+    int *ret)
 {
 	buf[0] = '\0';
-	return (opendisk(name, flags, buf, buflen, cooked));
+	if ((*ret = opendisk(name, flags, buf, buflen, 0)) >= 0)
+		return (1);
+	return (-1);
 }
 #else /* HAVE_OPENDISK */
 OS_GENERATE_OPENDISK_STUB(os_opendisk_opendisk)
@@ -174,18 +186,16 @@ OS_GENERATE_OPENDISK_STUB(os_opendisk_opendisk)
 #if HAVE_OPENDEV
 int
 os_opendisk_opendev(const char *name, int oflags, char *buf, size_t buflen,
-    int cooked)
+    int *ret)
 {
 	char *realname = NULL;
-	int dflags = OPENDEV_PART;
-	int ret;
 
 	buf[0] = '\0';
-	if (cooked)
-		dflags |= OPENDEV_BLCK;
-	if ((ret = opendev((char*)name, oflags, dflags, &realname)) >= 0)
+	if ((*ret = opendev((char*)name, oflags, OPENDEV_PART, &realname)) >= 0) {
 		strlcpy(buf, realname, buflen);
-	return (ret);
+		return (1);
+	}
+	return (-1);
 }
 #else /* HAVE_OPENDEV */
 OS_GENERATE_OPENDISK_STUB(os_opendisk_opendev)
@@ -222,7 +232,7 @@ os_getparams_disklabel(int fd, struct disk_params *params, const char *name)
 	params->size = dl.d_secperunit;
 #    endif
 
-	return (0);
+	return (1);
 }
 #else
 OS_GENERATE_GETPARAMS_STUB(os_getparams_disklabel)
@@ -259,7 +269,7 @@ os_getparams_freebsd(int fd, struct disk_params *params, const char *name)
 		up_warn("failed to get heads (tracks per cylinder) for %s: %s",
 		    name, strerror(errno));
 
-	return (0);
+	return (1);
 }
 #else
 OS_GENERATE_GETPARAMS_STUB(os_getparams_freebsd)

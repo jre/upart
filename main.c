@@ -2,7 +2,6 @@
 #include "config.h"
 #endif
 
-#include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -205,7 +204,7 @@ serialize(const struct disk *disk)
 	if (out == NULL) {
 		if (UP_NOISY(QUIET))
 			up_err("failed to open file for writing: %s: %s",
-			    opts->serialize, strerror(errno));
+			    opts->serialize, os_lasterrstr());
 		return (-1);
 	}
 
@@ -221,7 +220,7 @@ serialize(const struct disk *disk)
 	if (fclose(out)) {
 		if (UP_NOISY(QUIET))
 			up_err("failed to write to file: %s: %s",
-			    opts->serialize, strerror(errno));
+			    opts->serialize, os_lasterrstr());
 		return (-1);
 	}
 

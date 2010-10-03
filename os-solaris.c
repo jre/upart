@@ -12,7 +12,9 @@
 #ifdef HAVE_SYS_VTOC_H
 #include <sys/vtoc.h>
 #endif
+#ifdef HAVE_DIRENT_H
 #include <dirent.h>
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -20,6 +22,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#define UPART_DISK_PARAMS_ONLY
+#include "disk.h"
 #include "os-private.h"
 #include "util.h"
 
@@ -32,7 +36,7 @@
 #define WHOLE_PART		"s2"
 
 int
-os_listdev_solaris(int (*func)(const char *, void *), void *arg)
+os_listdev_solaris(os_list_callback_func func, void *arg)
 {
 	static const char hex[] = "0123456789ABCDEF";
 	static const char num[] = "0123456789";
@@ -65,27 +69,26 @@ os_listdev_solaris(int (*func)(const char *, void *), void *arg)
 		off += 1 + inc;
 		if (strcmp(ent->d_name + off, WHOLE_PART) != 0)
 			continue;
-		fd = os_opendisk_solaris(ent->d_name, O_RDONLY, NULL, 0, 0);
-		if (fd >= 0)
+		if (os_opendisk_solaris(ent->d_name, O_RDONLY, NULL, 0, &fd) < 0) {
+			if (errno == ENOENT)
+				continue;
+		} else {
 			close(fd);
-		else if (errno == ENOENT)
-			continue;
+		}
 		ent->d_name[off] = '\0';
 		func(ent->d_name, arg);
 		ent->d_name[off] = 's';
 	}
 	closedir(dir);
 
-	return (0);
+	return (1);
 }
 
 int
 os_opendisk_solaris(const char *name, int flags, char *buf, size_t buflen,
-    int iscooked)
+    int *ret)
 {
 	static char mybuf[MAXPATHLEN];
-	const char *dir;
-	int ret;
 
 	if (NULL == buf) {
 		buf = mybuf;
@@ -94,28 +97,30 @@ os_opendisk_solaris(const char *name, int flags, char *buf, size_t buflen,
 
 	if (strlcpy(buf, name, buflen) >= buflen)
 		goto trunc;
-	if ((ret = open(name, flags)) >= 0 || errno != ENOENT)
-		return (ret);
+	if ((*ret = open(name, flags)) >= 0)
+		return (1);
+	if (errno != ENOENT)
+		return (-1);
 
 	if(strlcat(buf, WHOLE_PART, buflen) >= buflen)
 		goto trunc;
-	if ((ret = open(buf, flags)) >= 0 || errno != ENOENT)
-		return (ret);
+	if ((*ret = open(buf, flags)) >= 0)
+		return (1);
+	if (errno != ENOENT || strchr(name, '/') != NULL)
 
-	if (strchr(name, '/') != NULL)
-		return (ret);
-
-	dir = (iscooked ? DEVPATH_COOKED : DEVPATH_RAW);
-	if (strlcpy(buf, dir, buflen) >= buflen ||
+	if (strlcpy(buf, DEVPATH_RAW, buflen) >= buflen ||
 	    strlcat(buf, name, buflen) >= buflen)
 		goto trunc;
-	if ((ret = open(buf, flags)) >= 0 || errno != ENOENT)
-		return (ret);
+	if ((*ret = open(buf, flags)) >= 0)
+		return (1);
+	if (errno != ENOENT)
+		return (-1);
 
 	if(strlcat(buf, WHOLE_PART, buflen) >= buflen)
 		goto trunc;
-	return (open(buf, flags));
-
+	if ((*ret = open(buf, flags)) >= 0)
+		return (1);
+	return (-1);
 trunc:
 	errno = ENOMEM;
 	return (-1);
@@ -172,7 +177,7 @@ os_getparams_solaris(int fd, struct disk_params *params, const char *name)
 	}
 #endif
 
-	return (0);
+	return (1);
 }
 #else
 OS_GENERATE_GETPARAMS_STUB(os_getparams_solaris)

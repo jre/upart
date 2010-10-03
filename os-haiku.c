@@ -12,6 +12,8 @@
 #include <OS.h>
 #endif
 
+#define UPART_DISK_PARAMS_ONLY
+#include "disk.h"
 #include "os-private.h"
 #include "util.h"
 
@@ -97,7 +99,7 @@ stat_disk_id(partition_id id, size_t size)
 }
 
 int
-os_listdev_haiku(int (*func)(const char *, void *), void *arg)
+os_listdev_haiku(os_list_callback_func func, void *arg)
 {
 	int32 cookie;
 	partition_id id;
@@ -110,7 +112,7 @@ os_listdev_haiku(int (*func)(const char *, void *), void *arg)
 		size = 0;
 		id = _kern_get_next_disk_device_id(&cookie, &size);
 		if (id < 0)
-			return (0);
+			return (1);
 		dev = stat_disk_id(id, size);
 		if (dev == NULL) {
 			up_warn("failed to get device parameters for %ld: %s",
@@ -169,18 +171,16 @@ maybe_open_disk(const char *path, int flags, int *ret)
 
 int
 os_opendisk_haiku(const char *name, int flags, char *buf, size_t buflen,
-    int ignored)
+    int *ret)
 {
 	long id;
 	char *end;
-	int ret;
 
 	end = NULL;
 	id = strtol(name, &end, 10);
 	if (end != NULL && *end == '\0' && id >= 0) {
 		struct user_disk_device_data *data;
-		data = stat_disk_id(id, 0);
-		if (data == NULL)
+		if ((data = stat_disk_id(id, 0)) == NULL)
 			return (-1);
 		if (strlcpy(buf, data->path, buflen) >= buflen) {
 			errno = ENOMEM;
@@ -188,28 +188,32 @@ os_opendisk_haiku(const char *name, int flags, char *buf, size_t buflen,
 			return (-1);
 		}
 		free(data);
-		return (open(buf, flags));
+		if ((*ret = open(buf, flags)) >= 0)
+			return (1);
+		return (-1);
 	}
 
 	if (strlcpy(buf, name, buflen) >= buflen)
 		goto trunc;
-	if (maybe_open_disk(name, flags, &ret))
-		return (ret);
+	if (maybe_open_disk(name, flags, ret))
+		return (1);
 
 	if (strlcat(buf, DEV_SUFFIX, buflen) >= buflen)
 		goto trunc;
-	if (maybe_open_disk(buf, flags, &ret))
-		return (ret);
+	if (maybe_open_disk(buf, flags, ret))
+		return (1);
 
 	if (strlcpy(buf, DEV_PREFIX, buflen) >= buflen ||
 	    strlcat(buf, name, buflen) >= buflen)
 		goto trunc;
-	if (maybe_open_disk(buf, flags, &ret))
-		return (ret);
+	if (maybe_open_disk(buf, flags, ret))
+		return (1);
 
 	if (strlcat(buf, DEV_SUFFIX, buflen) >= buflen)
 		goto trunc;
-	return (open(buf, flags));
+	if ((*ret = open(buf, flags)) >= 0)
+		return (1);
+	return (-1);
 
 trunc:
 	errno = ENOMEM;
@@ -245,7 +249,7 @@ os_getparams_haiku(int fd, struct disk_params *params, const char *name)
 	params->size = dev->device_partition_data.size / params->sectsize;
 	free(dev);
 
-	return (0);
+	return (1);
 }
 
 #else /* __HAIKU__ */

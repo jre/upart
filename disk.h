@@ -1,12 +1,23 @@
-#ifndef HDR_UPART_DISK
+#ifndef HDR_UPART_DISK_PARAMS_ONLY
+#define HDR_UPART_DISK_PARAMS_ONLY
+struct disk_params {
+	int64_t cyls;		/* total number of cylinders */
+	int64_t heads;		/* number of tracks per cylinder */
+	int64_t sects;		/* number of sectors per track */
+	int64_t size;		/* total number of sects */
+	int sectsize;		/* size of a sector in bytes */
+};
+#endif /* HDR_UPART_DISK_PARAMS_ONLY */
+
+#if !defined(HDR_UPART_DISK) && !defined(UPART_DISK_PARAMS_ONLY)
 #define HDR_UPART_DISK
 
 #include "bsdtree.h"
-#include "os-private.h"
 
 struct map;
 struct part;
 struct img;
+struct os_device_handle;
 
 #define UP_SECT_OFF(sect)       ((sect)->first)
 #define UP_SECT_COUNT(sect)     ((sect)->last - (sect)->first + 1)
@@ -32,7 +43,7 @@ enum disk_type {
 };
 
 union disk_handle {
-	int dev;
+	struct os_device_handle *dev;
 	FILE *file;
 	struct img *img;
 };

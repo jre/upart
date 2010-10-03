@@ -2,17 +2,18 @@
 #include "config.h"
 #endif
 
+#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
+#endif
 #include <assert.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "crc32.h"
 #include "disk.h"
 #include "img.h"
+#include "os.h"
 #include "util.h"
 
 /* #define IMG_DEBUG */
@@ -134,7 +135,7 @@ up_img_save(const struct disk *disk, FILE *stream, const char *label,
 	if (fwrite(&hdr, IMG_HDR_LEN, 1, stream) != 1) {
 		if (UP_NOISY(QUIET))
 			up_err("error writing to %s: %s",
-			    file, strerror(errno));
+			    file, os_lasterrstr());
 		free(data);
 		return (-1);
 	}
@@ -144,7 +145,7 @@ up_img_save(const struct disk *disk, FILE *stream, const char *label,
 		if (fwrite(data, 1, datalen, stream) != datalen ) {
 			if (UP_NOISY(QUIET))
 				up_err("error writing to %s: %s",
-				    file, strerror(errno));
+				    file, os_lasterrstr());
 			free(data);
 			return (-1);
 		}
@@ -367,14 +368,14 @@ img_read(FILE *stream, const char *name, void *buf, size_t size, off_t off)
 	if (fseeko(stream, off, SEEK_SET) != 0) {
 		if (UP_NOISY(QUIET))
 			up_err("failed to seek image file %s: %s",
-			    name, strerror(errno));
+			    name, os_lasterrstr());
 		return (-1);
 	}
 
 	if (fread(buf, 1, size, stream) != size) {
 		if (UP_NOISY(QUIET))
 			up_err("failed to read from image file %s: %s", name,
-			    (ferror(stream) ? strerror(errno) :
+			    (ferror(stream) ? os_lasterrstr() :
 				"unexpected end of file"));
 		return (-1);
 	}

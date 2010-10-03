@@ -110,36 +110,33 @@ up_mbr_register(void)
 static int
 mbr_load(const struct disk *disk, const struct part *parent, void **priv)
 {
-    const struct up_mbr_p      *buf;
-    int                         res;
-    struct up_mbr              *mbr;
+	const struct up_mbr_p *buf;
+	struct up_mbr *mbr;
+	int res;
 
-    assert(MBR_SIZE == sizeof *buf);
-    *priv = NULL;
+	assert(MBR_SIZE == sizeof(*buf));
+	*priv = NULL;
 
-    /* don't load if there's a parent map to avoid false positives
-       with partition boot sectors */
-    if(parent->map)
-        return 0;
+	/*
+	  Don't load if there's a parent map to avoid false positives
+	  with partition boot sectors.
+	*/
+	if (parent->map)
+		return (0);
 
-    /* load the mbr sector */
-    res = mbr_read(disk, parent->start, parent->size, &buf);
-    if(0 >= res)
-        return res;
+	/* load the mbr sector */
+	if ((res = mbr_read(disk, parent->start, parent->size, &buf)) <= 0)
+		return (res);
 
-    /* create map private struct */
-    mbr = calloc(1, sizeof *mbr);
-    if(!mbr)
-    {
-        perror("malloc");
-        return -1;
-    }
+	/* create map private struct */
+	if ((mbr = xalloc(1, sizeof(*mbr), XA_ZERO)) == NULL)
+		return (-1);
 
-    mbr->mbr          = *buf;
-    mbr->extcount     = 0;
-    *priv             = mbr;
+	mbr->mbr = *buf;
+	mbr->extcount = 0;
+	*priv = mbr;
 
-    return 1;
+	return (1);
 }
 
 static int
@@ -306,42 +303,37 @@ mbr_getextra(const struct part *part, FILE *stream)
 
 static int
 mbr_addpart(struct map *map, const struct up_mbrpart_p *part, int index,
-            int64_t extoff, const struct up_mbr_p *extmbr)
+    int64_t extoff, const struct up_mbr_p *extmbr)
 {
-    struct up_mbrpart  *priv;
-    int                 flags;
+	struct up_mbrpart *priv;
+	int flags;
 
-    assert((MBR_PART_COUNT >  index && 0 == extoff && !extmbr) ||
-           (MBR_PART_COUNT <= index && 0 <  extoff &&  extmbr));
+	assert((MBR_PART_COUNT > index && 0 == extoff && !extmbr) ||
+	    (MBR_PART_COUNT <= index && 0 < extoff && extmbr));
 
-    priv = calloc(1, sizeof *priv);
-    if(!priv)
-    {
-        perror("malloc");
-        return -1;
-    }
+	if ((priv = xalloc(1, sizeof(*priv), XA_ZERO)) == NULL)
+		return (-1);
 
-    priv->part = *part;
-    part = &priv->part;
+	priv->part = *part;
+	part = &priv->part;
 
-    priv->part.start  = UP_LETOH32(part->start) + extoff;
-    priv->part.size   = UP_LETOH32(part->size);
-    priv->index       = index;
-    priv->extoff      = extoff;
-    if(extmbr)
-        priv->extmbr  = *extmbr;
+	priv->part.start = UP_LETOH32(part->start) + extoff;
+	priv->part.size = UP_LETOH32(part->size);
+	priv->index = index;
+	priv->extoff = extoff;
+	if (extmbr != NULL)
+		priv->extmbr = *extmbr;
 
-    flags = 0;
-    if(MBR_ID_UNUSED == part->type)
-        flags |= UP_PART_EMPTY;
+	flags = 0;
+	if (part->type == MBR_ID_UNUSED)
+		flags |= UP_PART_EMPTY;
 
-    if(!up_map_add(map, part->start, part->size, flags, priv))
-    {
-        free(priv);
-        return -1;
-    }
+	if (!up_map_add(map, part->start, part->size, flags, priv)) {
+		free(priv);
+		return (-1);
+	}
 
-    return 0;
+	return (0);
 }
 
 static int

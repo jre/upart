@@ -106,8 +106,12 @@ float up_fmtsize(int64_t num, const char **units);
 /* Like snprintf(), except it appends to the end of a string. */
 int up_scatprintf(char *str, size_t size, const char *format, ...);
 
-/* Like calloc(), except doesn't zero the memory */
-void *up_malloc(size_t nmemb, size_t size);
+/* Allocate memory with malloc() or calloc(), printing errors on failure */
+#define XA_ZERO		(1 << 0) /* Zero the allocated memory */
+#define XA_QUIET	(1 << 1) /* Don't print an error message on failure */
+#define XA_FATAL	(1 << 2) /* Exit on failure */
+void	*xalloc(size_t, size_t, unsigned int);
+char	*xstrdup(const char *, unsigned int);
 
 /* save and retrieve the program name */
 int up_savename(const char *argv0);

@@ -96,12 +96,9 @@ up_img_save(const struct disk *disk, FILE *stream, const char *label,
 	if (disk->sectsused_count == 0)
 		data = NULL;
 	else {
-		data = up_malloc(disk->sectsused_count,
-		    UP_DISK_1SECT(disk) + IMG_SECT_LEN);
-		if (data == NULL) {
-			perror("malloc");
+		if ((data = xalloc(disk->sectsused_count,
+			    UP_DISK_1SECT(disk) + IMG_SECT_LEN, 0)) == NULL)
 			return (-1);
-		}
 
 		/* write sectors with sector headers into data buffer */
 		ptr = data;
@@ -244,11 +241,8 @@ up_img_load(FILE *stream, const char *name, struct img **ret)
 	}
 
 	/* allocate data buffer and read data */
-	data = malloc(UP_BETOH32(hdr.datasize));
-	if(data == NULL) {
-		perror("malloc");
+	if ((data = xalloc(1, UP_BETOH32(hdr.datasize), 0)) == NULL)
 		return (-1);
-	}
 	if (img_read(stream, name, data, UP_BETOH32(hdr.datasize),
 		UP_BETOH32(hdr.datastart)) != 0) {
 		free(data);
@@ -265,9 +259,7 @@ up_img_load(FILE *stream, const char *name, struct img **ret)
 	}
 
 	/* wrap everything up in a struct and return it */
-	*ret = calloc(1, sizeof **ret);
-	if(*ret == NULL) {
-		perror("malloc");
+	if ((*ret = xalloc(1, sizeof(**ret), XA_ZERO)) == NULL) {
 		free(data);
 		return (-1);
 	}
@@ -406,13 +398,12 @@ img_checkcrc(struct imghdr *hdr, FILE *stream, const char *name, uint32_t *ret)
 	/* if there's extra header data, read it in and get it's crc too */
 	len = UP_BETOH32(hdr->hdrlen) - sizeof *hdr;
 	if (len > 0) {
-		extra = malloc(len);
-		if (extra == NULL) {
-			perror("malloc");
+		if ((extra = xalloc(len, 1, 0)) == NULL)
+			return (-1);
+		if (img_read(stream, name, extra, len, IMG_HDR_LEN) != 0) {
+			free(extra);
 			return (-1);
 		}
-		if (img_read(stream, name, extra, len, IMG_HDR_LEN) != 0)
-			return (-1);
 		crc = up_crc32(extra, len, crc);
 		free(extra);
 	}

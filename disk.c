@@ -44,12 +44,9 @@ up_disk_open(const char *name)
 	const char *path;
 
  	/* allocate disk struct */
-	if ((disk = malloc(sizeof(*disk))) == NULL) {
-		perror("malloc");
+	if ((disk = xalloc(1, sizeof(*disk), 0)) == NULL)
 		return (NULL);
-	}
-	if ((disk->name = strdup(name)) == NULL) {
-		perror("malloc");
+	if ((disk->name = xstrdup(name, 0)) == NULL) {
 		free(disk);
 		return (NULL);
 	}
@@ -64,7 +61,7 @@ up_disk_open(const char *name)
 	/* open device */
 	disk->type = open_thing(name, &disk->handle, &path);
 	if (disk->type == DT_UNKNOWN ||
-	    (disk->path = strdup(path ? path : name)) == NULL) {
+	    (disk->path = xstrdup((path ? path : name), 0)) == NULL) {
 		up_disk_close(disk);
 		return (NULL);
 	}
@@ -103,11 +100,8 @@ up_disk_setup(struct disk *disk, const struct disk_params *params)
 	}
 
 	assert(disk->buf == NULL);
-	disk->buf = malloc(UP_DISK_1SECT(disk));
-	if(disk->buf == NULL) {
-		perror("malloc");
+	if ((disk->buf = xalloc(1, UP_DISK_1SECT(disk), 0)) == NULL)
 		return (-1);
-	}
 
 	disk->setup_done = 1;
 	return (0);
@@ -234,19 +228,14 @@ up_disk_savesectrange(struct disk *disk, int64_t first, int64_t size,
 	/* allocate data structure */
 	assert(disk->setup_done);
 	assert(size > 0);
-	new = calloc(1, sizeof *new);
-	if (new == NULL) {
-		perror("malloc");
+	if ((new = xalloc(1, sizeof(*new), XA_ZERO)) == NULL)
 		return (NULL);
-	}
 	new->data = NULL;
 	new->first = first;
 	new->last = first + size - 1;
 	new->ref = ref;
 	new->tag = tag;
-	new->data = calloc(size, UP_DISK_1SECT(disk));
-	if (new->data == NULL) {
-		perror("malloc");
+	if ((new->data = xalloc(size, UP_DISK_1SECT(disk), XA_ZERO)) == NULL) {
 		free(new);
 		return (NULL);
 	}

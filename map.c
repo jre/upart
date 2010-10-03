@@ -47,7 +47,7 @@ up_map_register(enum mapid type, const struct map_funcs *params)
 	assert(!(UP_TYPE_REGISTERED & params->flags));
 
 	funcs = &st_types[type];
-	funcs->label = strdup(params->label);
+	funcs->label = xstrdup(params->label, XA_FATAL);
 	funcs->flags = UP_TYPE_REGISTERED | params->flags;
 	funcs->load = params->load;
 	funcs->setup = params->setup;
@@ -176,46 +176,37 @@ up_map_freeall(struct disk *disk)
 }
 
 static struct map *
-map_new(struct disk *disk, struct part *parent,
-        enum mapid type, void *priv)
+map_new(struct disk *disk, struct part *parent, enum mapid type, void *priv)
 {
-    struct map *map;
+	struct map *map;
 
-    map = calloc(1, sizeof *map);
-    if(!map)
-    {
-        perror("malloc");
-        return NULL;
-    }
+	if ((map = xalloc(1, sizeof(*map), XA_ZERO)) == NULL)
+		return (NULL);
 
-    map->disk         = disk;
-    map->type         = type;
-    map->start        = parent->start;
-    map->size         = parent->size;
-    map->depth        = (parent->map ? parent->map->depth + 1 : 0);
-    map->priv         = priv;
-    SIMPLEQ_INIT(&map->list);
+	map->disk = disk;
+	map->type = type;
+	map->start = parent->start;
+	map->size = parent->size;
+	map->depth = (parent->map ? parent->map->depth + 1 : 0);
+	map->priv = priv;
+	SIMPLEQ_INIT(&map->list);
 
-    return map;
+	return (map);
 }
 
 static struct part *
 map_newcontainer(int64_t size)
 {
-    struct part *container;
+	struct part *container;
 
-    container = calloc(1, sizeof *container);
-    if(!container)
-    {
-        perror("malloc");
-        return NULL;
-    }
+	if ((container = xalloc(1, sizeof(*container), XA_ZERO)) == NULL)
+		return (NULL);
 
-    container->start  = 0;
-    container->size   = size;
-    SIMPLEQ_INIT(&container->submap);
+	container->start = 0;
+	container->size = size;
+	SIMPLEQ_INIT(&container->submap);
 
-    return container;
+	return (container);
 }
 
 static void
@@ -232,32 +223,27 @@ map_freecontainer(struct disk *disk, struct part *container)
 }
 
 struct part *
-up_map_add(struct map *map, int64_t start, int64_t size,
-           int flags, void *priv)
+up_map_add(struct map *map, int64_t start, int64_t size, int flags, void *priv)
 {
-    struct part *part;
+	struct part *part;
 
-    part = calloc(1, sizeof *part);
-    if(!part)
-    {
-        perror("malloc");
-        return NULL;
-    }
+	if ((part = xalloc(1, sizeof(*part), XA_ZERO)) == NULL)
+		return (NULL);
 
-    if(0 == size)
-        flags |= UP_PART_EMPTY;
-    if(start < map->start || start + size > map->start + map->size)
-        flags |= UP_PART_OOB;
+	if (0 == size)
+		flags |= UP_PART_EMPTY;
+	if (start < map->start || start + size > map->start + map->size)
+		flags |= UP_PART_OOB;
 
-    part->start       = start;
-    part->size        = size;
-    part->flags       = flags;
-    part->priv        = priv;
-    part->map         = map;
-    SIMPLEQ_INIT(&part->submap);
-    SIMPLEQ_INSERT_TAIL(&map->list, part, link);
+	part->start = start;
+	part->size = size;
+	part->flags = flags;
+	part->priv = priv;
+	part->map = map;
+	SIMPLEQ_INIT(&part->submap);
+	SIMPLEQ_INSERT_TAIL(&map->list, part, link);
 
-    return part;
+	return (part);
 }
 
 void

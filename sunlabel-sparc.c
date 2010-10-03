@@ -147,84 +147,72 @@ void up_sunlabel_sparc_register(void)
 }
 
 static int
-sparc_load(const struct disk *disk, const struct part *parent,
-    void **priv)
+sparc_load(const struct disk *disk, const struct part *parent, void **priv)
 {
-    int                 res;
-    const uint8_t      *buf;
-    struct up_sparc    *label;
+	int res;
+	const uint8_t *buf;
+	struct up_sparc *label;
 
-    assert(SPARC_EXT_SIZE == sizeof(struct up_sparcvtoc_p));
-    assert(SPARC_EXT_SIZE == sizeof(struct up_sparcobsd_p));
-    assert(SPARC_SIZE == sizeof(struct up_sparc_p));
+	assert(SPARC_EXT_SIZE == sizeof(struct up_sparcvtoc_p));
+	assert(SPARC_EXT_SIZE == sizeof(struct up_sparcobsd_p));
+	assert(SPARC_SIZE == sizeof(struct up_sparc_p));
 
-    *priv = NULL;
+	*priv = NULL;
 
-    if(UP_DISK_1SECT(disk) < SPARC_SIZE)
-        return 0;
+	if (UP_DISK_1SECT(disk) < SPARC_SIZE)
+		return (0);
 
-    /* read map and check magic */
-    res = sparc_read(disk, parent->start, parent->size, &buf);
-    if(0 >= res)
-        return res;
+	/* read map and check magic */
+	if ((res = sparc_read(disk, parent->start, parent->size, &buf)) <= 0)
+		return (res);
 
-    /* allocate map struct */
-    label = calloc(1, sizeof *label);
-    if(!label)
-    {
-        perror("malloc");
-        return -1;
-    }
-    memcpy(&label->packed, buf, sizeof label->packed);
-    label->ext = sparc_check_obsd(&label->packed.ext.obsd);
-    if (label->ext == 0)
-	    label->ext = sparc_check_vtoc(&label->packed);
+	/* allocate map struct */
+	if ((label = xalloc(1, sizeof *label, XA_ZERO)) == NULL)
+		return (-1);
+	memcpy(&label->packed, buf, sizeof label->packed);
+	label->ext = sparc_check_obsd(&label->packed.ext.obsd);
+	if (label->ext == 0)
+		label->ext = sparc_check_vtoc(&label->packed);
 
-    *priv = label;
+	*priv = label;
 
-    return 1;
+	return (1);
 }
 
 static int
 sparc_setup(struct disk *disk, struct map *map)
 {
-    struct up_sparc            *priv = map->priv;
-    struct up_sparc_p          *packed = &priv->packed;
-    int                         ii, max, flags;
-    struct up_sparcpart        *part;
-    int64_t                     cylsize, start, size;
+	struct up_sparc *priv = map->priv;
+	struct up_sparc_p *packed = &priv->packed;
+	int64_t cylsize, start, size;
+	struct up_sparcpart *part;
+	int i, max, flags;
 
-    if(!up_disk_save1sect(disk, map->start, map, 0))
-        return -1;
+	if (!up_disk_save1sect(disk, map->start, map, 0))
+		return (-1);
 
-    cylsize = (uint64_t)UP_BETOH16(packed->heads) *
-              (uint64_t)UP_BETOH16(packed->sects);
-    max = (SPARC_ISEXT(priv->ext, OBSD) ? OBSD_MAXPART : SPARC_MAXPART);
+	cylsize = (uint64_t)UP_BETOH16(packed->heads) *
+	    (uint64_t)UP_BETOH16(packed->sects);
+	max = (SPARC_ISEXT(priv->ext, OBSD) ? OBSD_MAXPART : SPARC_MAXPART);
 
-    for(ii = 0; max > ii; ii++)
-    {
-        part = calloc(1, sizeof *part);
-        if(!part)
-        {
-            perror("malloc");
-            return -1;
-        }
+	for (i = 0; max > i; i++) {
+		if ((part = xalloc(1, sizeof *part, XA_ZERO)) == NULL)
+			return (-1);
 
-        part->part    = (SPARC_MAXPART > ii ? packed->parts[ii] :
-                         packed->ext.obsd.extparts[ii - SPARC_MAXPART]);
-        part->index   = ii;
-        start         = map->start + cylsize * UP_BETOH32(part->part.cyl);
-        size          = UP_BETOH32(part->part.size);
-        flags         = 0;
+		part->part = (SPARC_MAXPART > i ? packed->parts[i] :
+		    packed->ext.obsd.extparts[i - SPARC_MAXPART]);
+		part->index = i;
+		start = map->start + cylsize * UP_BETOH32(part->part.cyl);
+		size = UP_BETOH32(part->part.size);
+		flags = 0;
 
-        if(!up_map_add(map, start, size, flags, part))
-        {
-            free(part);
-            return -1;
-        }
-    }
+		if (!up_map_add(map, start, size, flags, part)) {
+			free(part);
+			return (-1);
+		}
+	}
 
-    return 1;
+	return (1);
 }
 
 static int

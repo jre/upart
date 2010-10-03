@@ -105,83 +105,71 @@ void up_sunlabel_x86_register(void)
 }
 
 static int
-sun_x86_load(const struct disk *disk, const struct part *parent,
-    void **priv)
+sun_x86_load(const struct disk *disk, const struct part *parent, void **priv)
 {
-    int                 res;
-    const uint8_t      *buf;
-    struct up_sunx86   *label;
+	struct up_sunx86 *label;
+	const uint8_t *buf;
+	int res;
 
-    assert(SUNX86_SIZE == sizeof(struct up_sunx86_p));
-    *priv = NULL;
+	assert(SUNX86_SIZE == sizeof(struct up_sunx86_p));
+	*priv = NULL;
 
-    if(UP_DISK_1SECT(disk) < SUNX86_SIZE)
-        return 0;
+	if (UP_DISK_1SECT(disk) < SUNX86_SIZE)
+		return (0);
 
-    /* read map and check magic */
-    res = sun_x86_read(disk, parent->start, parent->size, &buf);
-    if(0 >= res)
-        return res;
+	/* read map and check magic */
+	if ((res = sun_x86_read(disk, parent->start, parent->size, &buf)) <= 0)
+		return (res);
 
-    /* allocate map struct */
-    label = calloc(1, sizeof *label);
-    if(!label)
-    {
-        perror("malloc");
-        return -1;
-    }
-    memcpy(&label->packed, buf, sizeof label->packed);
+	/* allocate map struct */
+	if ((label = xalloc(1, sizeof *label, XA_ZERO)) == NULL)
+		return (-1);
+	memcpy(&label->packed, buf, sizeof label->packed);
 
-    *priv = label;
+	*priv = label;
 
-    return 1;
+	return (1);
 }
 
 static int
 sun_x86_setup(struct disk *disk, struct map *map)
 {
-    struct up_sunx86           *priv = map->priv;
-    struct up_sunx86_p         *packed = &priv->packed;
-    int                         ii, max, flags;
-    struct up_sunx86part       *part;
-    int64_t                     start, size;
+	struct up_sunx86 *priv = map->priv;
+	struct up_sunx86_p *packed = &priv->packed;
+	struct up_sunx86part *part;
+	int64_t start, size;
+	int i, max, flags;
 
-    if(!up_disk_save1sect(disk, map->start + SUNX86_OFF, map, 0))
-        return -1;
+	if (!up_disk_save1sect(disk, map->start + SUNX86_OFF, map, 0))
+		return (-1);
 
-    max = UP_LETOH16(packed->partcount);
-    /* this probably isn't worth checking for */
-    if(SUNX86_MAXPARTITIONS < max)
-    {
-        if(UP_NOISY(QUIET))
-            up_warn("clamping partition count in %s from %d down to %d",
-                    up_map_label(map), max, SUNX86_MAXPARTITIONS);
-        max = SUNX86_MAXPARTITIONS;
-    }
+	max = UP_LETOH16(packed->partcount);
+	/* this probably isn't worth checking for */
+	if (SUNX86_MAXPARTITIONS < max) {
+		if (UP_NOISY(QUIET))
+			up_warn("clamping partition count in %s from %d "
+			    "down to %d", up_map_label(map), max,
+			    SUNX86_MAXPARTITIONS);
+		max = SUNX86_MAXPARTITIONS;
+	}
 
-    for(ii = 0; max > ii; ii++)
-    {
-        part = calloc(1, sizeof *part);
-        if(!part)
-        {
-            perror("malloc");
-            return -1;
-        }
+	for (i = 0; i < max; i++) {
+		if ((part = xalloc(1, sizeof *part, XA_ZERO)) == NULL)
+			return (-1);
 
-        memcpy(&part->part, &packed->parts[ii], sizeof part->part);
-        part->index = ii;
-        start         = map->start + UP_LETOH32(part->part.start);
-        size          = UP_LETOH32(part->part.size);
-        flags         = 0;
+		memcpy(&part->part, &packed->parts[i], sizeof part->part);
+		part->index = i;
+		start = map->start + UP_LETOH32(part->part.start);
+		size = UP_LETOH32(part->part.size);
+		flags = 0;
 
-        if(!up_map_add(map, start, size, flags, part))
-        {
-            free(part);
-            return -1;
-        }
-    }
+		if (!up_map_add(map, start, size, flags, part)) {
+			free(part);
+			return (-1);
+		}
+	}
 
-    return 1;
+	return (1);
 }
 
 static int

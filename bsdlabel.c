@@ -223,106 +223,96 @@ void up_bsdlabel_register(void)
 }
 
 static int
-bsdlabel_load(const struct disk *disk, const struct part *parent,
-    void **priv)
+bsdlabel_load(const struct disk *disk, const struct part *parent, void **priv)
 {
-    int                 res, sectoff, byteoff, endian, size;
-    const uint8_t      *buf;
-    struct up_bsd      *label;
+	int res, sectoff, byteoff, endian, size;
+	struct up_bsd *label;
+	const uint8_t *buf;
 
-    assert(LABEL_BASE_SIZE == sizeof(struct up_bsd_p) &&
-           LABEL_PART_SIZE == sizeof(struct up_bsdpart0_p) &&
-           LABEL_PART_SIZE == sizeof(struct up_bsdpart1_p));
-    *priv = NULL;
+	assert(LABEL_BASE_SIZE == sizeof(struct up_bsd_p) &&
+	    LABEL_PART_SIZE == sizeof(struct up_bsdpart0_p) &&
+	    LABEL_PART_SIZE == sizeof(struct up_bsdpart1_p));
+	*priv = NULL;
 
-    /* search for disklabel */
-    res = bsdlabel_scan(disk, parent->start, parent->size,
-                        &buf, &sectoff, &byteoff, &endian);
-    if(0 >= res)
-        return res;
-    assert(UP_DISK_1SECT(disk) - LABEL_BASE_SIZE >= byteoff);
+	/* search for disklabel */
+	if ((res = bsdlabel_scan(disk, parent->start, parent->size,
+		    &buf, &sectoff, &byteoff, &endian)) <= 0)
+		return (res);
+	assert(UP_DISK_1SECT(disk) - LABEL_BASE_SIZE >= byteoff);
 
-    /* allocate label struct */
-    label = calloc(1, sizeof *label);
-    if(!label)
-    {
-        perror("malloc");
-        return -1;
-    }
+	/* allocate label struct */
+	if ((label = xalloc(1, sizeof(*label), XA_ZERO)) == NULL)
+	    return (-1);
 
-    /* populate label struct */
-    label->sectoff     = sectoff;
-    label->byteoff     = byteoff;
-    label->endian      = endian;
-    assert(byteoff + sizeof(label->label) <= UP_DISK_1SECT(disk));
-    memcpy(&label->label, buf + byteoff, sizeof label->label);
-    label->version = LABEL_LGETINT16(label, obsd_version);
+	    /* populate label struct */
+	    label->sectoff = sectoff;
+	    label->byteoff = byteoff;
+	    label->endian = endian;
+	    assert(byteoff + sizeof(label->label) <= UP_DISK_1SECT(disk));
+	    memcpy(&label->label, buf + byteoff, sizeof label->label);
+	    label->version = LABEL_LGETINT16(label, obsd_version);
 
-    /* check if the label extends past the end of the sector */
-    size = LABEL_BASE_SIZE + (LABEL_PART_SIZE *
-                              LABEL_LGETINT16(label, maxpart));
-    if(byteoff + size > UP_DISK_1SECT(disk))
-    {
-        if(UP_NOISY(QUIET))
-            up_err("ignoring truncated %s in sector %"PRId64" (offset %d)",
-                   LABEL_LABEL, parent->start, label->sectoff);
-        free(label);
-        return -1;
-    }
+	    /* check if the label extends past the end of the sector */
+	    size = LABEL_BASE_SIZE + (LABEL_PART_SIZE *
+		LABEL_LGETINT16(label, maxpart));
+	    if (byteoff + size > UP_DISK_1SECT(disk)) {
+		    if(UP_NOISY(QUIET))
+			    up_err("ignoring truncated %s in sector %"PRId64" "
+				"(offset %d)",
+				LABEL_LABEL, parent->start, label->sectoff);
+		    free(label);
+		    return (-1);
+	    }
 
-    *priv = label;
+	    *priv = label;
 
-    return 1;
+	    return (1);
 }
 
 static int
 bsdlabel_setup(struct disk *disk, struct map *map)
 {
-    struct up_bsd              *label = map->priv;
-    int                         ii, max;
-    struct up_bsdpart          *part;
-    const uint8_t              *buf;
-    int (*getpart)(struct map *, struct up_bsdpart *, const uint8_t *);
+	int (*getpart)(struct map *, struct up_bsdpart *, const uint8_t *);
+	struct up_bsd *label = map->priv;
+	struct up_bsdpart *part;
+	const uint8_t *buf;
+	int i, max;
 
-    buf = up_disk_save1sect(disk, map->start + label->sectoff, map, 0);
-    if(!buf)
-        return -1;
+	if ((buf = up_disk_save1sect(disk, map->start + label->sectoff,
+		    map, 0)) == NULL)
+		return (-1);
 
-    max  = LABEL_LGETINT16(label, maxpart);
-    buf += label->byteoff + LABEL_BASE_SIZE;
-    assert(UP_DISK_1SECT(disk) >=
-           label->byteoff + LABEL_BASE_SIZE + (LABEL_PART_SIZE * max));
+	max = LABEL_LGETINT16(label, maxpart);
+	buf += label->byteoff + LABEL_BASE_SIZE;
+	assert(UP_DISK_1SECT(disk) >=
+	    label->byteoff + LABEL_BASE_SIZE + (LABEL_PART_SIZE * max));
 
-    /* verify the checksum */
-    if(bsdlabel_cksum(&label->label, buf, (LABEL_PART_SIZE * max)) !=
-       label->label.checksum)
-    {
-        if(UP_NOISY(QUIET))
-            up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
-                   "%s with bad checksum in sector %"PRId64" (offset %d)",
-                   up_map_label(map), map->start, label->sectoff);
-        if(!opts->relaxed)
-            return 0;
-    }
-
-    getpart = (label->version == 0 ? bsdlabel_getpart_v0 : bsdlabel_getpart_v1);
-    for(ii = 0; max > ii; ii++)
-    {
-        part = calloc(1, sizeof *part);
-        if(!part)
-        {
-            perror("malloc");
-            return -1;
-        }
-
-        part->index = ii;
-	if (!getpart(map, part, buf + (LABEL_PART_SIZE * ii))) {
-            free(part);
-            return (-1);
+	/* verify the checksum */
+	if (bsdlabel_cksum(&label->label, buf, (LABEL_PART_SIZE * max)) !=
+	    label->label.checksum) {
+		if (UP_NOISY(QUIET))
+			up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
+			    "%s with bad checksum in sector %"PRId64" "
+			    "(offset %d)", up_map_label(map), map->start,
+			    label->sectoff);
+		if (!opts->relaxed)
+			return (0);
 	}
-    }
 
-    return 1;
+	getpart = (label->version == 0 ?
+	    bsdlabel_getpart_v0 : bsdlabel_getpart_v1);
+	for (i = 0; i < max; i++) {
+		if ((part = xalloc(1, sizeof(*part), XA_ZERO)) == NULL)
+			return (-1);
+
+		part->index = i;
+		if (!getpart(map, part, buf + (LABEL_PART_SIZE * i))) {
+			free(part);
+			return (-1);
+		}
+	}
+
+	return (1);
 }
 
 static int

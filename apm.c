@@ -125,80 +125,68 @@ up_apm_register(void)
 }
 
 static int
-apm_load(const struct disk *disk, const struct part *parent,
-         void **priv)
+apm_load(const struct disk *disk, const struct part *parent, void **priv)
 {
-    int                 res;
-    struct up_apm      *apm;
-    int64_t             start, size;
+	int64_t start, size;
+	struct up_apm *apm;
+	int res;
 
-    assert(APM_ENTRY_SIZE == sizeof(struct up_apm_p));
-    *priv = NULL;
+	assert(APM_ENTRY_SIZE == sizeof(struct up_apm_p));
+	*priv = NULL;
 
-    if(UP_DISK_1SECT(disk) > APM_ENTRY_SIZE)
-        return 0;
+	if (UP_DISK_1SECT(disk) > APM_ENTRY_SIZE)
+		return (0);
 
-    /* find partitions */
-    res = apm_find(disk, parent->start, parent->size, &start, &size);
-    if(0 >= res)
-        return res;
+	/* find partitions */
+	if ((res = apm_find(disk, parent->start, parent->size,
+		    &start, &size)) <= 0)
+		return (res);
 
-    /* allocate apm struct and buffer for raw map */
-    apm = calloc(1, sizeof *apm);
-    if(!apm)
-    {
-        perror("malloc");
-        return -1;
-    }
-    apm->size = UP_DISK_1SECT(disk) * size;
-    apm->firstsect = start;
-    apm->sectcount = size;
+	/* allocate apm struct and buffer for raw map */
+	if ((apm = xalloc(1, sizeof(*apm), XA_ZERO)) == NULL)
+		return (-1);
+	apm->size = UP_DISK_1SECT(disk) * size;
+	apm->firstsect = start;
+	apm->sectcount = size;
 
-    *priv = apm;
+	*priv = apm;
 
-    return 1;
+	return (1);
 }
 
 static int
 apm_setup(struct disk *disk, struct map *map)
 {
-    struct up_apm              *apm = map->priv;
-    int                         ii, flags;
-    struct up_apmpart          *part;
-    int64_t                     start, size;
-    const uint8_t              *data;
+	struct up_apm *apm = map->priv;
+	struct up_apmpart *part;
+	int64_t start, size;
+	const uint8_t *data;
+	int i, flags;
 
-    data = up_disk_savesectrange(disk, apm->firstsect, apm->sectcount,
-                                 map, 0);
-    if(!data)
-        return -1;
-    apm->tmpbuf = data;
+	if ((data = up_disk_savesectrange(disk, apm->firstsect,
+		    apm->sectcount, map, 0)) == NULL)
+		return (-1);
+	apm->tmpbuf = data;
 
-    for(ii = 0; apm->size / UP_DISK_1SECT(disk) > ii; ii++)
-    {
-        part = calloc(1, sizeof *part);
-        if(!part)
-        {
-            perror("malloc");
-            return -1;
-        }
-        memcpy(&part->part, data + ii * UP_DISK_1SECT(disk),
-               sizeof part->part);
-        part->index   = ii;
-        apm_bounds(&part->part, &start, &size);
-        flags         = 0;
+	for (i = 0; i < apm->size / UP_DISK_1SECT(disk); i++) {
+		if ((part = xalloc(1, sizeof(*part), XA_ZERO)) == NULL)
+			return (-1);
+		memcpy(&part->part, data + i * UP_DISK_1SECT(disk),
+		    sizeof(part->part));
+		part->index = i;
+		apm_bounds(&part->part, &start, &size);
+		flags = 0;
 
-        if(APM_MAGIC != UP_BETOH16(part->part.sig))
-            flags |= UP_PART_EMPTY;
+		if (APM_MAGIC != UP_BETOH16(part->part.sig))
+			flags |= UP_PART_EMPTY;
 
-        if(!up_map_add(map, start, size, flags, part))
-        {
-            free(part);
-            return -1;
-        }
-    }
+		if (!up_map_add(map, start, size, flags, part)) {
+			free(part);
+			return (-1);
+		}
+	}
 
-    return 1;
+	return (1);
 }
 
 static int

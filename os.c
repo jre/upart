@@ -193,12 +193,9 @@ listdev_add(const char *name, void *arg)
 	if (RB_FIND(os_listdev_map, map, &key) != NULL)
 		return (0);
 
-	if ((new = malloc(sizeof(*new))) == NULL) {
-		perror("malloc");
+	if ((new = xalloc(1, sizeof(*new), 0)) == NULL)
 		return (-1);
-	}
-	if ((new->name = strdup(name)) == NULL) {
-		perror("malloc");
+	if ((new->name = xstrdup(name, 0)) == NULL) {
 		free(new);
 		return (-1);
 	}

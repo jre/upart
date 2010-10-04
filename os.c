@@ -34,6 +34,7 @@ int
 os_list_devices(FILE *stream)
 {
 	static os_list_func funcs[] = {
+		os_listdev_windows,
 		os_listdev_sysctl,
 		os_listdev_iokit,
 		os_listdev_linux,
@@ -79,6 +80,7 @@ enum disk_type
 os_dev_open(const char *name, const char **path, os_device_handle *ret)
 {
 	static os_open_func funcs[] = {
+		os_opendisk_windows,
 		os_opendisk_opendev,
 		os_opendisk_opendisk,
 		os_opendisk_haiku,
@@ -142,6 +144,7 @@ int
 os_dev_params(os_device_handle ehand, struct disk_params *params, const char *name)
 {
 	static os_params_func funcs[] = {
+	    os_getparams_windows,
 	    os_getparams_disklabel,
 	    os_getparams_freebsd,
 	    os_getparams_linux,

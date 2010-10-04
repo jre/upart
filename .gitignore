@@ -1,5 +1,7 @@
 *~
 *.o
+*.obj
+*.exe
 .depend
 auto.mk
 autom4te.cache

@@ -53,6 +53,11 @@ int	os_getparams_solaris(os_handle, struct disk_params *, const char *);
 /* os-unix.c */
 int	os_opendisk_unix(const char *, int, char *, size_t, os_handle *);
 
+/* os-windows.c */
+int	os_listdev_windows(os_list_callback_func, void *);
+int	os_opendisk_windows(const char *, int, char *, size_t, os_handle *);
+int	os_getparams_windows(os_handle, struct disk_params *, const char *);
+
 #define OS_GENERATE_LISTDEV_STUB(fn) \
 	int fn(os_list_callback_func f, void *a) { return (0); }
 #define OS_GENERATE_OPENDISK_STUB(fn) \

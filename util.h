@@ -13,6 +13,14 @@
 #define NITEMS(ary)		(sizeof(ary) / sizeof((ary)[0]))
 #endif
 
+#ifdef __GNUC__
+#define ATTR_PRINTF(f,a)		__attribute__((format (printf, f, a)))
+#define ATTR_PACKED			__attribute__((packed))
+#else
+#define ATTR_PRINTF(f,a)
+#define ATTR_PACKED
+#endif
+
 #define UP_ENDIAN_BIG           (4321)
 #define UP_ENDIAN_LITTLE        (1234)
 extern int up_endian;
@@ -117,13 +125,12 @@ char	*xstrdup(const char *, unsigned int);
 int up_savename(const char *argv0);
 const char *up_getname(void);
 
-void up_err(const char *fmt, ...) __attribute__((format (printf, 1, 2)));
-void up_warn(const char *fmt, ...) __attribute__((format (printf, 1, 2)));
+void up_err(const char *fmt, ...) ATTR_PRINTF(1, 2);
+void up_warn(const char *fmt, ...) ATTR_PRINTF(1, 2);
 #define UP_MSG_FWARN            (1 << 0)
 #define UP_MSG_FERR             (1 << 1)
 #define UP_MSG_FBARE            (1 << 2)
-void up_msg(unsigned int flags, const char *fmt, ...)
-    __attribute__((format (printf, 2, 3)));
+void up_msg(unsigned int flags, const char *fmt, ...) ATTR_PRINTF(2, 3);
 
 #define UP_VERBOSITY_SILENT     -2
 #define UP_VERBOSITY_QUIET      -1

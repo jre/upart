@@ -87,7 +87,7 @@ struct up_sparc_p
     {
         struct up_sparcvtoc_p   vtoc;
         struct up_sparcobsd_p   obsd;
-    } __attribute__((packed))   ext;
+    } ATTR_PACKED               ext;
     uint16_t                    rpm;
     uint16_t                    physcyls;
     uint16_t                    alts;

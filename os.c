@@ -44,14 +44,32 @@ os_list_devices(FILE *stream)
 	int i;
 
 	RB_INIT(&map);
-	for (i = 0; i < NITEMS(funcs); i++)
-		if ((funcs[i])(listdev_add, &map) == 1 && !RB_EMPTY(&map))
+	for (i = 0; i < NITEMS(funcs); i++) {
+		switch ((funcs[i])(listdev_add, &map)) {
+		case -1:
+			if (UP_NOISY(QUIET))
+				up_err("failed to list devices: %s",
+				    os_lasterrstr());
 			break;
-	if (RB_EMPTY(&map)) {
-		up_err("don't know how to list devices on this platform");
-		return (-1);
+		case 0:
+			break;
+		case 1:
+			if (!RB_EMPTY(&map))
+				goto done;
+			break;
+		default:
+			assert(!"bad return value");
+			break;
+		}
 	}
 
+done:
+	if (RB_EMPTY(&map)) {
+		if (UP_NOISY(QUIET))
+			up_err("don't know how to list devices "
+			    "on this platform");
+		return (-1);
+	}
 	listdev_print(&map, stream);
 	listdev_free(&map);
 	return (0);
@@ -132,17 +150,15 @@ os_dev_params(os_device_handle ehand, struct disk_params *params, const char *na
 	    os_getparams_haiku,
 	};
 	os_handle hand;
-	int once, i;
+	int i;
 
 	assert(sizeof(os_device_handle) >= sizeof(os_handle));
 	hand = OS_HANDLE_IN(ehand);
 
-	once = 0;
 	for (i = 0; i < NITEMS(funcs); i++) {
 		switch (funcs[i](hand, params, name)) {
 		case -1:
-			once = 1;
-			break;
+			return (-1);
 		case 0:
 			break;
 		case 1:
@@ -152,7 +168,7 @@ os_dev_params(os_device_handle ehand, struct disk_params *params, const char *na
 			break;
 		}
 	}
-	if (!once)
+	if (UP_NOISY(QUIET))
 		up_err("don't know how to get disk parameters "
 		    "on this platform");
 

@@ -49,7 +49,7 @@ struct img {
 	uint8_t *data;
 };
 
-static int	img_read(FILE *, const char *, void *, size_t, off_t);
+static int	img_read(FILE *, const char *, void *, size_t, int64_t);
 static int	img_checkcrc(struct imghdr *, FILE *, const char *, uint32_t *);
 
 static int
@@ -360,7 +360,7 @@ up_img_free(struct img *img)
 }
 
 static int
-img_read(FILE *stream, const char *name, void *buf, size_t size, off_t off)
+img_read(FILE *stream, const char *name, void *buf, size_t size, int64_t off)
 {
 	if (fseeko(stream, off, SEEK_SET) != 0) {
 		if (UP_NOISY(QUIET))

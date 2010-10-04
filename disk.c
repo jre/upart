@@ -75,8 +75,13 @@ up_disk_setup(struct disk *disk, const struct disk_params *params)
 	case DT_DEVICE:
 		/* try to get drive parameters via OS-dependent interfaces */
 		if (os_dev_params(disk->handle.dev, &disk->params,
-			UP_DISK_PATH(disk)) < 0)
+			UP_DISK_PATH(disk)) < 0) {
+			if (UP_NOISY(QUIET))
+				up_err("failed to determine disk parameters "
+				    "for %s: %s",
+				    UP_DISK_PATH(disk), os_lasterrstr());
 			return (-1);
+		}
 		break;
 	case DT_FILE:
 		break;
@@ -106,7 +111,7 @@ up_disk_read(const struct disk *disk, int64_t sect_off, int64_t sect_count,
     void *buf, size_t bufsize)
 {
 	size_t byte_count;
-	off_t byte_off;
+	int64_t byte_off;
 	ssize_t res;
 
 	/* validate and fixup arguments */

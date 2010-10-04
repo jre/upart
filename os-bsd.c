@@ -75,7 +75,7 @@ os_bsd_listdev_hw_disknames(os_list_callback_func func, void *arg)
 {
 	int mib[2] = { CTL_HW, HW_DISKNAMES };
 	char *names, *begin, *end;
-	int count;
+	int once;
 
 	if ((names = os_bsd_sysctl_alloc(mib, 2)) == NULL) {
 		if (errno == ENOMEM)
@@ -86,20 +86,20 @@ os_bsd_listdev_hw_disknames(os_list_callback_func func, void *arg)
 		return (-1);
 	}
 
-	count = 0;
+	once = 0;
 	for (begin = names; begin != NULL; begin = end) {
 		if ((end = strchr(begin, ':')) != NULL)
 			*(end++) = '\0';
 		if ((end = strchr(end == NULL ? begin : end, ',')) != NULL)
 			*(end++) = '\0';
 		if (*begin != '\0') {
-			count++;
+			once = 1;
 			func(begin, arg);
 		}
 	}
 
 	free(names);
-	return (count);
+	return (once);
 }
 #    endif /* CTL_HW && HW_DISKNAMES */
 
@@ -113,7 +113,7 @@ int
 os_bsd_listdev_kern_disks(os_list_callback_func func, void *arg)
 {
 	char *names, *begin, *end;
-	int mib[2], count;
+	int mib[2], once;
 	size_t len;
 
 	len = 2;
@@ -128,18 +128,18 @@ os_bsd_listdev_kern_disks(os_list_callback_func func, void *arg)
 		return (-1);
 	}
 
-	count = 0;
+	once = 0;
 	for (begin = names; begin != NULL; begin = end) {
 		if ((end = strchr(begin, ' ')) != NULL)
 			*(end++) = '\0';
 		if (*begin != '\0') {
-			count++;
+			once = 1;
 			func(begin, arg);
 		}
 	}
 
 	free(names);
-	return (count);
+	return (once);
 }
 #    endif /* HAVE_SYSCTLNAMETOMIB */
 
@@ -179,6 +179,8 @@ os_opendisk_opendisk(const char *name, int flags, char *buf, size_t buflen,
 	buf[0] = '\0';
 	if ((*ret = opendisk(name, flags, buf, buflen, 0)) >= 0)
 		return (1);
+	else if (errno == ENOENT)
+		return (0);
 	return (-1);
 }
 #else /* HAVE_OPENDISK */
@@ -197,6 +199,8 @@ os_opendisk_opendev(const char *name, int oflags, char *buf, size_t buflen,
 		strlcpy(buf, realname, buflen);
 		return (1);
 	}
+	else if (errno == ENOENT)
+		return (0);
 	return (-1);
 }
 #else /* HAVE_OPENDEV */

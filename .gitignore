@@ -1,8 +1,8 @@
 *~
 *.o
 .depend
+auto.mk
 autom4te.cache
-common.mk
 config.cache
 config.h
 config.log

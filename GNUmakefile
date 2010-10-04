@@ -1,4 +1,6 @@
-include common.mk
+include auto.mk
+include defs.mk
+include build.mk
 
 .PHONY: depend dep
 

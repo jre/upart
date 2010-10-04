@@ -2,7 +2,7 @@ AC_INIT([upart], [0.2.5])
 dnl need 2.60 for AC_PROG_MKDIR_P
 AC_PREREQ([2.60])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([common.mk])
+AC_CONFIG_FILES([auto.mk])
 
 dnl remember if CFLAGS was set before AC_PROG_CC messes with it
 had_prior_cflags=${CFLAGS:+yes}

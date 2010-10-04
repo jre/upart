@@ -1,7 +1,14 @@
 #!/bin/sh
 
-if [ -n "$UPART_TEST_CLEAN" ]
-then
+upart="../upart -f"
+diff="diff -u"
+
+failcount=0
+totalcount=0
+faillist=
+
+case "$*" in
+    clean)
     for img in *.img
     do
         cleanfiles=
@@ -14,17 +21,9 @@ then
         rm -f $cleanfiles
     done
     exit
-fi
+    ;;
 
-upart="../upart -f"
-diff="diff -u"
-
-failcount=0
-totalcount=0
-faillist=
-
-if [ -n "$UPART_TEST_REGEN" ]
-then
+    regen)
     for img in *.img
     do
         for flag in '' -v -vv
@@ -42,7 +41,16 @@ then
         done
     done
     exit
-fi
+    ;;
+
+    '')
+    ;;
+
+    *)
+    echo "usage: `basename "$0"` [clean|regen]"
+    exit 1
+    ;;
+esac
 
 echo "running tests..."
 

@@ -144,13 +144,18 @@ int
 os_dev_params(os_device_handle ehand, struct disk_params *params, const char *name)
 {
 	static os_params_func funcs[] = {
-	    os_getparams_windows,
-	    os_getparams_disklabel,
-	    os_getparams_freebsd,
-	    os_getparams_linux,
-	    os_getparams_darwin,
-	    os_getparams_solaris,
-	    os_getparams_haiku,
+		os_getparams_windows,
+		os_getparams_freebsd,
+		/*
+		  os_getparams_disklabel() compiles on FreeBSD but
+		  fails to work, so make sure os_getparams_freebsd()
+		  is tried first.
+		*/
+		os_getparams_disklabel,
+		os_getparams_linux,
+		os_getparams_darwin,
+		os_getparams_solaris,
+		os_getparams_haiku,
 	};
 	os_handle hand;
 	int i;

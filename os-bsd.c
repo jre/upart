@@ -78,9 +78,11 @@ os_bsd_listdev_hw_disknames(os_list_callback_func func, void *arg)
 	int once;
 
 	if ((names = os_bsd_sysctl_alloc(mib, 2)) == NULL) {
-		if (errno == ENOMEM)
+		if (errno == ENOENT)
+			return (0);
+		else if (errno == ENOMEM)
 			perror("malloc");
-		else if (errno != ENOENT)
+		else
 			up_warn("failed to retrieve hw.disknames "
 			    "sysctl: %s", strerror(errno));
 		return (-1);
@@ -120,9 +122,11 @@ os_bsd_listdev_kern_disks(os_list_callback_func func, void *arg)
 	names = NULL;
 	if (sysctlnametomib("kern.disks", mib, &len) < 0 ||
 	    (names = os_bsd_sysctl_alloc(mib, len)) == NULL) {
-		if (errno == ENOMEM)
+		if (errno == ENOENT)
+			return (0);
+		else if (errno == ENOMEM)
 			perror("malloc");
-		else if (errno != ENOENT)
+		else
 			up_warn("failed to retrieve kern.disks "
 			    "sysctl: %s", strerror(errno));
 		return (-1);

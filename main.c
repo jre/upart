@@ -81,8 +81,16 @@ static char *
 readargs(int argc, char *argv[], struct opts *newopts,
     struct disk_params *params)
 {
-	int opt;
+	int opt, dolist;
 
+	/*
+	  Note that the global options aren't initialized yet, do not
+	  call any function which might try to read them unless you
+	  like segfaults. This includes the verbosity option check
+	  that is done before printing error messages.
+	*/
+
+	dolist = 0;
 	init_options(newopts);
 	memset(params, 0, sizeof *params);
 	while(0 < (opt = getopt(argc, argv, "C:fhH:klL:qrsS:vVw:xz:"))) {
@@ -108,8 +116,7 @@ readargs(int argc, char *argv[], struct opts *newopts,
 			newopts->sloppyio = 1;
 			break;
 		case 'l':
-			os_list_devices(stdout);
-			exit(EXIT_SUCCESS);
+			dolist = 1;
 			break;
 		case 'L':
 			newopts->label = optarg;
@@ -154,8 +161,15 @@ readargs(int argc, char *argv[], struct opts *newopts,
 		}
 	}
 
+	if (dolist) {
+		/* XXX argument validation? */
+		set_options(newopts);
+		os_list_devices(stdout);
+		exit(EXIT_SUCCESS);
+	}
+
 	if (newopts->label && !newopts->serialize)
-		usage("-w is required for -l");
+		usage("-w is required for -L");
 	if (optind + 1 == argc)
 		return (argv[optind]);
 	else

@@ -146,7 +146,7 @@ os_bsd_listdev_kern_disks(os_list_callback_func func, void *arg)
 int
 os_listdev_sysctl(os_list_callback_func func, void *arg)
 {
-	int saved = 0;
+	int saved ATTR_UNUSED = 0;
 	int ret = 0;
 
 #if defined(CTL_HW) && defined(HW_DISKNAMES)

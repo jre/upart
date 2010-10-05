@@ -16,9 +16,11 @@
 #ifdef __GNUC__
 #define ATTR_PRINTF(f,a)		__attribute__((format (printf, f, a)))
 #define ATTR_PACKED			__attribute__((packed))
+#define ATTR_UNUSED			__attribute__((unused))
 #else
 #define ATTR_PRINTF(f,a)
 #define ATTR_PACKED
+#define ATTR_UNUSED
 #endif
 
 #define UP_ENDIAN_BIG           (4321)

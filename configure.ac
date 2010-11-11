@@ -22,7 +22,7 @@ dnl check for crap needed for 64-bit off_t and such
 AC_SYS_LARGEFILE
 
 dnl some standard headers
-AC_CHECK_HEADERS([sys/types.h sys/param.h sys/ioctl.h sys/stat.h \
+AC_CHECK_HEADERS([sys/types.h sys/param.h sys/ioctl.h sys/stat.h sys/wait.h \
 		  dirent.h errno.h fcntl.h inttypes.h stdint.h unistd.h])
 
 dnl some standard functions

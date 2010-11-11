@@ -4,15 +4,13 @@
 struct disk_params;
 struct os_device_handle;
 
-#ifdef _MSC_VER
+#ifdef OS_TYPE_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#define OS_DEVTYPE_WINDOWS
 typedef HANDLE os_handle;
 
 #else
 
-#define OS_DEVTYPE_UNIX
 typedef int os_handle;
 
 #endif

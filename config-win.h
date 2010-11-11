@@ -1,5 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
+#define OS_TYPE_WINDOWS
+
 /* for various types */
 #include <crtdefs.h>
 

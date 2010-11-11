@@ -6,6 +6,8 @@ AC_PREREQ([2.60])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([auto.mk])
 
+AC_DEFINE([OS_TYPE_UNIX])
+
 dnl remember if CFLAGS was set before AC_PROG_CC messes with it
 had_prior_cflags=${CFLAGS:+yes}
 

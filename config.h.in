@@ -5,6 +5,8 @@
 #undef PACKAGE_NAME
 #undef PACKAGE_VERSION
 
+#undef OS_TYPE_UNIX
+
 /* linux is great */
 #undef _GNU_SOURCE
 #undef _FILE_OFFSET_BITS

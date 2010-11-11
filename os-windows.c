@@ -12,7 +12,7 @@
 #include "os-private.h"
 #include "util.h"
 
-#ifdef OS_DEVTYPE_WINDOWS
+#ifdef OS_TYPE_WINDOWS
 
 #include <io.h>
 #include <winioctl.h>

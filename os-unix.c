@@ -27,7 +27,7 @@
 #include "os-private.h"
 #include "util.h"
 
-#ifdef OS_DEVTYPE_UNIX
+#ifdef OS_TYPE_UNIX
 
 #ifdef O_LARGEFILE
 #define OPENFLAGS(flags)        (O_LARGEFILE | (flags))

@@ -5,7 +5,7 @@ struct disk_params;
 enum disk_type;
 
 typedef struct os_device_handle * os_device_handle;
-typedef uintmax_t os_error;
+typedef int os_error;
 
 int		 os_list_devices(FILE *);
 enum disk_type	 os_dev_open(const char *, const char **, os_device_handle *);

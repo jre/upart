@@ -50,9 +50,10 @@
 #define NITEMS(a)		(sizeof(a) / sizeof((a)[0]))
 #endif
 
-/* XXX is this necessary? */
-#define CHAR_CR			(0xd)
-#define CHAR_LF			(0xa)
+#ifdef OS_TYPE_WINDOWS
+/* grumble grumble */
+#define strdup _strdup
+#endif
 
 void	 cleanfiles(FILE *);
 void	 regenfiles(FILE *);
@@ -109,7 +110,7 @@ main(int argc, char *argv[])
 
 	changedir();
 
-	if ((idx = fopen(TESTINDEX_PATH, "rb")) == NULL)
+	if ((idx = fopen(TESTINDEX_PATH, "r")) == NULL)
 		fail("failed to open %s for reading", TESTINDEX_PATH);
 
 	(*mode)(idx);
@@ -248,8 +249,7 @@ nextname(const char *filename, FILE *fh)
 
 	off = 0;
 	while ((ch = getc(fh)) != EOF) {
-		/* XXX is this necessary? */
-		if (ch == CHAR_CR || ch == CHAR_LF) {
+		if (ch == '\n') {
 			if (off != 0)
 				break;
 		} else {
@@ -305,7 +305,7 @@ checkexitval(const char *name, int got, const char *file)
 	FILE *fh;
 	int want;
 
-	if ((fh = maybefopen(file, "rb")) == NULL)
+	if ((fh = maybefopen(file, "r")) == NULL)
 		want = 0;
 	else {
 		len = fread(buf, 1, sizeof(buf) - 1, fh);
@@ -349,7 +349,6 @@ checkfiles(const char *name, const char *want, const char *got, int err)
 	do {
 		wch = getc(wh);
 		gch = getc(gh);
-		/* XXX do I need to do something special here with newlines? */
 	} while (wch == gch && wch != EOF);
 	fclose(wh);
 	fclose(gh);
@@ -498,3 +497,148 @@ maybefopen(const char *path, const char *mode)
 }
 
 #endif /* OS_TYPE_UNIX */
+
+#ifdef OS_TYPE_WINDOWS
+
+char *
+getmyname(char *argv0)
+{
+	char *fwd, *back;
+
+	if ((fwd = strrchr(argv0, '/')) != NULL)
+		fwd++;
+	if ((back = strrchr(argv0, '\\')) != NULL)
+		back++;
+	if (fwd != NULL && fwd[0] != '\0' && fwd > back)
+		return (fwd);
+	else if (back != NULL && back[0] != '\0')
+		return (back);
+	else
+		return (argv0);
+}
+
+void
+fail(const char *format, ...)
+{
+	char buf[1024];
+	va_list ap;
+	DWORD err;
+	int off;
+
+	err = GetLastError();
+	off = snprintf(buf, sizeof(buf), "%s: ", myname);
+	if (off > 0 && off < sizeof(buf)) {
+		va_start(ap, format);
+		off += vsnprintf(buf + off, sizeof(buf) - off, format, ap);
+		va_end(ap);
+	}
+	if (off > 0 && off < sizeof(buf))
+		buf[off++] = ':';
+	if (off > 0 && off < sizeof(buf))
+		buf[off++] = ' ';
+	if (off > 0 && off < sizeof(buf))
+		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |
+		    FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err, 0,
+		    buf + off, sizeof(buf) - off, NULL);
+	off = strlen(buf);
+	buf[off] = '\n';
+	WriteFile(GetStdHandle(STD_ERROR_HANDLE), buf, off + 1, NULL, NULL);
+	exit(EXIT_FAILURE);
+}
+
+void
+changedir(void)
+{
+	if (!SetCurrentDirectory(TESTDIR_PATH))
+		fail("failed to change directory to %s", TESTDIR_PATH);
+}
+
+void
+rmfile(const char *path)
+{
+	if (!DeleteFile(path) && GetLastError() != ERROR_FILE_NOT_FOUND)
+		fail("failed to remove %s", path);
+}
+
+int
+runtest(const char *args, const char *img, const char *out, const char *err)
+{
+	SECURITY_ATTRIBUTES sa;
+	PROCESS_INFORMATION pi;
+	STARTUPINFO si;
+	HANDLE nh, oh, eh;
+	DWORD ecode;
+	char *cmd;
+
+	/* XXX should do escaping here */
+	cmd = strjoin(UPART_PATH, " ", args, " ", img, (void *)NULL);
+
+	memset(&sa, 0, sizeof(sa));
+	sa.nLength = sizeof(sa);
+	sa.bInheritHandle = TRUE;
+	if ((nh = CreateFile("NUL", GENERIC_READ|GENERIC_WRITE,
+		    FILE_SHARE_READ|FILE_SHARE_WRITE, &sa,
+		    OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE)
+		fail("failed to open NUL device");
+	if ((oh = CreateFile(out, GENERIC_WRITE, FILE_SHARE_READ, &sa,
+		    CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL))
+	    == INVALID_HANDLE_VALUE)
+		fail("failed to open %s for writing", out);
+	if ((eh = CreateFile(err, GENERIC_WRITE, FILE_SHARE_READ, &sa,
+		    CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL))
+	    == INVALID_HANDLE_VALUE)
+		fail("failed to open %s for writing", err);
+
+	memset(&si, 0, sizeof(si));
+	memset(&pi, 0, sizeof(pi));
+	si.cb = sizeof(si);
+	si.dwFlags = STARTF_USESTDHANDLES;
+	si.hStdInput = nh;
+	si.hStdOutput = oh;
+	si.hStdError = eh;
+
+	if (!CreateProcess(NULL, cmd, NULL, NULL, 1, 0, NULL, NULL, &si, &pi))
+		fail("failed to create process %s", cmd);
+
+	if (WaitForSingleObject(pi.hProcess, INFINITE) == WAIT_FAILED)
+		fail("failed to wait for child process to finish");
+
+	if (!GetExitCodeProcess(pi.hProcess, &ecode))
+		fail("failed to get child process exit code");
+
+	free(cmd);
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+	CloseHandle(nh);
+	CloseHandle(eh);
+	CloseHandle(oh);
+
+	return (ecode);
+}
+
+off_t
+filesize(const char *path)
+{
+	WIN32_FILE_ATTRIBUTE_DATA fi;
+
+	if (GetFileAttributesEx(path, GetFileExInfoStandard, &fi) == 0)
+		fail("failed to get file attributes for %s", path);
+
+	return ((off_t)fi.nFileSizeHigh << 32 | fi.nFileSizeLow);
+}
+
+FILE *
+maybefopen(const char *path, const char *mode)
+{
+	FILE *fh;
+
+	if ((fh = fopen(path, mode)) == NULL &&
+	    GetLastError() != ERROR_FILE_NOT_FOUND)
+		fail("failed to open %s for %s",
+		    path, (*mode == 'r' ? "reading" :
+			((*mode == 'w' || *mode == 'a') ? "writing" :
+			    "???")));
+	return (fh);
+}
+
+#endif /* OS_TYPE_WINDOWS */

@@ -10,6 +10,7 @@ UPART_HDRSRC  = apm. bsdlabel. crc32. disk. gpt. img. map. mbr. os. \
 		sunlabel-shared. sunlabel-sparc. sunlabel-x86. util.
 REGRESS_SRC   = tests/tester.c
 REGRESS_BIN   = tests/tester
+REGRESS_CMD   = ./$(REGRESS_BIN)
 
 UPART_OBJS    = $(UPART_SRCS:.c=.o)
 ALL_OBJS      = $(ALL_SRCS:.c=.o)

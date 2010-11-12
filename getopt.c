@@ -149,7 +149,7 @@ getopt(int nargc, char * const *nargv, const char *options)
 			++optind;
 		if (PRINT_ERROR)
 			fprintf(stderr, "%s: " ILLOPTCHAR "\n",
-			    up_getname(), optchar);
+			    nargv[0], optchar);
 		optopt = optchar;
 		return (BADCH);
 	}
@@ -165,7 +165,7 @@ getopt(int nargc, char * const *nargv, const char *options)
 				place = EMSG;
 				if (PRINT_ERROR)
 					fprintf(stderr, "%s: " RECARGCHAR "\n",
-					    up_getname(), optchar);
+					    nargv[0], optchar);
 				optopt = optchar;
 				return (BADARG);
 			} else

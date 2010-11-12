@@ -12,14 +12,14 @@ install: all
 upart$(EXE_SUF): $(UPART_OBJS)
 	$(CC) $(LDFLAGS) $(LIBS) -o $@ $(UPART_OBJS)
 
-$(REGRESS_BIN)$(EXE_SUF): $(REGRESS_SRC) util.h
-	$(CC) $(CFLAGS) -I. -o $@ $(REGRESS_SRC)
+$(REGRESS_BIN)$(EXE_SUF): $(REGRESS_SRC) getopt.c util.h
+	$(CC) $(CFLAGS) -I. -o $@ $(REGRESS_SRC) getopt.c
 
 clean: clean-tests
 	$(RM_CMD) .depend $(ALL_PROGS) $(ALL_OBJS)
 
 clean-tests: $(REGRESS_BIN)$(EXE_SUF)
-	./$(REGRESS_BIN)$(EXE_SUF) -c
+	$(REGRESS_CMD) -c
 	$(RM_CMD) $(REGRESS_BIN)$(EXE_SUF)
 
 cleaner: clean
@@ -29,7 +29,7 @@ cleanest: cleaner
 	$(RM_CMD) configure
 
 check regress: upart$(EXE_SUF) $(REGRESS_BIN)$(EXE_SUF)
-	./$(REGRESS_BIN)$(EXE_SUF)
+	$(REGRESS_CMD)
 
 regen-tests: tester$(EXE_SUF)
-	./$(REGRESS_BIN)$(EXE_SUF) -r
+	$(REGRESS_CMD) -r

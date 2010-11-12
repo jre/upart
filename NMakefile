@@ -5,6 +5,8 @@ LDFLAGS = /nologo
 RM_CMD = del
 EXE_SUF = .exe
 
+REGRESS_CMD = .\$(REGRESS_BIN:/=\).exe
+
 UPART_OBJS = $(UPART_SRCS:.c=.obj)
 ALL_OBJS = $(ALL_SRCS:.c=.obj)
 
@@ -13,4 +15,4 @@ ALL_OBJS = $(ALL_SRCS:.c=.obj)
 config.h: config-win.h
 	copy /y config-win.h $@
 
-*.c: *.h
+*.c: *.h config.h

@@ -6,6 +6,7 @@
 #include <crtdefs.h>
 
 typedef ptrdiff_t ssize_t;
+typedef __int64 off_t;
 
 /* XXX */
 #define MAXPATHLEN	4096

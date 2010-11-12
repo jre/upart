@@ -5,8 +5,6 @@ LDFLAGS = /nologo
 RM_CMD = del
 EXE_SUF = .exe
 
-REGRESS_CMD = @echo
-
 UPART_OBJS = $(UPART_SRCS:.c=.obj)
 ALL_OBJS = $(ALL_SRCS:.c=.obj)
 

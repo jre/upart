@@ -82,6 +82,24 @@ static char *place = EMSG; /* option letter processing */
 #define RECARGCHAR "option requires an argument -- %c"
 #define ILLOPTCHAR  "unknown option -- %c"
 
+static const char *
+getmyname(const char *argv0)
+{
+	char *fwd, *back;
+
+	if ((fwd = strrchr(argv0, '/')) != NULL)
+		fwd++;
+	if ((back = strrchr(argv0, '\\')) != NULL)
+		back++;
+	if (fwd != NULL && fwd[0] != '\0' && fwd > back)
+		return (fwd);
+	else if (back != NULL && back[0] != '\0')
+		return (back);
+	else
+		return (argv0);
+}
+
+
 /*
  * getopt --
  *	Parse argc/argv argument vector.
@@ -149,7 +167,7 @@ getopt(int nargc, char * const *nargv, const char *options)
 			++optind;
 		if (PRINT_ERROR)
 			fprintf(stderr, "%s: " ILLOPTCHAR "\n",
-			    nargv[0], optchar);
+			    getmyname(nargv[0]), optchar);
 		optopt = optchar;
 		return (BADCH);
 	}
@@ -165,7 +183,7 @@ getopt(int nargc, char * const *nargv, const char *options)
 				place = EMSG;
 				if (PRINT_ERROR)
 					fprintf(stderr, "%s: " RECARGCHAR "\n",
-					    nargv[0], optchar);
+					    getmyname(nargv[0]), optchar);
 				optopt = optchar;
 				return (BADARG);
 			} else

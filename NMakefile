@@ -1,0 +1,18 @@
+!include defs.mk
+
+CFLAGS = /nologo /W3 /DHAVE_CONFIG_H
+LDFLAGS = /nologo
+RM_CMD = del
+EXE_SUF = .exe
+
+REGRESS_CMD = .\$(REGRESS_BIN:/=\).exe
+
+UPART_OBJS = $(UPART_SRCS:.c=.obj)
+ALL_OBJS = $(ALL_SRCS:.c=.obj)
+
+!include build.mk
+
+config.h: config-win.h
+	copy /y config-win.h $@
+
+*.c: *.h config.h

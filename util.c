@@ -2,9 +2,7 @@
 #include "config.h"
 #endif
 
-#include <sys/types.h>
 #include <assert.h>
-#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -152,15 +150,38 @@ up_scatprintf(char *str, size_t size, const char *format, ...)
 }
 
 void *
-up_malloc(size_t nmemb, size_t size)
+xalloc(size_t nmemb, size_t size, unsigned int flags)
 {
-    if(SIZE_MAX / nmemb < size)
-    {
-        errno = ENOMEM;
-        return NULL;
-    }
-    else
-        return malloc(nmemb * size);
+	void *ptr;
+
+	if (SIZE_MAX / nmemb < size)
+		ptr = NULL;
+	else if (flags & XA_ZERO)
+		ptr = calloc(nmemb, size);
+	else
+		ptr = malloc(nmemb * size);
+
+	if (ptr == NULL) {
+		if (!(flags & XA_QUIET))
+			fputs("failed to allocate memory\n", stderr);
+		if (flags & XA_FATAL)
+			abort();
+	}
+
+	return (ptr);
+}
+
+char *
+xstrdup(const char *old, unsigned int flags)
+{
+	size_t len;
+	char *new;
+
+	len = strlen(old);
+	if ((new = xalloc(len + 1, 1, flags)) != NULL)
+		memcpy(new, old, len + 1);
+
+	return (new);
 }
 
 static char *up_savedname = NULL;
@@ -168,23 +189,19 @@ static char *up_savedname = NULL;
 int
 up_savename(const char *argv0)
 {
-    const char *name;
-    char       *new;
+	const char *name;
+	char *new;
 
-    if(!(name = strrchr(argv0, '/')) || !*(++name))
-        name = argv0;
+	if (!(name = strrchr(argv0, '/')) || !*(++name))
+		name = argv0;
 
-    new = strdup(name);
-    if(!new)
-    {
-        perror("malloc");
-        return -1;
-    }
+	if ((new = xstrdup(name, 0)) == NULL)
+		return (-1);
 
-    free(up_savedname);
-    up_savedname = new;
+	free(up_savedname);
+	up_savedname = new;
 
-    return 0;
+	return (0);
 }
 
 const char *

@@ -1,8 +1,12 @@
+dnl Don't forget to update the version in config-win.h too, as well as
+dnl tag the commit where configure is regenerated.
 AC_INIT([upart], [0.2.5])
 dnl need 2.60 for AC_PROG_MKDIR_P
 AC_PREREQ([2.60])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([common.mk])
+AC_CONFIG_FILES([auto.mk])
+
+AC_DEFINE([OS_TYPE_UNIX])
 
 dnl remember if CFLAGS was set before AC_PROG_CC messes with it
 had_prior_cflags=${CFLAGS:+yes}
@@ -18,7 +22,11 @@ dnl check for crap needed for 64-bit off_t and such
 AC_SYS_LARGEFILE
 
 dnl some standard headers
-AC_CHECK_HEADERS([sys/types.h sys/param.h stdint.h inttypes.h])
+AC_CHECK_HEADERS([sys/types.h sys/param.h sys/ioctl.h sys/stat.h sys/wait.h \
+		  dirent.h errno.h fcntl.h inttypes.h stdint.h unistd.h])
+
+dnl some standard functions
+AC_CHECK_FUNCS([getopt pread])
 
 dnl bsd disklabel headers
 AC_CHECK_HEADERS([sys/disklabel.h])

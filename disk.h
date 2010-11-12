@@ -1,12 +1,23 @@
-#ifndef HDR_UPART_DISK
+#ifndef HDR_UPART_DISK_PARAMS_ONLY
+#define HDR_UPART_DISK_PARAMS_ONLY
+struct disk_params {
+	int64_t cyls;		/* total number of cylinders */
+	int64_t heads;		/* number of tracks per cylinder */
+	int64_t sects;		/* number of sectors per track */
+	int64_t size;		/* total number of sects */
+	int sectsize;		/* size of a sector in bytes */
+};
+#endif /* HDR_UPART_DISK_PARAMS_ONLY */
+
+#if !defined(HDR_UPART_DISK) && !defined(UPART_DISK_PARAMS_ONLY)
 #define HDR_UPART_DISK
 
 #include "bsdtree.h"
-#include "os-private.h"
 
 struct map;
 struct part;
 struct img;
+struct os_device_handle;
 
 #define UP_SECT_OFF(sect)       ((sect)->first)
 #define UP_SECT_COUNT(sect)     ((sect)->last - (sect)->first + 1)
@@ -24,18 +35,29 @@ struct disk_sect {
 
 RB_HEAD(disk_sect_map, disk_sect);
 
+enum disk_type {
+	DT_UNKNOWN = 0,
+	DT_DEVICE,
+	DT_FILE,
+	DT_IMAGE
+};
+
+union disk_handle {
+	struct os_device_handle *dev;
+	FILE *file;
+	struct img *img;
+};
+
 struct disk {
 	char *name;		/* disk name supplied by user */
 	char *path;		/* path to opened device node */
 	struct disk_params params;
 
-	unsigned int f_setup : 1;
-	unsigned int f_plainfile : 1;
-
 	/* don't touch any of these */
-	int fd;
+	unsigned setup_done;
+	enum disk_type type;
+	union disk_handle handle;
 	uint8_t *buf;
-	struct img *img;
 	struct part *maps;
 	struct disk_sect_map sectsused;
 	int64_t sectsused_count;
@@ -51,8 +73,6 @@ struct disk {
 /* XXX should handle overflow here and anywhere sects are converted to bytes */
 #define UP_DISK_SIZEBYTES(disk) \
     ((disk)->params.size * (disk)->params.sectsize)
-#define UP_DISK_IS_IMG(disk)    (NULL != (disk)->img)
-#define UP_DISK_IS_FILE(disk)   ((disk)->f_plainfile)
 
 typedef int (*up_disk_iterfunc_t)(const struct disk *,
     const struct disk_sect *, void *);

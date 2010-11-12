@@ -5,6 +5,8 @@
 #undef PACKAGE_NAME
 #undef PACKAGE_VERSION
 
+#undef OS_TYPE_UNIX
+
 /* linux is great */
 #undef _GNU_SOURCE
 #undef _FILE_OFFSET_BITS
@@ -13,8 +15,19 @@
 /* standard headers */
 #undef HAVE_SYS_TYPES_H
 #undef HAVE_SYS_PARAM_H
-#undef HAVE_STDINT_H
+#undef HAVE_SYS_IOCTL_H
+#undef HAVE_SYS_STAT_H
+#undef HAVE_SYS_WAIT_H
+#undef HAVE_DIRENT_H
+#undef HAVE_ERRNO_H
+#undef HAVE_FCNTL_H
 #undef HAVE_INTTYPES_H
+#undef HAVE_STDINT_H
+#undef HAVE_UNISTD_H
+
+/* standard functions */
+#undef HAVE_GETOPT
+#undef HAVE_PREAD
 
 /* bsd disklabel */
 #undef HAVE_SYS_DISKLABEL_H

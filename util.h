@@ -13,6 +13,18 @@
 #define NITEMS(ary)		(sizeof(ary) / sizeof((ary)[0]))
 #endif
 
+#ifdef __GNUC__
+#define ATTR_PRINTF(f,a)		__attribute__((format (printf, f, a)))
+#define ATTR_PACKED			__attribute__((packed))
+#define ATTR_UNUSED			__attribute__((unused))
+#define ATTR_SENTINEL(p)		__attribute__((sentinel(p)))
+#else
+#define ATTR_PRINTF(f,a)
+#define ATTR_PACKED
+#define ATTR_UNUSED
+#define ATTR_SENTINEL(p)
+#endif
+
 #define UP_ENDIAN_BIG           (4321)
 #define UP_ENDIAN_LITTLE        (1234)
 extern int up_endian;
@@ -106,20 +118,23 @@ float up_fmtsize(int64_t num, const char **units);
 /* Like snprintf(), except it appends to the end of a string. */
 int up_scatprintf(char *str, size_t size, const char *format, ...);
 
-/* Like calloc(), except doesn't zero the memory */
-void *up_malloc(size_t nmemb, size_t size);
+/* Allocate memory with malloc() or calloc(), printing errors on failure */
+#define XA_ZERO		(1 << 0) /* Zero the allocated memory */
+#define XA_QUIET	(1 << 1) /* Don't print an error message on failure */
+#define XA_FATAL	(1 << 2) /* Exit on failure */
+void	*xalloc(size_t, size_t, unsigned int);
+char	*xstrdup(const char *, unsigned int);
 
 /* save and retrieve the program name */
 int up_savename(const char *argv0);
 const char *up_getname(void);
 
-void up_err(const char *fmt, ...) __attribute__((format (printf, 1, 2)));
-void up_warn(const char *fmt, ...) __attribute__((format (printf, 1, 2)));
+void up_err(const char *fmt, ...) ATTR_PRINTF(1, 2);
+void up_warn(const char *fmt, ...) ATTR_PRINTF(1, 2);
 #define UP_MSG_FWARN            (1 << 0)
 #define UP_MSG_FERR             (1 << 1)
 #define UP_MSG_FBARE            (1 << 2)
-void up_msg(unsigned int flags, const char *fmt, ...)
-    __attribute__((format (printf, 2, 3)));
+void up_msg(unsigned int flags, const char *fmt, ...) ATTR_PRINTF(2, 3);
 
 #define UP_VERBOSITY_SILENT     -2
 #define UP_VERBOSITY_QUIET      -1
@@ -140,6 +155,16 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 /* see strlcat(3) manpage */
 #ifndef HAVE_STRLCAT
 size_t strlcat(char *dst, const char *src, size_t siz);
+#endif
+
+/* see getopt(3) manpage */
+#ifndef HAVE_GETOPT
+extern	char *optarg;
+extern	int opterr;
+extern	int optind;
+extern	int optopt;
+extern	int optreset;
+int	getopt(int, char * const *, const char *);
 #endif
 
 struct opts

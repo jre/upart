@@ -18,8 +18,13 @@
 #include <IOKit/storage/IOMedia.h>
 #endif
 
+#ifdef HAVE_ERRNO_H
+#include <errno.h>
+#endif
 #include <stdio.h>
 
+#define UPART_DISK_PARAMS_ONLY
+#include "disk.h"
 #include "os-private.h"
 #include "util.h"
 
@@ -30,7 +35,7 @@
 #include <mach/mach_error.h>
 
 int
-os_listdev_iokit(int (*func)(const char *, void *), void *arg)
+os_listdev_iokit(os_list_callback_func func, void *arg)
 {
 	CFMutableDictionaryRef dict;
 	io_iterator_t iter;
@@ -88,7 +93,7 @@ os_listdev_iokit(int (*func)(const char *, void *), void *arg)
 	}
 	IOObjectRelease(iter);
 
-	return (0);
+	return (1);
 }
 
 #else
@@ -113,7 +118,7 @@ os_getparams_darwin(int fd, struct disk_params *params, const char *name)
 		up_warn("failed to get block count for %s: %s",
 		    name, strerror(errno));
 
-	return (0);
+	return (1);
 }
 #else
 OS_GENERATE_GETPARAMS_STUB(os_getparams_darwin)

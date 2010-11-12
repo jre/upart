@@ -5,25 +5,16 @@
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
-#include <errno.h>
-#include <fcntl.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "bsdtree.h"
+#include "disk.h"
 #include "os.h"
 #include "os-private.h"
 #include "util.h"
-
-#ifdef O_LARGEFILE
-#define OPENFLAGS(flags)        (O_LARGEFILE | (flags))
-#else
-#define OPENFLAGS(flags)        (flags)
-#endif
-
-#define DEVPREFIX		"/dev/"
 
 struct os_listdev_node {
 	char *name;
@@ -32,7 +23,6 @@ struct os_listdev_node {
 
 RB_HEAD(os_listdev_map, os_listdev_node);
 
-static int	opendisk_generic(const char *, int, char *, size_t, int);
 static int	sortdisk(struct os_listdev_node *, struct os_listdev_node *);
 static int	listdev_add(const char *, void *);
 static int	listdev_print(struct os_listdev_map *, FILE *);
@@ -41,9 +31,10 @@ static void	listdev_free(struct os_listdev_map *);
 RB_GENERATE_STATIC(os_listdev_map, os_listdev_node, entry, sortdisk)
 
 int
-os_list_devices(void *stream)
+os_list_devices(FILE *stream)
 {
-	static int (*funcs[])(int (*)(const char *, void *), void *) = {
+	static os_list_func funcs[] = {
+		os_listdev_windows,
 		os_listdev_sysctl,
 		os_listdev_iokit,
 		os_listdev_linux,
@@ -54,103 +45,142 @@ os_list_devices(void *stream)
 	int i;
 
 	RB_INIT(&map);
-	for (i = 0; i < NITEMS(funcs); i++)
-		if ((funcs[i])(listdev_add, &map) == 0)
+	for (i = 0; i < NITEMS(funcs); i++) {
+		switch ((funcs[i])(listdev_add, &map)) {
+		case -1:
+			if (UP_NOISY(QUIET))
+				up_err("failed to list devices: %s",
+				    os_lasterrstr());
 			break;
-	if (RB_EMPTY(&map)) {
-		up_err("don't know how to list devices on this platform");
-		return (-1);
+		case 0:
+			break;
+		case 1:
+			if (!RB_EMPTY(&map))
+				goto done;
+			break;
+		default:
+			assert(!"bad return value");
+			break;
+		}
 	}
 
+done:
+	if (RB_EMPTY(&map)) {
+		if (UP_NOISY(QUIET))
+			up_err("don't know how to list devices "
+			    "on this platform");
+		return (-1);
+	}
 	listdev_print(&map, stream);
 	listdev_free(&map);
 	return (0);
 }
 
-int
-up_os_opendisk(const char *name, const char **path)
+enum disk_type
+os_dev_open(const char *name, const char **path, os_device_handle *ret)
 {
-	static int (*funcs[])(const char *, int, char *, size_t, int) = {
+	static os_open_func funcs[] = {
+		os_opendisk_windows,
 		os_opendisk_opendev,
 		os_opendisk_opendisk,
 		os_opendisk_haiku,
 		os_opendisk_solaris,
-		opendisk_generic,
+		os_opendisk_unix,
 	};
 	static char buf[MAXPATHLEN];
-	int flags, i, ret;
+	enum disk_type type;
+	os_handle hand;
+	int i, flags;
+
+	assert(sizeof(os_device_handle) >= sizeof(os_handle));
 
 	*path = NULL;
-	flags = OPENFLAGS(O_RDONLY);
+	flags = os_open_flags("r");
 
 	if (opts->plainfile)
-		return open(name, flags);
+		return (DT_FILE);
 
 	for (i = 0; i < NITEMS(funcs); i++) {
-		ret = (funcs[i])(name, flags, buf, sizeof(buf), 0);
-		if (ret == INT_MAX)
+		switch((funcs[i])(name, flags, buf, sizeof(buf), &hand)) {
+		case -1:
+			return (DT_UNKNOWN);
+		case 0:
 			continue;
-		if (ret >= 0 && buf[0] != '\0')
-			*path = buf;
-		return (ret);
+		case 1:
+			break;
+		default:
+			assert(!"bad return value");
+			break;
+		}
+
+		if (os_handle_type(OS_HANDLE_OUT(hand), &type) < 0) {
+			os_error saved = os_lasterr();
+			os_dev_close(OS_HANDLE_OUT(hand));
+			os_setlasterr(saved);
+			return (DT_UNKNOWN);
+		}
+
+		switch(type) {
+		case DT_FILE:
+			os_dev_close(OS_HANDLE_OUT(hand));
+			break;
+		case DT_DEVICE:
+			if (buf[0] != '\0')
+				*path = buf;
+			*ret = OS_HANDLE_OUT(hand);
+			break;
+		default:
+			assert(!"bad return value");
+			break;
+		}
+		return (type);
 	}
 
-	return (-1);
+	assert(!"device open not implemented on this platform?!?");
+	return (DT_UNKNOWN);
 }
 
 int
-up_os_getparams(int fd, struct disk_params *params, const char *name)
+os_dev_params(os_device_handle ehand, struct disk_params *params, const char *name)
 {
-	static int (*funcs[])(int, struct disk_params *, const char *) = {
-	    os_getparams_disklabel,
-	    os_getparams_freebsd,
-	    os_getparams_linux,
-	    os_getparams_darwin,
-	    os_getparams_solaris,
-	    os_getparams_haiku,
+	static os_params_func funcs[] = {
+		os_getparams_windows,
+		os_getparams_freebsd,
+		/*
+		  os_getparams_disklabel() compiles on FreeBSD but
+		  fails to work, so make sure os_getparams_freebsd()
+		  is tried first.
+		*/
+		os_getparams_disklabel,
+		os_getparams_linux,
+		os_getparams_darwin,
+		os_getparams_solaris,
+		os_getparams_haiku,
 	};
-	int once, i;
+	os_handle hand;
+	int i;
 
-	once = 0;
+	assert(sizeof(os_device_handle) >= sizeof(os_handle));
+	hand = OS_HANDLE_IN(ehand);
+
 	for (i = 0; i < NITEMS(funcs); i++) {
-		switch (funcs[i](fd, params, name)) {
+		switch (funcs[i](hand, params, name)) {
+		case -1:
+			return (-1);
 		case 0:
-			return (0);
-		case INT_MAX:
 			break;
+		case 1:
+			return (0);
 		default:
-			once = 1;
+			assert(!"bad return value");
 			break;
 		}
 	}
-	if (!once)
+	if (UP_NOISY(QUIET))
 		up_err("don't know how to get disk parameters "
 		    "on this platform");
 
 	return (-1);
-}
-
-static int
-opendisk_generic(const char *name, int flags, char *buf, size_t buflen,
-    int cooked)
-{
-	int ret;
-
-	if (strlcpy(buf, name, buflen) >= buflen) {
-		errno = ENOMEM;
-		return (-1);
-	}
-	if ((ret = open(name, flags)) >= 0 ||
-	    errno != ENOENT ||
-	    strchr(name, '/') != NULL)
-		return (ret);
-
-	if (strlcpy(buf, DEVPREFIX, buflen) >= buflen ||
-	    strlcat(buf, name, buflen) >= buflen) {
-		errno = ENOMEM;
-		return (-1);
-	}
-	return (open(buf, flags));
 }
 
 static int
@@ -169,12 +199,9 @@ listdev_add(const char *name, void *arg)
 	if (RB_FIND(os_listdev_map, map, &key) != NULL)
 		return (0);
 
-	if ((new = malloc(sizeof(*new))) == NULL) {
-		perror("malloc");
+	if ((new = xalloc(1, sizeof(*new), 0)) == NULL)
 		return (-1);
-	}
-	if ((new->name = strdup(name)) == NULL) {
-		perror("malloc");
+	if ((new->name = xstrdup(name, 0)) == NULL) {
 		free(new);
 		return (-1);
 	}

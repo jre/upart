@@ -1,46 +1,66 @@
 #ifndef HDR_UPART_OS_PRIVATE
 #define HDR_UPART_OS_PRIVATE
 
-#include <limits.h>
+struct disk_params;
+struct os_device_handle;
 
-struct disk_params {
-	int64_t cyls;		/* total number of cylinders */
-	int64_t heads;		/* number of tracks per cylinder */
-	int64_t sects;		/* number of sectors per track */
-	int64_t size;		/* total number of sects */
-	int sectsize;		/* size of a sector in bytes */
-};
+#ifdef OS_TYPE_WINDOWS
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+typedef HANDLE os_handle;
+
+#else
+
+typedef int os_handle;
+
+#endif
+
+#define OS_HANDLE_IN(e)		((os_handle)(size_t)(e))
+#define OS_HANDLE_OUT(i)	((os_device_handle)(size_t)(i))
+
+typedef int (*os_list_callback_func)(const char *, void *);
+typedef int (*os_list_func)(os_list_callback_func, void *);
+typedef int (*os_open_func)(const char *, int, char *, size_t, os_handle *);
+typedef int (*os_params_func)(os_handle, struct disk_params *, const char *);
 
 /* os-bsd.c */
-int	os_listdev_sysctl(int (*)(const char *, void *), void *);
-int	os_opendisk_opendisk(const char *, int, char *, size_t, int);
-int	os_opendisk_opendev(const char *, int, char *, size_t, int);
-int	os_getparams_disklabel(int, struct disk_params *, const char *);
-int	os_getparams_freebsd(int, struct disk_params *, const char *);
+int	os_listdev_sysctl(os_list_callback_func, void *);
+int	os_opendisk_opendisk(const char *, int, char *, size_t, os_handle *);
+int	os_opendisk_opendev(const char *, int, char *, size_t, os_handle *);
+int	os_getparams_disklabel(os_handle, struct disk_params *, const char *);
+int	os_getparams_freebsd(os_handle, struct disk_params *, const char *);
 
 /* os-darwin.c */
-int	os_listdev_iokit(int (*)(const char *, void *), void *);
-int	os_getparams_darwin(int, struct disk_params *, const char *);
+int	os_listdev_iokit(os_list_callback_func, void *);
+int	os_getparams_darwin(os_handle, struct disk_params *, const char *);
 
 /* os-haiku.c */
-int	os_listdev_haiku(int (*)(const char *, void *), void *);
-int	os_opendisk_haiku(const char *, int, char *, size_t, int);
-int	os_getparams_haiku(int, struct disk_params *, const char *);
+int	os_listdev_haiku(os_list_callback_func, void *);
+int	os_opendisk_haiku(const char *, int, char *, size_t, os_handle *);
+int	os_getparams_haiku(os_handle, struct disk_params *, const char *);
 
 /* os-linux.c */
-int	os_listdev_linux(int (*)(const char *, void *), void *);
-int	os_getparams_linux(int, struct disk_params *, const char *);
+int	os_listdev_linux(os_list_callback_func, void *);
+int	os_getparams_linux(os_handle, struct disk_params *, const char *);
 
 /* os-solaris.c */
-int	os_listdev_solaris(int (*)(const char *, void *), void *);
-int	os_opendisk_solaris(const char *, int, char *, size_t, int);
-int	os_getparams_solaris(int, struct disk_params *, const char *);
+int	os_listdev_solaris(os_list_callback_func, void *);
+int	os_opendisk_solaris(const char *, int, char *, size_t, os_handle *);
+int	os_getparams_solaris(os_handle, struct disk_params *, const char *);
+
+/* os-unix.c */
+int	os_opendisk_unix(const char *, int, char *, size_t, os_handle *);
+
+/* os-windows.c */
+int	os_listdev_windows(os_list_callback_func, void *);
+int	os_opendisk_windows(const char *, int, char *, size_t, os_handle *);
+int	os_getparams_windows(os_handle, struct disk_params *, const char *);
 
 #define OS_GENERATE_LISTDEV_STUB(fn) \
-	int fn(int (*f)(const char *, void *), void *a) { return (-1); }
+	int fn(os_list_callback_func f, void *a) { return (0); }
 #define OS_GENERATE_OPENDISK_STUB(fn) \
-	int fn(const char *n, int f, char *b, size_t l, int c) { return (INT_MAX); }
+	int fn(const char *n, int f, char *b, size_t l, os_handle *r) { return (0); }
 #define OS_GENERATE_GETPARAMS_STUB(fn) \
-	int fn(int f, struct disk_params *p, const char *n) { return (INT_MAX); }
+	int fn(os_handle h, struct disk_params *p, const char *n) { return (0); }
 
 #endif /* HDR_UPART_OS_PRIVATE */

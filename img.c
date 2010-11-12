@@ -2,17 +2,15 @@
 #include "config.h"
 #endif
 
-#include <sys/types.h>
 #include <assert.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "crc32.h"
 #include "disk.h"
 #include "img.h"
+#include "os.h"
 #include "util.h"
 
 /* #define IMG_DEBUG */
@@ -51,7 +49,8 @@ struct img {
 	uint8_t *data;
 };
 
-static int	img_checkcrc(struct imghdr *, int, const char *, uint32_t *);
+static int	img_read(FILE *, const char *, void *, size_t, int64_t);
+static int	img_checkcrc(struct imghdr *, FILE *, const char *, uint32_t *);
 
 static int
 img_save_iter(const struct disk *disk, const struct disk_sect *node,
@@ -79,17 +78,15 @@ img_save_iter(const struct disk *disk, const struct disk_sect *node,
 }
 
 int
-up_img_save(const struct disk *disk, void *_stream, const char *label,
+up_img_save(const struct disk *disk, FILE *stream, const char *label,
     const char *file)
 {
-	FILE *stream;
 	struct imghdr hdr;
 	uint8_t *data, *ptr;
 	size_t datalen;
 
 	assert(sizeof(struct imghdr) == IMG_HDR_LEN);
 	assert(sizeof(struct imgsect) == IMG_SECT_LEN);
-	stream = _stream;
 
 	/* allocate the data buffer */
 	datalen = disk->sectsused_count *
@@ -97,12 +94,9 @@ up_img_save(const struct disk *disk, void *_stream, const char *label,
 	if (disk->sectsused_count == 0)
 		data = NULL;
 	else {
-		data = up_malloc(disk->sectsused_count,
-		    UP_DISK_1SECT(disk) + IMG_SECT_LEN);
-		if (data == NULL) {
-			perror("malloc");
+		if ((data = xalloc(disk->sectsused_count,
+			    UP_DISK_1SECT(disk) + IMG_SECT_LEN, 0)) == NULL)
 			return (-1);
-		}
 
 		/* write sectors with sector headers into data buffer */
 		ptr = data;
@@ -138,7 +132,7 @@ up_img_save(const struct disk *disk, void *_stream, const char *label,
 	if (fwrite(&hdr, IMG_HDR_LEN, 1, stream) != 1) {
 		if (UP_NOISY(QUIET))
 			up_err("error writing to %s: %s",
-			    file, strerror(errno));
+			    file, os_lasterrstr());
 		free(data);
 		return (-1);
 	}
@@ -148,7 +142,7 @@ up_img_save(const struct disk *disk, void *_stream, const char *label,
 		if (fwrite(data, 1, datalen, stream) != datalen ) {
 			if (UP_NOISY(QUIET))
 				up_err("error writing to %s: %s",
-				    file, strerror(errno));
+				    file, os_lasterrstr());
 			free(data);
 			return (-1);
 		}
@@ -159,11 +153,10 @@ up_img_save(const struct disk *disk, void *_stream, const char *label,
 }
 
 int
-up_img_load(int fd, const char *name, struct img **ret)
+up_img_load(FILE *stream, const char *name, struct img **ret)
 {
 	struct imghdr hdr;
 	void *data;
-	ssize_t res;
 	uint32_t crc;
 
 	assert(sizeof(struct imghdr) == IMG_HDR_LEN);
@@ -172,20 +165,10 @@ up_img_load(int fd, const char *name, struct img **ret)
 
 	/* try to read header and check magic */
 	memset(&hdr, 0, sizeof hdr);
-	res = pread(fd, &hdr, IMG_HDR_LEN, 0);
-	if (res < 0) {
-		if (UP_NOISY(QUIET))
-			up_err("failed to read from %s: %s",
-			    name, strerror(errno));
+	if (img_read(stream, name, &hdr, IMG_HDR_LEN, 0) != 0)
 		return (-1);
-	}
-	if (res != IMG_HDR_LEN || UP_BETOH64(hdr.magic) != IMG_MAGIC)
+	if (UP_BETOH64(hdr.magic) != IMG_MAGIC)
 		return (0);
-	if (res != IMG_HDR_LEN) {
-		if (UP_NOISY(QUIET))
-			up_err("truncated upart image file");
-		return (-1);
-	}
 
 #ifdef IMG_DEBUG
 	fprintf(stderr, "upart image file %s:\n"
@@ -246,7 +229,7 @@ up_img_load(int fd, const char *name, struct img **ret)
 			    UP_BETOH32(hdr.hdrlen));
 		return (-1);
 	}
-	if (img_checkcrc(&hdr, fd, name, &crc) < 0)
+	if (img_checkcrc(&hdr, stream, name, &crc) < 0)
 		return (-1);
 	if (UP_BETOH32(hdr.hdrcrc) != crc) {
 		if (UP_NOISY(QUIET))
@@ -256,17 +239,10 @@ up_img_load(int fd, const char *name, struct img **ret)
 	}
 
 	/* allocate data buffer and read data */
-	data = malloc(UP_BETOH32(hdr.datasize));
-	if(data == NULL) {
-		perror("malloc");
+	if ((data = xalloc(1, UP_BETOH32(hdr.datasize), 0)) == NULL)
 		return (-1);
-	}
-	res = pread(fd, data, UP_BETOH32(hdr.datasize),
-	    UP_BETOH32(hdr.datastart));
-	if (UP_BETOH32(hdr.datasize) != res) {
-		if (UP_NOISY(QUIET))
-			up_err("failed to read from %s: %s", name,
-			    (res < 0 ? strerror(errno) : "short read count"));
+	if (img_read(stream, name, data, UP_BETOH32(hdr.datasize),
+		UP_BETOH32(hdr.datastart)) != 0) {
 		free(data);
 		return (-1);
 	}
@@ -281,9 +257,7 @@ up_img_load(int fd, const char *name, struct img **ret)
 	}
 
 	/* wrap everything up in a struct and return it */
-	*ret = calloc(1, sizeof **ret);
-	if(*ret == NULL) {
-		perror("malloc");
+	if ((*ret = xalloc(1, sizeof(**ret), XA_ZERO)) == NULL) {
 		free(data);
 		return (-1);
 	}
@@ -386,11 +360,32 @@ up_img_free(struct img *img)
 }
 
 static int
-img_checkcrc(struct imghdr *hdr, int fd, const char *name, uint32_t *ret)
+img_read(FILE *stream, const char *name, void *buf, size_t size, int64_t off)
+{
+	if (fseeko(stream, off, SEEK_SET) != 0) {
+		if (UP_NOISY(QUIET))
+			up_err("failed to seek image file %s: %s",
+			    name, os_lasterrstr());
+		return (-1);
+	}
+
+	if (fread(buf, 1, size, stream) != size) {
+		if (UP_NOISY(QUIET))
+			up_err("failed to read from image file %s: %s", name,
+			    (ferror(stream) ? os_lasterrstr() :
+				"unexpected end of file"));
+		return (-1);
+	}
+
+	return (0);
+}
+
+static int
+img_checkcrc(struct imghdr *hdr, FILE *stream, const char *name, uint32_t *ret)
 {
 	uint32_t old, crc;
 	void *extra;
-	ssize_t len, res;
+	ssize_t len;
 
 	/* get the crc of the main header first */
 	old = hdr->hdrcrc;
@@ -401,17 +396,10 @@ img_checkcrc(struct imghdr *hdr, int fd, const char *name, uint32_t *ret)
 	/* if there's extra header data, read it in and get it's crc too */
 	len = UP_BETOH32(hdr->hdrlen) - sizeof *hdr;
 	if (len > 0) {
-		extra = malloc(len);
-		if (extra == NULL) {
-			perror("malloc");
+		if ((extra = xalloc(len, 1, 0)) == NULL)
 			return (-1);
-		}
-		res = pread(fd, extra, len, IMG_HDR_LEN);
-		if (len != res) {
-			if (UP_NOISY(QUIET))
-				up_err("failed to read from %s: %s",
-				    name, (res < 0 ? strerror(errno) :
-					"short read count"));
+		if (img_read(stream, name, extra, len, IMG_HDR_LEN) != 0) {
+			free(extra);
 			return (-1);
 		}
 		crc = up_crc32(extra, len, crc);

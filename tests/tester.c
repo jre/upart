@@ -41,9 +41,11 @@
 #define TESTINDEX_PATH	"index.txt"
 
 #ifdef OS_TYPE_WINDOWS
-#define RMFILE_DISPLAY	"del"
+#define RMFILE_DISPLAY	"\tdel"
+#define DIRSEP_DISPLAY	"\\"
 #else
 #define RMFILE_DISPLAY	"rm -f"
+#define DIRSEP_DISPLAY	"/"
 #endif
 
 #ifndef NITEMS
@@ -127,9 +129,11 @@ cleanfiles(FILE *idx)
 	while ((name = nextname(TESTINDEX_PATH, idx)) != NULL) {
 		printf("%s", RMFILE_DISPLAY);
 		for (i = 0; i < NITEMS(flags); i++) {
-			outfile = strjoin(TESTDIR_PATH "/test-", name, flags[i], ".out", (void *)NULL);
-			errfile = strjoin(TESTDIR_PATH "/test-", name, flags[i], ".err", (void *)NULL);
-			printf(" %s %s", outfile, errfile);
+			outfile = strjoin("test-", name, flags[i], ".out", (void *)NULL);
+			errfile = strjoin("test-", name, flags[i], ".err", (void *)NULL);
+			printf(" %s%s%s %s%s%s",
+			    TESTDIR_PATH, DIRSEP_DISPLAY, outfile,
+			    TESTDIR_PATH, DIRSEP_DISPLAY, errfile);
 			rmfile(outfile);
 			rmfile(errfile);
 			free(outfile);

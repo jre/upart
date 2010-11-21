@@ -18,6 +18,7 @@
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -27,8 +28,39 @@
 #include "util.h"
 
 #if defined(linux) || defined(__linux) || defined(__linux__)
-int
-os_listdev_linux(os_list_callback_func func, void *arg)
+
+static int
+os_linux_listdev_sysfs(os_list_callback_func func, void *arg)
+{
+	struct dirent *ent;
+	DIR *dir;
+	int ret;
+
+	if ((dir = opendir("/sys/block")) == NULL) {
+		if (errno == ENOENT)
+			return (0);
+		up_warn("failed to list /sys/block: %s", strerror(errno));
+		return (-1);
+	}
+
+	ret = 0;
+	while ((ent = readdir(dir)) != NULL) {
+		const char *name = ent->d_name;
+		if (strcmp(name, ".") == 0 ||
+		    strcmp(name, "..") == 0 ||
+		    (strncmp(name, "loop", 4) == 0 && isdigit(name[4])) ||
+		    (strncmp(name, "ram", 3) == 0 && isdigit(name[3])) ||
+		    (strncmp(name, "dm-", 3) == 0 && isdigit(name[3])))
+			continue;
+		ret = 1;
+		func(name, arg);
+	}
+	closedir(dir);
+	return (ret);
+}
+
+static int
+os_linux_listdev_devfs(os_list_callback_func func, void *arg)
 {
 	static const char letters[] = "abcdefghijklmnopqrstuvwxyz";
 	struct dirent *ent;
@@ -62,6 +94,26 @@ os_listdev_linux(os_list_callback_func func, void *arg)
 
 	return (1);
 }
+
+int
+os_listdev_linux(os_list_callback_func func, void *arg)
+{
+	int saved = 0;
+	int ret = 0;
+
+	if ((ret = os_linux_listdev_sysfs(func, arg)) < 0)
+		saved = errno;
+
+	if (ret <= 0)
+		ret = os_linux_listdev_devfs(func, arg);
+	if (ret == 0 && saved != 0) {
+		ret = -1;
+		errno = saved;
+	}
+
+	return (ret);
+}
+
 #else
 OS_GENERATE_LISTDEV_STUB(os_listdev_linux)
 #endif

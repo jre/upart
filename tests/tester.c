@@ -170,9 +170,9 @@ regenfiles(FILE *idx)
 			if (exitval != 0) {
 				FILE *eh;
 
-				if ((eh = fopen(errfile, "w")) == NULL)
+				if ((eh = fopen(exitfile, "w")) == NULL)
 					fail("failed to open %s for writing",
-					    errfile);
+					    exitfile);
 				fprintf(eh, "%d\n", exitval);
 				fclose(eh);
 			}

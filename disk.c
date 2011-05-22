@@ -488,27 +488,17 @@ up_disk_print(const struct disk *disk, void *_stream)
                 UP_DISK_SIZESECTS(disk), UP_DISK_1SECT(disk));
     if(UP_NOISY(EXTRA))
         fprintf(stream,
-#if 0
                 "    description:         %s\n"
                 "    device name:         %s\n"
-#else
-                "    label:               %s\n"
-#endif
                 "    device path:         %s\n"
                 "    sector size:         %d\n"
                 "    total sectors:       %"PRId64"\n"
                 "    total cylinders:     %"PRId64" (cylinders)\n"
                 "    tracks per cylinder: %"PRId64" (heads)\n"
                 "    sectors per track:   %"PRId64" (sectors)\n"
-#if 0
 	    "\n", UP_DISK_DESC(disk), UP_DISK_NAME(disk), UP_DISK_PATH(disk),
 	    UP_DISK_1SECT(disk), UP_DISK_SIZESECTS(disk),
 	    UP_DISK_CYLS(disk), UP_DISK_HEADS(disk), UP_DISK_SPT(disk));
-#else
-                "\n", UP_DISK_NAME(disk),
-                UP_DISK_PATH(disk), UP_DISK_1SECT(disk), UP_DISK_SIZESECTS(disk),
-                UP_DISK_CYLS(disk), UP_DISK_HEADS(disk), UP_DISK_SPT(disk));
-#endif
     if(UP_NOISY(NORMAL))
         fputc('\n', stream);
 }

@@ -1,5 +1,6 @@
 jre-ruby-wd0.img: 298GB (625142448 sectors of 512 bytes)
-    label:               jre-ruby-wd0.img
+    description:         regression-tests/jre-ruby-wd0.old
+    device name:         jre-ruby-wd0.img
     device path:         jre-ruby-wd0.img
     sector size:         512
     total sectors:       625142448

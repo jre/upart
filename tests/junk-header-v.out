@@ -1,5 +1,6 @@
 junk-header.img: 9.84MB (20160 sectors of 512 bytes)
-    label:               junk-header.img
+    description:         /dev/rsvnd0c
+    device name:         junk-header.img
     device path:         junk-header.img
     sector size:         512
     total sectors:       20160

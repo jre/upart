@@ -1,5 +1,6 @@
 sparc-obsd-new.img: 16.9GB (35378533 sectors of 512 bytes)
-    label:               sparc-obsd-new.img
+    description:         regression-tests/sparc-obsd-new.old
+    device name:         sparc-obsd-new.img
     device path:         sparc-obsd-new.img
     sector size:         512
     total sectors:       35378533

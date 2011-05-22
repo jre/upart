@@ -1,5 +1,6 @@
 openbsd-uid.img: 149GB (312581808 sectors of 512 bytes)
-    label:               openbsd-uid.img
+    description:         sd2
+    device name:         openbsd-uid.img
     device path:         openbsd-uid.img
     sector size:         512
     total sectors:       312581808

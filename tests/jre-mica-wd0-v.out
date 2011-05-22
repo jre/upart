@@ -1,5 +1,6 @@
 jre-mica-wd0.img: 149GB (312581808 sectors of 512 bytes)
-    label:               jre-mica-wd0.img
+    description:         wd0
+    device name:         jre-mica-wd0.img
     device path:         jre-mica-wd0.img
     sector size:         512
     total sectors:       312581808

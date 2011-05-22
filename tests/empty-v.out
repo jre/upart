@@ -1,5 +1,6 @@
 empty.img: 149GB (312581808 sectors of 512 bytes)
-    label:               empty.img
+    description:         regression-tests/empty.old
+    device name:         empty.img
     device path:         empty.img
     sector size:         512
     total sectors:       312581808

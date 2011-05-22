@@ -1,5 +1,6 @@
 openbsd-48bit-label.img: 3.00TB (6442450177 sectors of 512 bytes)
-    label:               openbsd-48bit-label.img
+    description:         sd0
+    device name:         openbsd-48bit-label.img
     device path:         openbsd-48bit-label.img
     sector size:         512
     total sectors:       6442450177

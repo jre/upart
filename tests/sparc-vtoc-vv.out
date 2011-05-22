@@ -1,5 +1,6 @@
 sparc-vtoc.img: 68.4GB (143374738 sectors of 512 bytes)
-    label:               sparc-vtoc.img
+    description:         sd0
+    device name:         sparc-vtoc.img
     device path:         sparc-vtoc.img
     sector size:         512
     total sectors:       143374738

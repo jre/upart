@@ -1,5 +1,6 @@
 mac68k.img: 1.97GB (4124736 sectors of 512 bytes)
-    label:               mac68k.img
+    description:         sd0
+    device name:         mac68k.img
     device path:         mac68k.img
     sector size:         512
     total sectors:       4124736

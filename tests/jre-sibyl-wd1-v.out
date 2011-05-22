@@ -1,5 +1,6 @@
 jre-sibyl-wd1.img: 37.3GB (78165360 sectors of 512 bytes)
-    label:               jre-sibyl-wd1.img
+    description:         regression-tests/jre-sibyl-wd1.old
+    device name:         jre-sibyl-wd1.img
     device path:         jre-sibyl-wd1.img
     sector size:         512
     total sectors:       78165360

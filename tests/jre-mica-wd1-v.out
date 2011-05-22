@@ -1,5 +1,6 @@
 jre-mica-wd1.img: 149GB (312581808 sectors of 512 bytes)
-    label:               jre-mica-wd1.img
+    description:         wd1
+    device name:         jre-mica-wd1.img
     device path:         jre-mica-wd1.img
     sector size:         512
     total sectors:       312581808

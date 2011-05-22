@@ -1,5 +1,6 @@
 jre-mike-wd2.img: 57.3GB (120103200 sectors of 512 bytes)
-    label:               jre-mike-wd2.img
+    description:         regression-tests/jre-mike-wd2.old
+    device name:         jre-mike-wd2.img
     device path:         jre-mike-wd2.img
     sector size:         512
     total sectors:       120103200

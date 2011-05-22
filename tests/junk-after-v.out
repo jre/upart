@@ -1,5 +1,6 @@
 junk-after.img: 9.84MB (20160 sectors of 512 bytes)
-    label:               junk-after.img
+    description:         /dev/rsvnd0c
+    device name:         junk-after.img
     device path:         junk-after.img
     sector size:         512
     total sectors:       20160

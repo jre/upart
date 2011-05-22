@@ -22,6 +22,7 @@ typedef int (*os_list_callback_func)(const char *, void *);
 typedef int (*os_list_func)(os_list_callback_func, void *);
 typedef int (*os_open_func)(const char *, int, char *, size_t, os_handle *);
 typedef int (*os_params_func)(os_handle, struct disk_params *, const char *);
+typedef int (*os_desc_func)(os_handle, char *, size_t, const char *);
 
 /* os-bsd.c */
 int	os_listdev_sysctl(os_list_callback_func, void *);
@@ -29,6 +30,7 @@ int	os_opendisk_opendisk(const char *, int, char *, size_t, os_handle *);
 int	os_opendisk_opendev(const char *, int, char *, size_t, os_handle *);
 int	os_getparams_disklabel(os_handle, struct disk_params *, const char *);
 int	os_getparams_freebsd(os_handle, struct disk_params *, const char *);
+int	os_getdesc_diocinq(os_handle, char *, size_t, const char *);
 
 /* os-darwin.c */
 int	os_listdev_iokit(os_list_callback_func, void *);
@@ -62,5 +64,7 @@ int	os_getparams_windows(os_handle, struct disk_params *, const char *);
 	int fn(const char *n, int f, char *b, size_t l, os_handle *r) { return (0); }
 #define OS_GENERATE_GETPARAMS_STUB(fn) \
 	int fn(os_handle h, struct disk_params *p, const char *n) { return (0); }
+#define OS_GENERATE_GETDESC_STUB(fn) \
+	int fn(os_handle h, char *p, size_t s, const char *n) { return (0); }
 
 #endif /* HDR_UPART_OS_PRIVATE */

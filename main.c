@@ -215,7 +215,6 @@ static int
 serialize(const struct disk *disk)
 {
 	FILE *out;
-	const char *label;
 
 	out = fopen(opts->serialize, "wb");
 	if (out == NULL) {
@@ -225,11 +224,7 @@ serialize(const struct disk *disk)
 		return (-1);
 	}
 
-	if (opts->label != NULL)
-		label = opts->label;
-	else
-		label = UP_DISK_LABEL(disk);
-	if (up_img_save(disk, out, label, opts->serialize) < 0) {
+	if (up_img_save(disk, out, opts->label, opts->serialize) < 0) {
 		fclose(out);
 		return (-1);
 	}

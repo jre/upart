@@ -52,6 +52,7 @@ struct disk {
 	char *name;		/* disk name supplied by user */
 	char *path;		/* path to opened device node */
 	struct disk_params params;
+	char desc[128];		/* hardware description provided by OS */
 
 	/* don't touch any of these */
 	unsigned setup_done;
@@ -63,8 +64,9 @@ struct disk {
 	int64_t sectsused_count;
 };
 
-#define UP_DISK_LABEL(disk)     ((disk)->name)
+#define UP_DISK_NAME(disk)      ((disk)->name)
 #define UP_DISK_PATH(disk)      ((disk)->path)
+#define UP_DISK_DESC(disk)      ((disk)->desc)
 #define UP_DISK_1SECT(disk)     ((disk)->params.sectsize)
 #define UP_DISK_CYLS(disk)      ((disk)->params.cyls)
 #define UP_DISK_HEADS(disk)     ((disk)->params.heads)

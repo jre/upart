@@ -11,6 +11,7 @@ int		 os_list_devices(FILE *);
 enum disk_type	 os_dev_open(const char *, const char **, os_device_handle *);
 int		 os_dev_params(os_device_handle, struct disk_params *,
     const char *);
+int		 os_dev_desc(os_device_handle, char *, size_t, const char *);
 ssize_t		 os_dev_read(os_device_handle, void *, size_t, int64_t);
 int		 os_dev_close(os_device_handle);
 int64_t		 os_file_size(FILE *);

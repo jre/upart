@@ -183,6 +183,38 @@ os_dev_params(os_device_handle ehand, struct disk_params *params, const char *na
 	return (-1);
 }
 
+int
+os_dev_desc(os_device_handle ehand, char *buf, size_t size, const char *name)
+{
+	static os_desc_func funcs[] = {
+		os_getdesc_diocinq,
+	};
+	os_handle hand;
+	int i;
+
+	assert(sizeof(os_device_handle) >= sizeof(os_handle));
+	hand = OS_HANDLE_IN(ehand);
+
+	assert(buf != NULL && size != 0);
+	buf[0] = '\0';
+
+	for (i = 0; i < NITEMS(funcs); i++) {
+		switch (funcs[i](hand, buf, size, name)) {
+		case -1:
+			return (-1);
+		case 0:
+			break;
+		case 1:
+			return (0);
+		default:
+			assert(!"bad return value");
+			break;
+		}
+	}
+
+	return (0);
+}
+
 static int
 sortdisk(struct os_listdev_node *a, struct os_listdev_node *b)
 {

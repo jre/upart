@@ -71,6 +71,8 @@ up_disk_setup(struct disk *disk, const struct disk_params *params)
 	case DT_IMAGE:
 		/* get saved drive parameters from image */
 		up_img_getparams(disk->handle.img, &disk->params);
+		strlcpy(disk->desc, up_img_getlabel(disk->handle.img),
+		    sizeof(disk->desc));
 		break;
 	case DT_DEVICE:
 		/* try to get drive parameters via OS-dependent interfaces */
@@ -82,6 +84,8 @@ up_disk_setup(struct disk *disk, const struct disk_params *params)
 				    UP_DISK_PATH(disk), os_lasterrstr());
 			return (-1);
 		}
+		os_dev_desc(disk->handle.dev, disk->desc, sizeof(disk->desc),
+		    UP_DISK_PATH(disk));
 		break;
 	case DT_FILE:
 		break;
@@ -484,16 +488,27 @@ up_disk_print(const struct disk *disk, void *_stream)
                 UP_DISK_SIZESECTS(disk), UP_DISK_1SECT(disk));
     if(UP_NOISY(EXTRA))
         fprintf(stream,
+#if 0
+                "    description:         %s\n"
+                "    device name:         %s\n"
+#else
                 "    label:               %s\n"
+#endif
                 "    device path:         %s\n"
                 "    sector size:         %d\n"
                 "    total sectors:       %"PRId64"\n"
                 "    total cylinders:     %"PRId64" (cylinders)\n"
                 "    tracks per cylinder: %"PRId64" (heads)\n"
                 "    sectors per track:   %"PRId64" (sectors)\n"
-                "\n", UP_DISK_LABEL(disk),
+#if 0
+	    "\n", UP_DISK_DESC(disk), UP_DISK_NAME(disk), UP_DISK_PATH(disk),
+	    UP_DISK_1SECT(disk), UP_DISK_SIZESECTS(disk),
+	    UP_DISK_CYLS(disk), UP_DISK_HEADS(disk), UP_DISK_SPT(disk));
+#else
+                "\n", UP_DISK_NAME(disk),
                 UP_DISK_PATH(disk), UP_DISK_1SECT(disk), UP_DISK_SIZESECTS(disk),
                 UP_DISK_CYLS(disk), UP_DISK_HEADS(disk), UP_DISK_SPT(disk));
+#endif
     if(UP_NOISY(NORMAL))
         fputc('\n', stream);
 }

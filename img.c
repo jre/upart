@@ -88,6 +88,10 @@ up_img_save(const struct disk *disk, FILE *stream, const char *label,
 	assert(sizeof(struct imghdr) == IMG_HDR_LEN);
 	assert(sizeof(struct imgsect) == IMG_SECT_LEN);
 
+	/* label defaults to the device description */
+	if (label == NULL)
+		label = UP_DISK_DESC(disk);
+
 	/* allocate the data buffer */
 	datalen = disk->sectsused_count *
 	    (UP_DISK_1SECT(disk) + IMG_SECT_LEN);
@@ -124,7 +128,7 @@ up_img_save(const struct disk *disk, FILE *stream, const char *label,
 	hdr.cyls = UP_HTOBE64(UP_DISK_CYLS(disk));
 	hdr.heads = UP_HTOBE64(UP_DISK_HEADS(disk));
 	hdr.sects = UP_HTOBE64(UP_DISK_SPT(disk));
-	strlcpy(hdr.label, label, sizeof hdr.label);
+	strlcpy(hdr.label, label, sizeof(hdr.label));
 	/* this must go last, for reasons which should be obvious */
 	hdr.hdrcrc = UP_HTOBE32(up_crc32(&hdr, IMG_HDR_LEN, 0));
 
@@ -169,6 +173,9 @@ up_img_load(FILE *stream, const char *name, struct img **ret)
 		return (-1);
 	if (UP_BETOH64(hdr.magic) != IMG_MAGIC)
 		return (0);
+
+	/* make sure label string is nul-terminated */
+	hdr.label[sizeof(hdr.label)-1] = '\0';
 
 #ifdef IMG_DEBUG
 	fprintf(stderr, "upart image file %s:\n"
@@ -278,14 +285,10 @@ up_img_getparams(struct img *img, struct disk_params *params)
 }
 
 const char *
-up_img_getlabel(struct img *img, size_t *len)
+up_img_getlabel(struct img *img)
 {
-    if(memchr(img->hdr.label, 0, sizeof img->hdr.label))
-        *len = strlen(img->hdr.label);
-    else
-        *len = sizeof img->hdr.label;
-
-    return img->hdr.label;
+	assert(memchr(img->hdr.label, 0, sizeof(img->hdr.label)));
+	return (img->hdr.label);
 }
 
 int64_t

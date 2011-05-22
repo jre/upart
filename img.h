@@ -11,7 +11,7 @@ int		 up_img_save(const struct disk *, FILE *, const char *,
 
 int		 up_img_load(FILE *, const char *, struct img **);
 void		 up_img_getparams(struct img *, struct disk_params *);
-const char	*up_img_getlabel(struct img *, size_t *);
+const char	*up_img_getlabel(struct img *);
 int64_t		 up_img_read(struct img *, int64_t, int64_t, void *);
 void		 up_img_free(struct img *);
 

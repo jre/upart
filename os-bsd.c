@@ -284,3 +284,26 @@ os_getparams_freebsd(int fd, struct disk_params *params, const char *name)
 #else
 OS_GENERATE_GETPARAMS_STUB(os_getparams_freebsd)
 #endif
+
+#if defined(DIOCINQ)
+int
+os_getdesc_diocinq(int fd, char *buf, size_t size, const char *name)
+{
+	struct dk_inquiry inq;
+
+	if (ioctl(fd, DIOCINQ, &inq) != 0)
+		return (0);
+
+	if (inq.vendor[0] != '\0' && inq.product != '\0')
+		snprintf(buf, size, "%s %s", inq.vendor, inq.product);
+	else if (inq.vendor[0] != '\0')
+		strlcpy(buf, inq.vendor, size);
+	else if (inq.product[0] != '\0')
+		strlcpy(buf, inq.product, size);
+	else
+		return (0);
+	return (1);
+}
+#else
+OS_GENERATE_GETDESC_STUB(os_getdesc_diocinq)
+#endif

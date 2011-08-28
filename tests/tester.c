@@ -402,6 +402,7 @@ fail(const char *format, ...)
 {
 	char buf[1024];
 	va_list ap;
+	ssize_t stupid_fucking_nanny_compiler;
 	int off;
 
 	off = snprintf(buf, sizeof(buf), "%s: ", myname);
@@ -415,7 +416,7 @@ fail(const char *format, ...)
 		    strerror(errno));
 	off = strlen(buf);
 	buf[off] = '\n';
-	write(STDERR_FILENO, buf, off + 1);
+	stupid_fucking_nanny_compiler = write(STDERR_FILENO, buf, off + 1);
 	exit(EXIT_FAILURE);
 }
 

@@ -15,14 +15,14 @@ upart$(EXE_SUF): $(UPART_OBJS)
 $(REGRESS_BIN): $(REGRESS_SRC) getopt.c util.h
 	$(CC) $(CFLAGS) -I. -o $@ $(REGRESS_SRC) getopt.c
 
-clean: clean-tests
+clean:
 	$(RM_CMD) .depend $(ALL_PROGS) $(ALL_OBJS)
 
 clean-tests: $(REGRESS_BIN)
 	$(REGRESS_CMD) -c
 	$(RM_CMD) $(REGRESS_BIN)
 
-cleaner: clean
+cleaner: clean clean-tests
 	$(RM_CMD) config.cache config.h config.log config.status common.mk
 
 cleanest: cleaner

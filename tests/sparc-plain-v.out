@@ -10,14 +10,14 @@ sparc-plain.img: 17.0GB (35566478 sectors of 512 bytes)
 
 
 Sun sparc disklabel at sector 0 of sparc-plain.img:
-  rpm: 15000
   physical cylinders: 17163
-  alternates/cylinder: 0
-  interleave: 1
   data cylinders: 17163
   alternate cylinders: 0
   tracks/cylinder: 4
   sectors/track: 518
+  rpm: 15000
+  alternates/cylinder: 0
+  interleave: 1
 
           Start     Size
 0:            0   524216

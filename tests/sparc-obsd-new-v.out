@@ -10,14 +10,14 @@ sparc-obsd-new.img: 16.9GB (35378533 sectors of 512 bytes)
 
 
 Sun sparc disklabel (OpenBSD extensions) at sector 0 of sparc-obsd-new.img:
-  rpm: 7200
   physical cylinders: 7508
-  alternates/cylinder: 0
-  interleave: 1
   data cylinders: 7508
   alternate cylinders: 0
   tracks/cylinder: 19
   sectors/track: 248
+  rpm: 7200
+  alternates/cylinder: 0
+  interleave: 1
 
           Start     Size Type    fsize bsize   cpg
 a:            0   527744 4.2BSD   2048 16384     1

@@ -247,22 +247,22 @@ sparc_info(const struct map *map, FILE *stream)
 		return (1);
 
 	if (fprintf(stream,
-		"  rpm: %u\n"
 		"  physical cylinders: %u\n"
-		"  alternates/cylinder: %u\n"
-		"  interleave: %u\n"
 		"  data cylinders: %u\n"
 		"  alternate cylinders: %u\n"
 		"  tracks/cylinder: %u\n"
-		"  sectors/track: %u\n",
-		UP_BETOH16(label->rpm),
+		"  sectors/track: %u\n"
+		"  rpm: %u\n"
+		"  alternates/cylinder: %u\n"
+		"  interleave: %u\n",
 		UP_BETOH16(label->physcyls),
-		UP_BETOH16(label->alts),
-		UP_BETOH16(label->interleave),
 		UP_BETOH16(label->datacyls),
 		UP_BETOH16(label->altcyls),
 		UP_BETOH16(label->heads),
-		UP_BETOH16(label->sects)) < 0)
+		UP_BETOH16(label->sects),
+		UP_BETOH16(label->rpm),
+		UP_BETOH16(label->alts),
+		UP_BETOH16(label->interleave)) < 0)
 		return (-1);
 
 	if (SPARC_ISEXT(priv->ext, VTOC)) {

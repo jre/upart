@@ -22,9 +22,10 @@
 #define SPARC_SIZE              (512)
 #define SPARC_EXT_SIZE          (292)
 
-#define SPARC_EXTFL_VTOC        (0x01)
-#define SPARC_EXTFL_OBSD        (0x02)
-#define SPARC_EXTFL_OBSD_TYPES  (0x06)
+#define SPARC_EXTFL_VTOC	(1 << 0)
+#define SPARC_EXTFL_OBSD	(1 << 1)
+#define SPARC_EXTFL_OBSD_TYPES	(1 << 2 | SPARC_EXTFL_OBSD)
+#define SPARC_EXTFL_OBSD_UID	(1 << 3 | SPARC_EXTFL_OBSD_TYPES)
 #define SPARC_ISEXT(ext, flag) \
     ((SPARC_EXTFL_##flag & (ext)) == SPARC_EXTFL_##flag)
 
@@ -77,7 +78,8 @@ struct up_sparcobsd_p
     uint8_t                     types[OBSD_MAXPART];
     uint8_t                     fragblock[OBSD_MAXPART];
     uint16_t                    cpg[OBSD_MAXPART];
-    char                        pad[156];
+    uint8_t                     uid[8];
+    char                        pad[148];
 };
 
 struct up_sparc_p
@@ -128,6 +130,7 @@ static int	sparc_read(const struct disk *, int64_t, int64_t,
     const uint8_t **);
 static unsigned int sparc_check_vtoc(const struct up_sparc_p *);
 static unsigned int sparc_check_obsd(const struct up_sparcobsd_p *);
+static uint32_t	sparc_obsd_cksum(const struct up_sparcobsd_p *, const void *);
 
 void up_sunlabel_sparc_register(void)
 {
@@ -220,8 +223,10 @@ sparc_info(const struct map *map, FILE *stream)
 	const struct up_sparc *priv;
 	const struct up_sparc_p *label;
 	const struct up_sparcvtoc_p *vtoc;
+	const struct up_sparcobsd_p *obsd;
 	char name[sizeof(vtoc->name)+1];
 	const char *extstr;
+	int i;
 
 	if (!UP_NOISY(NORMAL))
 		return (0);
@@ -251,19 +256,23 @@ sparc_info(const struct map *map, FILE *stream)
 		"  data cylinders: %u\n"
 		"  alternate cylinders: %u\n"
 		"  tracks/cylinder: %u\n"
-		"  sectors/track: %u\n"
-		"  rpm: %u\n"
-		"  alternates/cylinder: %u\n"
-		"  interleave: %u\n",
+		"  sectors/track: %u\n",
 		UP_BETOH16(label->physcyls),
 		UP_BETOH16(label->datacyls),
 		UP_BETOH16(label->altcyls),
 		UP_BETOH16(label->heads),
-		UP_BETOH16(label->sects),
-		UP_BETOH16(label->rpm),
-		UP_BETOH16(label->alts),
-		UP_BETOH16(label->interleave)) < 0)
+		UP_BETOH16(label->sects)) < 0)
 		return (-1);
+
+	if (!SPARC_ISEXT(priv->ext, OBSD_UID))
+		if (fprintf(stream,
+			"  rpm: %u\n"
+			"  alternates/cylinder: %u\n"
+			"  interleave: %u\n",
+			UP_BETOH16(label->rpm),
+			UP_BETOH16(label->alts),
+			UP_BETOH16(label->interleave)) < 0)
+			return (-1);
 
 	if (SPARC_ISEXT(priv->ext, VTOC)) {
 		vtoc = &label->ext.vtoc;
@@ -278,6 +287,17 @@ sparc_info(const struct map *map, FILE *stream)
 			UP_BETOH16(vtoc->partcount),
 			UP_BETOH16(vtoc->readskip),
 			UP_BETOH16(vtoc->writeskip)) < 0)
+			return (-1);
+	}
+
+	if (SPARC_ISEXT(priv->ext, OBSD_UID)) {
+		obsd = &label->ext.obsd;
+		if (fprintf(stream, "  uid: ") < 0)
+			return (-1);
+		for (i = 0; i < sizeof(obsd->uid); i++)
+			if (fprintf(stream, "%02x", obsd->uid[i]) < 0)
+				return (-1);
+		if (fprintf(stream, "\n") < 0)
 			return (-1);
 	}
 
@@ -434,26 +454,35 @@ sparc_check_vtoc(const struct up_sparc_p *sparcpart)
 static unsigned int
 sparc_check_obsd(const struct up_sparcobsd_p *obsd)
 {
-    int                 res;
-    const uint32_t     *ptr, *end;
-    uint32_t            sum;
+	uint32_t magic, sum;
 
-    if(OBSD_OLD_MAGIC == UP_BETOH32(obsd->magic))
-    {
-        res = SPARC_EXTFL_OBSD;
-        end = (const uint32_t *)&obsd->types;
-    }
-    else if(OBSD_NEW_MAGIC == UP_BETOH32(obsd->magic))
-    {
-        res = SPARC_EXTFL_OBSD_TYPES;
-        end = (const uint32_t *)&obsd->pad;
-    }
-    else
+	magic = UP_BETOH32(obsd->magic);
+	sum = UP_BETOH32(obsd->checksum);
+	if (magic == OBSD_OLD_MAGIC) {
+		if (sparc_obsd_cksum(obsd, &obsd->types) == sum)
+			return (SPARC_EXTFL_OBSD);
+	}
+	else if (magic == OBSD_NEW_MAGIC) {
+		/* The uid field was added without changing the magic,
+		 * so try to validate the checksum without summing the
+		 * uid field. If it matches, there's no uid. */
+		if (sparc_obsd_cksum(obsd, &obsd->uid) == sum)
+			return (SPARC_EXTFL_OBSD_TYPES);
+		else if (sparc_obsd_cksum(obsd, &obsd->pad) == sum)
+			return (SPARC_EXTFL_OBSD_UID);
+	}
         return 0;
+}
 
-    sum = 0;
-    for(ptr = &obsd->magic; ptr < end; ptr++)
-        sum += UP_BETOH32(*ptr);
+static uint32_t
+sparc_obsd_cksum(const struct up_sparcobsd_p *obsd, const void *end)
+{
+	const uint32_t *ptr;
+	uint32_t sum;
 
-    return (sum == UP_BETOH32(obsd->checksum) ? res : 0);
+	assert(end > (void*)obsd && end < (void*)(obsd+1));
+	sum = 0;
+	for (ptr = &obsd->magic; ptr < (const uint32_t *)end; ptr++)
+		sum += UP_BETOH32(*ptr);
+	return (sum);
 }

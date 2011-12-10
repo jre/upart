@@ -1,0 +1,36 @@
+sparc-obsd-uid.img: 33.9GB (71132959 sectors of 512 bytes)
+    description:         OpenBSD/sparc64 5.0 disklabel (sd0 on opal.elsasser.org, 2011-12-10)
+    device name:         sparc-obsd-uid.img
+    device path:         sparc-obsd-uid.img
+    sector size:         512
+    total sectors:       71132959
+    total cylinders:     18547 (cylinders)
+    tracks per cylinder: 8 (heads)
+    sectors per track:   479 (sectors)
+
+
+Sun sparc disklabel (OpenBSD extensions) at sector 0 of sparc-obsd-uid.img:
+  physical cylinders: 18547
+  data cylinders: 18547
+  alternate cylinders: 0
+  tracks/cylinder: 8
+  sectors/track: 479
+  uid: 08954facd0a7c4ba
+
+          Start     Size Type    fsize bsize   cpg
+a:            0   524984 4.2BSD   2048 16384     1
+b:       524984  1049968 swap
+c:            0 71132959 unused      0     0
+d:      1574952  1049968 4.2BSD   2048 16384     1
+e:      2624920 20972536 4.2BSD   2048 16384     1
+f:     23597456 20972536 4.2BSD   2048 16384     1
+g:     44569992 13281712 4.2BSD   2048 16384     1
+h:     57851704 13281255 4.2BSD   2048 16384     1
+i:   X        0        0 unused
+j:   X        0        0 unused
+k:   X        0        0 unused
+l:   X        0        0 unused
+m:   X        0        0 unused
+n:   X        0        0 unused
+o:   X        0        0 unused
+p:   X        0        0 unused

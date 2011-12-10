@@ -1,0 +1,12 @@
+sparc-obsd-uid.img: 33.9GB (71132959 sectors of 512 bytes)
+
+Sun sparc disklabel (OpenBSD extensions) at sector 0 of sparc-obsd-uid.img:
+          Start     Size Type
+a:            0   524984 4.2BSD
+b:       524984  1049968 swap
+c:            0 71132959 unused
+d:      1574952  1049968 4.2BSD
+e:      2624920 20972536 4.2BSD
+f:     23597456 20972536 4.2BSD
+g:     44569992 13281712 4.2BSD
+h:     57851704 13281255 4.2BSD

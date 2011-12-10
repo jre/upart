@@ -28,5 +28,6 @@ smallmajor
 sparc-linux
 sparc-obsd-new
 sparc-obsd-old
+sparc-obsd-uid
 sparc-plain
 sparc-vtoc

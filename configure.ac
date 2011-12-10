@@ -1,6 +1,6 @@
 dnl Don't forget to update the version in config-win.h too, as well as
 dnl tag the commit where configure is regenerated.
-AC_INIT([upart], [0.3])
+AC_INIT([upart], [0.3.1])
 dnl need 2.60 for AC_PROG_MKDIR_P
 AC_PREREQ([2.60])
 AC_CONFIG_HEADERS([config.h])

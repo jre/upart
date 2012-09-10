@@ -3,6 +3,7 @@
 #endif
 
 #include <assert.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -154,8 +155,10 @@ xalloc(size_t nmemb, size_t size, unsigned int flags)
 {
 	void *ptr;
 
-	if (SIZE_MAX / nmemb < size)
+	if (SIZE_MAX / nmemb < size) {
 		ptr = NULL;
+		errno = ENOMEM;
+	}
 	else if (flags & XA_ZERO)
 		ptr = calloc(nmemb, size);
 	else

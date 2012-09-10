@@ -1,0 +1,21 @@
+bigsect-obsdbug-both.img: 2.73TB (732558336 sectors of 4096 bytes)
+
+MBR partition table at sector 0 of bigsect-obsdbug-both.img:
+           Start      Size A Type
+0:           256      1792   DOS FAT12 (0x01)
+1:          2048      7168   DOS Fat16 (32-bit) (0x06)
+2:          9216 732482560   OpenBSD (0xa6)
+ OpenBSD disklabel at sector 9216 (offset 0) of bigsect-obsdbug-both.img:
+            Start      Size Type
+ a:          9216    135368 4.2BSD
+ b:        144584    128521 swap
+ c:   X         0 732558336 unused
+ d:        273108     80320 4.2BSD
+ e:        353428    128520 4.2BSD
+ f:        481948    514080 4.2BSD
+ g:        996028    128520 4.2BSD
+ h:       1124560 731367216 4.2BSD
+ i:   X       256      1792 MSDOS
+ j:   X      2048      7168 MSDOS
+ k:   X 732491776     66560 MSDOS
+3:     732491776     66560   Windows FAT32 (LBA) (0x0c)

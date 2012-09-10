@@ -1,0 +1,50 @@
+bigsect-4k.img: 2.73TB (732558336 sectors of 4096 bytes)
+    description:         WD My Book 1140
+    device name:         bigsect-4k.img
+    device path:         bigsect-4k.img
+    sector size:         4096
+    total sectors:       732558336
+    total cylinders:     45599 (cylinders)
+    tracks per cylinder: 255 (heads)
+    sectors per track:   63 (sectors)
+
+
+MBR partition table at sector 0 of bigsect-4k.img:
+           Start      Size A    C   H  S    C   H  S Type
+0:           256      1792      0/  4/ 5-   0/ 32/32 DOS FAT12 (0x01)
+1:          2048      7168      0/ 32/33-   0/146/18 DOS Fat16 (32-bit) (0x06)
+2:          9216 732482560      0/146/19-1023/128/37 OpenBSD (0xa6)
+ OpenBSD disklabel at sector 9216 (offset 0) of bigsect-4k.img:
+  version: 1
+  type: SCSI (4)
+  disk: SCSI disk
+  label: My Book 1140 yea
+  flags: 00000000
+  bytes/sector: 4096
+  sectors/track: 63
+  tracks/cylinder: 255
+  sectors/cylinder: 16065
+  cylinders: 45599
+  total sectors: 732558336
+  uid: 61cc653ef152b5b9
+  byte order: little endian
+  partition count: 16
+
+            Start      Size Type    fsize bsize   cpg
+ a:          9216    135368 4.2BSD  16384 16384     1
+ b:        144584    128521 swap
+ c:   X         0 732558336 unused      0     0
+ d:        273108     80320 4.2BSD  16384 16384     1
+ e:        353428    128520 4.2BSD  16384 16384     1
+ f:        481948    514080 4.2BSD  16384 16384     1
+ g:        996028    128520 4.2BSD  16384 16384     1
+ h:       1124560 731367216 4.2BSD   8192 65536     1
+ i:   X       256      1792 MSDOS
+ j:   X      2048      7168 MSDOS
+ k:   X 732491776     66560 MSDOS
+ l:   X         0         0 unused
+ m:   X         0         0 unused
+ n:   X         0         0 unused
+ o:   X         0         0 unused
+ p:   X         0         0 unused
+3:     732491776     66560   1023/128/38-1023/165/ 6 Windows FAT32 (LBA) (0x0c)

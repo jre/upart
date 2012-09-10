@@ -1,4 +1,7 @@
 bigmajor
+bigsect-4k
+bigsect-obsdbug-bad
+bigsect-obsdbug-both
 empty
 gpt
 jre-anubis-wd0

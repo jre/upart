@@ -1,12 +1,14 @@
-make output less unreadable
+non-partitions:
+  filesystem detection
+  softraid
+  lvm
 test with different sector sizes
+make output less unreadable
 disklabel
-  openbsd v1 labels
   more testing with labels from other BSDs
   some way to tell which BSD wrote a label?
 apple map
   fix bzb
-filesystem tasting
 better overall description in manpage
 option to change displayed offset/size units
 interactive restore mode for dumps

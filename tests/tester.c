@@ -63,20 +63,27 @@ void	 testfiles(FILE *);
 char	*nextname(const char *, FILE *);
 char	*strjoin(const char *, ...) ATTR_SENTINEL(0);
 int	 checkexitval(const char *, int, const char *);
-int	 checkfiles(const char *, const char *, const char *, int);
+int	 checkfiles(const char *, char *, char *, int);
 char	*appendname(char *, const char *);
 
 char	*getmyname(char *);
 void	 fail(const char *, ...) ATTR_PRINTF(1, 2);
 void	 changedir(void);
 void	 rmfile(const char *);
-int	 runtest(const char *, const char *, const char *, const char *);
+int	 diff(char *, char *);
+int	 runtest(char *, char *, const char *, const char *);
 off_t	 filesize(const char *);
 FILE	*maybefopen(const char *, const char *);
 
-static const char * const flags[] = { "", "-v", "-vv" };
+#ifdef OS_TYPE_UNIX
+int	runprog(const char *, char *const *, const char *, const char *, int);
+#endif
+
+
+static char * const flags[] = { "", "-v", "-vv" };
 
 char *myname;
+int verbose;
 
 int
 main(int argc, char *argv[])
@@ -88,7 +95,7 @@ main(int argc, char *argv[])
 	myname = getmyname(argv[0]);
 
 	mode = testfiles;
-	while ((opt = getopt(argc, argv, "chrt")) != -1) {
+	while ((opt = getopt(argc, argv, "chrtv")) != -1) {
 		switch (opt) {
 		case 'c':
 			mode = cleanfiles;
@@ -99,12 +106,16 @@ main(int argc, char *argv[])
 		case 't':
 			mode = testfiles;
 			break;
+		case 'v':
+			verbose = 1;
+			break;
 		default:
 			printf("usage: %s [-chr] -f path -u path\n"
 			    "  -c       clean test output\n"
 			    "  -h       show this message and exit.\n"
 			    "  -r       regenerate test output.\n"
-			    "  -t       run tests (the default)\n",
+			    "  -t       run tests (the default)\n"
+			    "  -v       verbose mode\n",
 			    myname);
 			exit(EXIT_FAILURE);
 		}
@@ -330,7 +341,7 @@ checkexitval(const char *name, int got, const char *file)
 }
 
 int
-checkfiles(const char *name, const char *want, const char *got, int err)
+checkfiles(const char *name, char *want, char *got, int err)
 {
 	FILE *wh, *gh;
 	int wch, gch;
@@ -362,6 +373,8 @@ checkfiles(const char *name, const char *want, const char *got, int err)
 mismatch:
 	printf("%s: standard %s does not match expected\n",
 	    name, (err ? "error" : "output"));
+	if (verbose)
+		diff(want, got);
 	return (0);
 }
 
@@ -435,16 +448,48 @@ rmfile(const char *path)
 }
 
 int
-runtest(const char *args, const char *img, const char *out, const char *err)
+diff(char *old, char *new)
+{
+	char *argv[] = { "diff", "-u", NULL, NULL, NULL };
+
+	argv[2] = old;
+	argv[3] = new;
+
+	return (runprog("diff", argv, NULL, NULL, 1));
+}
+
+int
+runtest(char *flags, char *img, const char *out, const char *err)
+{
+	char *argv[4];
+	int i;
+
+	i = 0;
+	argv[i++] = UPART_PATH;
+	if (flags && flags[0] != '\0')
+		argv[i++] = flags;
+	argv[i++] = img;
+	argv[i++] = NULL;
+
+	return (runprog(UPART_PATH, argv, out, err, 0));
+}
+
+int
+runprog(const char *prog, char *const argv[],
+    const char *out, const char *err, int search)
 {
 	int ifd, ofd, efd, status;
+	char errbuf[64];
 	pid_t pid;
+
+	/* shut up a spurious compiler warning */
+	ofd = efd = -1;
 
 	if ((ifd = open("/dev/null", O_RDONLY, 0)) == -1)
 		fail("failed to open %s for reading", "/dev/null");
-	if ((ofd = open(out, O_WRONLY|O_CREAT|O_TRUNC, 0666)) == -1)
+	if (out && (ofd = open(out, O_WRONLY|O_CREAT|O_TRUNC, 0666)) == -1)
 		fail("failed to open %s for writing", out);
-	if ((efd = open(err, O_WRONLY|O_CREAT|O_TRUNC, 0666)) == -1)
+	if (err && (efd = open(err, O_WRONLY|O_CREAT|O_TRUNC, 0666)) == -1)
 		fail("failed to open %s for writing", err);
 
 	if ((pid = fork()) == -1)
@@ -452,28 +497,33 @@ runtest(const char *args, const char *img, const char *out, const char *err)
 
 	if (pid != 0) {
 		close(ifd);
-		close(ofd);
-		close(efd);
+		if (out)
+			close(ofd);
+		if (err)
+			close(efd);
 		if (waitpid(pid, &status, 0) == -1)
 			fail("waitpid() failed");
 		return (WEXITSTATUS(status));
 	}
 
 	if (dup2(ifd, STDIN_FILENO) == -1 ||
-	    dup2(ofd, STDOUT_FILENO) == -1 ||
-	    dup2(efd, STDERR_FILENO) == -1) {
+	    (out && dup2(ofd, STDOUT_FILENO) == -1) ||
+	    (err && dup2(efd, STDERR_FILENO) == -1)) {
 		perror("dup2() failed");
 		_exit(EXIT_FAILURE);
 	}
 	close(ifd);
-	close(ofd);
-	close(efd);
+	if (out)
+		close(ofd);
+	if (err)
+		close(efd);
 
-	if (args != NULL && args[0] != '\0')
-		execl(UPART_PATH, UPART_PATH, args, img, (void *)NULL);
+	if (search)
+		execvp(prog, argv);
 	else
-		execl(UPART_PATH, UPART_PATH, img, (void *)NULL);
-	perror("failed to execute " UPART_PATH);
+		execv(prog, argv);
+	snprintf(errbuf, sizeof(errbuf), "failed to execute %s", prog);
+	perror(errbuf);
 	_exit(EXIT_FAILURE);
 }
 
@@ -563,6 +613,12 @@ rmfile(const char *path)
 {
 	if (!DeleteFile(path) && GetLastError() != ERROR_FILE_NOT_FOUND)
 		fail("failed to remove %s", path);
+}
+
+int
+diff(char *old, char *new)
+{
+	return (0);
 }
 
 int

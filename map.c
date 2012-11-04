@@ -373,8 +373,6 @@ map_print(const struct map *map, int sizewidth, FILE *stream)
 		    sizewidth, stream);
 		if (funcs->print_extra != NULL)
 			funcs->print_extra(part, stream);
-		if (part->flags & UP_PART_VIRTDISK)
-			fputs(" <VIRT>", stream);
 		putc('\n', stream);
 		indented = 0;
 

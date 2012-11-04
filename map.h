@@ -53,9 +53,10 @@ enum mapid {
 	UP_MAP_APM,
 	UP_MAP_SUN_SPARC,
 	UP_MAP_SUN_X86,
-	/* BSD disklabel should be last because the probing it does can
-	   cause a disklabel to be detected before it's container partition */
+	/* BSD disklabel should be last because the probing it can
+	   cause a disklabel to be detected before its container partition */
 	UP_MAP_BSD,
+	UP_MAP_SOFTRAID,
 	UP_MAP_ID_COUNT
 };
 

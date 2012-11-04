@@ -20,9 +20,10 @@
 #include "map.h"
 #include "mbr.h"
 #include "os.h"
-#include "util.h"
+#include "softraid.h"
 #include "sunlabel-sparc.h"
 #include "sunlabel-x86.h"
+#include "util.h"
 
 static char	*readargs(int, char *[], struct opts *, struct disk_params *);
 static void	 usage(const char *, ...);
@@ -46,6 +47,7 @@ main(int argc, char *argv[])
 	up_sunlabel_sparc_register();
 	up_sunlabel_x86_register();
 	up_gpt_register();
+	up_softraid_register();
 
 	name = readargs(argc, argv, &newopts, &params);
 	if (name == NULL)

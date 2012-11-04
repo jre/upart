@@ -359,9 +359,11 @@ map_print(const struct map *map, int sizewidth, FILE *stream)
 			flag = ' ';
 
 		idx[0] = '\0';
-		funcs->get_index(part, idx, sizeof(idx));
+		if (funcs->get_index)
+			funcs->get_index(part, idx, sizeof(idx));
 		idx[sizeof(idx)-1] = '\0';
-		strlcat(idx, ":", sizeof(idx));
+		if (idx[0] != '\0')
+			strlcat(idx, ":", sizeof(idx));
 
 		fprintf(stream, "%-4s %c ", idx, flag);
 		printsect_pad((opts->swapcols ? part->size : part->virtstart),

@@ -13,8 +13,10 @@ struct part;
 #define UP_PART_EMPTY           (1<<0) /* empty or deleted */
 #define UP_PART_OOB             (1<<1) /* out of bounds */
 #define UP_PART_VIRTDISK	(1<<2) /* partition defines a virtual disk */
+#define UP_PART_UNREADABLE	(1<<3) /* ignore partition contents */
 
-#define UP_PART_IS_BAD(flags)   ((UP_PART_EMPTY|UP_PART_OOB) & (flags))
+#define UP_PART_IS_BAD(flags) \
+	((UP_PART_EMPTY|UP_PART_OOB|UP_PART_UNREADABLE) & (flags))
 
 #define UP_MAP_VIRTADDR(m)		((m)->virtstart)
 #define UP_MAP_PHYSADDR(m)		((m)->virtstart + (m)->virtoff)

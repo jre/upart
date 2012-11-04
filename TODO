@@ -1,9 +1,20 @@
 non-partitions:
   filesystem detection
-  softraid
   lvm
+listdev verbose
 test with different sector sizes
-make output less unreadable
+make output less unreadable, especially for virtdisks
+softraid
+  v3 and v4 metadata format
+  validate and save all optional metadata
+  support other raid types
+    0, P (4/5), 6, concat
+  tests
+    metadata versions
+    raid levels
+    nested map types
+    nested softraid
+    key disks and hot spares
 disklabel
   more testing with labels from other BSDs
   some way to tell which BSD wrote a label?

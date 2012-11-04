@@ -12,14 +12,28 @@ struct part;
 
 #define UP_PART_EMPTY           (1<<0) /* empty or deleted */
 #define UP_PART_OOB             (1<<1) /* out of bounds */
+#define UP_PART_VIRTDISK	(1<<2) /* partition defines a virtual disk */
 
 #define UP_PART_IS_BAD(flags)   ((UP_PART_EMPTY|UP_PART_OOB) & (flags))
+
+#define UP_MAP_VIRTADDR(m)		((m)->virtstart)
+#define UP_MAP_PHYSADDR(m)		((m)->virtstart + (m)->virtoff)
+#define UP_MAP_PHYS_TO_VIRT(m, a)	((a) - (m)->virtoff)
+#define UP_MAP_VIRT_TO_PHYS(m, a)	((a) + (m)->virtoff)
+#define UP_PART_VIRTADDR(p)		((p)->virtstart)
+#define UP_PART_PHYSADDR(p) \
+	((p)->virtstart + ((p)->map ? (p)->map->virtoff : 0))
+#define UP_PART_VIRTOFFSET(p) \
+	(((p)->map ? (p)->map->virtoff : 0) + \
+	    ((p)->flags & UP_PART_VIRTDISK ? (p)->virtstart : 0))
+#define UP_PART_PHYS_TO_VIRT(p, a)	((a) - UP_PART_VIRTOFFSET(p))
+#define UP_PART_VIRT_TO_PHYS(p, a)	((a) + UP_PART_VIRTOFFSET(p))
 
 SIMPLEQ_HEAD(map_list, map);
 SIMPLEQ_HEAD(part_list, part);
 
 struct part {
-	int64_t start;
+	int64_t virtstart;
 	int64_t size;
 	int flags;
 	void *priv;
@@ -46,8 +60,9 @@ enum mapid {
 struct map {
 	const struct disk *disk;
 	enum mapid type;
-	int64_t start;
+	int64_t virtstart;
 	int64_t size;
+	int64_t virtoff;
 	int depth;
 	void *priv;
 	struct part *parent;

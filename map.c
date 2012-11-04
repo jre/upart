@@ -70,21 +70,23 @@ up_map_load(struct disk *disk, struct part *parent, enum mapid type,
 	int res;
 
 	CHECKTYPE(type);
-	assert(parent->start >= 0 && parent->size >= 0 &&
-	    parent->start + parent->size <= UP_DISK_SIZESECTS(disk));
+	assert(UP_PART_VIRTADDR(parent) >= 0 && parent->size >= 0 &&
+	    UP_PART_VIRTADDR(parent) + parent->size <=
+	    UP_DISK_SIZESECTS(disk));
 
 	funcs = &st_types[type];
 	*ret = NULL;
 	priv = NULL;
 
 #ifdef MAP_PROBE_DEBUG
-	fprintf(stderr, "probe %"PRId64" %s\n", parent->start, funcs->label);
+	fprintf(stderr, "probe %"PRId64" %s\n",
+	    UP_PART_VIRTADDR(parent), funcs->label);
 #endif
 	switch (funcs->load(disk, parent, &priv)) {
 	case 1:
 #ifdef MAP_PROBE_DEBUG
 		fprintf(stderr, "matched %"PRId64" %s\n",
-		    parent->start, funcs->label);
+		    UP_PART_VIRTADDR(parent), funcs->label);
 #endif
 		map = map_new(disk, parent, type, priv);
 		if (map == NULL) {
@@ -185,8 +187,14 @@ map_new(struct disk *disk, struct part *parent, enum mapid type, void *priv)
 
 	map->disk = disk;
 	map->type = type;
-	map->start = parent->start;
 	map->size = parent->size;
+	map->virtoff = (parent->map ? parent->map->virtoff : 0);
+	if (parent->flags & UP_PART_VIRTDISK) {
+		map->virtstart = 0;
+		map->virtoff += + parent->virtstart;
+	} else {
+		map->virtstart = UP_PART_VIRTADDR(parent);
+	}
 	map->depth = (parent->map ? parent->map->depth + 1 : 0);
 	map->priv = priv;
 	SIMPLEQ_INIT(&map->list);
@@ -202,7 +210,7 @@ map_newcontainer(int64_t size)
 	if ((container = xalloc(1, sizeof(*container), XA_ZERO)) == NULL)
 		return (NULL);
 
-	container->start = 0;
+	container->virtstart = 0;
 	container->size = size;
 	SIMPLEQ_INIT(&container->submap);
 
@@ -232,10 +240,11 @@ up_map_add(struct map *map, int64_t start, int64_t size, int flags, void *priv)
 
 	if (0 == size)
 		flags |= UP_PART_EMPTY;
-	if (start < map->start || start + size > map->start + map->size)
+	if (start < map->virtstart ||
+	    start + size > map->virtstart + map->size)
 		flags |= UP_PART_OOB;
 
-	part->start = start;
+	part->virtstart = start;
 	part->size = size;
 	part->flags = flags;
 	part->priv = priv;
@@ -355,13 +364,15 @@ map_print(const struct map *map, int sizewidth, FILE *stream)
 		strlcat(idx, ":", sizeof(idx));
 
 		fprintf(stream, "%-4s %c ", idx, flag);
-		printsect_pad((opts->swapcols ? part->size : part->start),
+		printsect_pad((opts->swapcols ? part->size : part->virtstart),
 		    sizewidth, stream);
 		putc(' ', stream);
-		printsect_pad((opts->swapcols ? part->start : part->size),
+		printsect_pad((opts->swapcols ? part->virtstart : part->size),
 		    sizewidth, stream);
 		if (funcs->print_extra != NULL)
 			funcs->print_extra(part, stream);
+		if (part->flags & UP_PART_VIRTDISK)
+			fputs(" <VIRT>", stream);
 		putc('\n', stream);
 		indented = 0;
 
@@ -389,8 +400,10 @@ map_printcontainer(const struct part *up, int width, FILE *stream)
 		     map = up_map_nextmap(map)) {
 			for (part = up_map_first(map); part != NULL;
 			     part = up_map_next(part)) {
-				if (size < part->start || size < part->size)
-					size = MAX(part->start, part->size);
+				if (size < part->virtstart ||
+				    size < part->size)
+					size = MAX(part->virtstart,
+					    part->size);
 			}
 		}
 		width = printsect(size, NULL);

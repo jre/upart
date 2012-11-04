@@ -125,7 +125,8 @@ mbr_load(const struct disk *disk, const struct part *parent, void **priv)
 		return (0);
 
 	/* load the mbr sector */
-	if ((res = mbr_read(disk, parent->start, parent->size, &buf)) <= 0)
+	if ((res = mbr_read(disk, UP_PART_PHYSADDR(parent), parent->size,
+		    &buf)) <= 0)
 		return (res);
 
 	/* create map private struct */
@@ -156,7 +157,7 @@ mbr_setup(struct disk *disk, struct map *map)
     struct up_mbr              *mbr = map->priv;
     int                         ii;
 
-    if(!up_disk_save1sect(disk, map->start, map, 0))
+    if(!up_disk_save1sect(disk, UP_MAP_PHYSADDR(map), map, 0))
         return -1;
 
     /* add primary partitions */
@@ -170,71 +171,73 @@ mbr_setup(struct disk *disk, struct map *map)
 static int
 mbrext_setup(struct disk *disk, struct map *map)
 {
-    struct up_mbr              *parent;
-    const struct up_mbr_p      *buf;
-    int                         index;
-    int64_t                     absoff, reloff;
+	int64_t diskoff, reloff, physoff;
+	const struct up_mbr_p *buf;
+	struct up_mbr *parent;
+	int index;
 
-    assert(UP_MAP_MBR == map->parent->map->type);
+	assert(map->parent->map->type == UP_MAP_MBR);
 
-    parent    = map->parent->map->priv;
-    absoff    = map->start;
-    reloff    = 0;
-    index     = MBR_PART_COUNT + parent->extcount;
+	parent = map->parent->map->priv;
+	diskoff = UP_MAP_VIRTADDR(map);
+	reloff = 0;
+	index = MBR_PART_COUNT + parent->extcount;
 
-    for(;;)
-    {
-        /* load extended mbr */
-        assert(absoff >= map->start && map->start - absoff < map->size);
-        buf = up_disk_save1sect(disk, absoff, map, 1);
-        if(!buf)
-            return -1;
+	for(;;) {
+		/* load extended mbr */
+		assert(diskoff >= UP_MAP_VIRTADDR(map) &&
+		    diskoff - UP_MAP_VIRTADDR(map) < map->size);
+		physoff = UP_MAP_VIRT_TO_PHYS(map, diskoff);
+		if (!(buf = up_disk_save1sect(disk, physoff, map, 1)))
+			return (-1);
 
-        if(MBR_MAGIC != UP_LETOH16(buf->magic))
-        {
-            if(UP_NOISY(QUIET))
-                up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
-                       "extended MBR in sector %"PRId64
-                       " has invalid magic number", absoff);
-            if(!opts->relaxed)
-                return 0;
-        }
+		if (UP_LETOH16(buf->magic) != MBR_MAGIC) {
+			if (UP_NOISY(QUIET))
+				up_msg((opts->relaxed ?
+					UP_MSG_FWARN : UP_MSG_FERR),
+				    "extended MBR in sector %"PRId64" has "
+				    "invalid magic number", physoff);
+			if (!opts->relaxed)
+				return 0;
+		}
 
-        if(0 > mbr_addpart(map, &buf->part[MBR_EXTPART], index, absoff, buf))
-            return -1;
+		if (mbr_addpart(map, &buf->part[MBR_EXTPART], index, diskoff,
+			    buf) < 0)
+			return (-1);
 
-        if(MBR_ID_UNUSED == buf->part[MBR_EXTNEXT].type)
-            break;
-        else if(!MBR_ID_IS_EXT(buf->part[MBR_EXTNEXT].type))
-        {
-            if(UP_NOISY(QUIET))
-                up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
-                       "extended MBR in sector %"PRId64
-                       " has invalid type for partition %d 0x%02x",
-                       absoff, MBR_EXTNEXT, buf->part[MBR_EXTNEXT].type);
-            if(!opts->relaxed)
-                return 0;
-            break;
-        }
+		if (MBR_ID_UNUSED == buf->part[MBR_EXTNEXT].type)
+			break;
+		else if (!MBR_ID_IS_EXT(buf->part[MBR_EXTNEXT].type)) {
+			if (UP_NOISY(QUIET))
+				up_msg((opts->relaxed ?
+					UP_MSG_FWARN : UP_MSG_FERR),
+				    "extended MBR in sector %"PRId64" has "
+				    "invalid type for partition %d 0x%02x",
+				    physoff, MBR_EXTNEXT,
+				    buf->part[MBR_EXTNEXT].type);
+			if (!opts->relaxed)
+				return (0);
+			break;
+		}
 
-        index++;
+		index++;
 
-        reloff = UP_LETOH32(buf->part[MBR_EXTNEXT].start);
-        absoff = reloff + map->start;
+		reloff = UP_LETOH32(buf->part[MBR_EXTNEXT].start);
+		diskoff = UP_MAP_VIRTADDR(map) + reloff;
 
-        if(0 > reloff || reloff >= map->size)
-        {
-            if(UP_NOISY(QUIET))
-                up_warn("logical MBR partition %d out of range: "
-                        "offset %"PRId64"+%"PRId64" size %"PRId64,
-                        index, map->start, reloff, map->size);
-            break;
-        }
-    }
+		if (reloff < 0 || reloff >= map->size) {
+			if (UP_NOISY(QUIET))
+				up_warn("logical MBR partition %d out of "
+				    "range: offset %"PRId64"+%"PRId64" size "
+				    "%"PRId64, index, UP_MAP_VIRTADDR(map),
+				    reloff, map->size);
+			break;
+		}
+	}
 
-    parent->extcount = index - MBR_PART_COUNT;
+	parent->extcount = index - MBR_PART_COUNT;
 
-    return 1;
+	return (1);
 }
 
 static int
@@ -244,7 +247,7 @@ mbr_getinfo(const struct map *map, FILE *stream)
 		return (0);
 
 	if (fprintf(stream, "%s partition table at ", up_map_label(map)) < 0 ||
-	    printsect_verbose(map->start, stream) < 0 ||
+	    printsect_verbose(UP_MAP_VIRTADDR(map), stream) < 0 ||
 	    fprintf(stream, " of %s:\n", UP_DISK_PATH(map->disk)) < 0)
 		return (-1);
 	return (1);

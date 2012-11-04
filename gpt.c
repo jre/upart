@@ -133,7 +133,8 @@ gpt_load(const struct disk *disk, const struct part *parent, void **priv)
 	  Try to load either the primary or secondary gpt headers, and
 	  check the magic and crc.
 	*/
-	if ((res = gpt_findhdr(disk, parent->start, parent->size, &pk)) <= 0)
+	if ((res = gpt_findhdr(disk, UP_PART_PHYSADDR(parent), parent->size,
+		    &pk)) <= 0)
 		return (res);
 
 	/* check revision */
@@ -171,10 +172,12 @@ gpt_setup(struct disk *disk, struct map *map)
 	partsects = partbytes / UP_DISK_1SECT(disk);
 
 	/* save sectors from primary and secondary maps */
-	data1 = up_disk_savesectrange(disk, GPT_PRIOFF(map->start, map->size),
+	data1 = up_disk_savesectrange(disk,
+	    GPT_PRIOFF(UP_MAP_PHYSADDR(map), map->size),
 	    1 + partsects, map, 0);
-	data2 = up_disk_savesectrange(disk, GPT_SECOFF(map->start, map->size)
-	    - partsects, 1 + partsects, map, 0);
+	data2 = up_disk_savesectrange(disk,
+	    GPT_SECOFF(UP_MAP_PHYSADDR(map), map->size) - partsects,
+	    1 + partsects, map, 0);
 	if (data1 == NULL || data2 == NULL)
 		return (-1);
 
@@ -221,9 +224,11 @@ gpt_getinfo(const struct map *map, FILE *stream)
 
 	if (fprintf(stream, "%s partition table at ",
 		up_map_label(map)) < 0 ||
-	    printsect_verbose(GPT_PRIOFF(map->start, map->size), stream) < 0 ||
+	    printsect_verbose(GPT_PRIOFF(UP_MAP_VIRTADDR(map), map->size),
+		stream) < 0 ||
 	    fputs(" (backup at ", stream) == EOF ||
-	    printsect_verbose(GPT_SECOFF(map->start, map->size), stream) < 0 ||
+	    printsect_verbose(GPT_SECOFF(UP_MAP_VIRTADDR(map), map->size),
+		stream) < 0 ||
 	    fprintf(stream, ") of %s:\n", UP_DISK_PATH(map->disk)) < 0)
 		return (-1);
 

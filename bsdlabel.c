@@ -237,10 +237,10 @@ bsdlabel_load(const struct disk *disk, const struct part *parent, void **priv)
 	int res, sectoff, byteoff, endian, size, bugflags;
 	struct up_bsd *label;
 	const uint8_t *buf;
-	int64_t startsect;
+	int64_t physaddr;
 
 	/* placate gcc */
-	startsect = 0;
+	physaddr = 0;
 	sectoff = 0;
 
 	assert(LABEL_BASE_SIZE == sizeof(struct up_bsd_p) &&
@@ -249,19 +249,20 @@ bsdlabel_load(const struct disk *disk, const struct part *parent, void **priv)
 	*priv = NULL;
 
 	/* search for disklabel */
-	if ((res = bsdlabel_scan(disk, parent->start, parent->size,
-		    &startsect, &sectoff, &bugflags)) <= 0 ||
-	    (res = bsdlabel_read(disk, startsect + sectoff,
+	if ((res = bsdlabel_scan(disk, UP_PART_PHYSADDR(parent), parent->size,
+		    &physaddr, &sectoff, &bugflags)) <= 0 ||
+	    (res = bsdlabel_read(disk, physaddr + sectoff,
 		parent->size - sectoff, &buf, &byteoff, &endian)) <= 0)
 		return (res);
 	assert(UP_DISK_1SECT(disk) - LABEL_BASE_SIZE >= byteoff);
+	assert(physaddr >= LABEL_BUG_ADJUST(disk, UP_PART_PHYSADDR(parent)));
 
 	/* allocate label struct */
 	if ((label = xalloc(1, sizeof(*label), XA_ZERO)) == NULL)
 		return (-1);
 
 	/* populate label struct */
-	label->startsect = startsect;
+	label->startsect = UP_PART_PHYS_TO_VIRT(parent, physaddr);
 	label->sectoff = sectoff;
 	label->byteoff = byteoff;
 	label->endian = endian;
@@ -273,18 +274,20 @@ bsdlabel_load(const struct disk *disk, const struct part *parent, void **priv)
 	/* warn about the big sector bug */
 	if (bugflags & LABEL_BUG_BADLABEL && UP_NOISY(QUIET)) {
 		if (bugflags & LABEL_BUG_USEBADLABEL) {
-			assert(startsect == LABEL_BUG_ADJUST(disk, parent->start));
+			assert(label->startsect == LABEL_BUG_ADJUST(disk,
+				UP_PART_VIRTADDR(parent)));
 			up_warn("%d-byte sector bug: using misplaced %s at "
 			    "sector %"PRId64" (offset %d), should be at "
 			    "sector %"PRId64,
-			    UP_DISK_1SECT(disk), LABEL_LABEL, startsect,
-			    label->sectoff, parent->start);
+			    UP_DISK_1SECT(disk), LABEL_LABEL, label->startsect,
+			    label->sectoff, UP_PART_VIRTADDR(parent));
 		} else {
-			assert(startsect == parent->start);
+			assert(label->startsect == UP_PART_VIRTADDR(parent));
 			up_warn("%d-byte sector bug: ignoring misplaced %s at "
 			    "sector %"PRId64" (offset %d)",
 			    UP_DISK_1SECT(disk), LABEL_LABEL,
-			    LABEL_BUG_ADJUST(disk, startsect), label->sectoff);
+			    LABEL_BUG_ADJUST(disk, label->startsect),
+			    label->sectoff);
 		}
 	}
 
@@ -295,7 +298,7 @@ bsdlabel_load(const struct disk *disk, const struct part *parent, void **priv)
 		if (UP_NOISY(QUIET))
 			up_err("ignoring truncated %s in sector %"PRId64" "
 			    "(offset %d)",
-			    LABEL_LABEL, startsect, label->sectoff);
+			    LABEL_LABEL, label->startsect, label->sectoff);
 		free(label);
 		return (-1);
 	}
@@ -315,16 +318,17 @@ bsdlabel_setup(struct disk *disk, struct map *map)
 	int i, max;
 
 	/* save the disklabel we're using */
-	if ((buf = up_disk_save1sect(disk, label->startsect + label->sectoff,
-		    map, 0)) == NULL)
+	if ((buf = up_disk_save1sect(disk,
+		    UP_MAP_VIRT_TO_PHYS(map, label->startsect) +
+		    label->sectoff, map, 0)) == NULL)
 		return (-1);
 
 	/* if we found both a bad label but aren't using it, save it
 	   as well */
 	if ((label->bugs & (LABEL_BUG_BADLABEL|LABEL_BUG_USEBADLABEL)) ==
 	    LABEL_BUG_BADLABEL &&
-	    (buf = up_disk_save1sect(disk, LABEL_BUG_ADJUST(disk, map->start) +
-		label->sectoff, map, 0)) == NULL)
+	    (buf = up_disk_save1sect(disk, LABEL_BUG_ADJUST(disk,
+		    UP_MAP_VIRTADDR(map)) + label->sectoff, map, 0)) == NULL)
 		return (-1);
 
 	max = LABEL_LGETINT16(label, maxpart);
@@ -422,7 +426,7 @@ bsdlabel_info(const struct map *map, FILE *stream)
 		priv->sectoff, UP_DISK_PATH(map->disk)) < 0 ||
 	    (priv->bugs & LABEL_BUG_USEBADLABEL &&
 		(fputs(" (should be at ", stream) == EOF ||
-		printsect_verbose(map->start, stream) < 0 ||
+		printsect_verbose(UP_MAP_VIRTADDR(map), stream) < 0 ||
 		fputs(")", stream) == EOF)) ||
 	    fputs(":\n", stream) == EOF)
 		return (-1);

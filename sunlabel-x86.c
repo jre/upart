@@ -117,7 +117,8 @@ sun_x86_load(const struct disk *disk, const struct part *parent, void **priv)
 		return (0);
 
 	/* read map and check magic */
-	if ((res = sun_x86_read(disk, parent->start, parent->size, &buf)) <= 0)
+	if ((res = sun_x86_read(disk, UP_PART_PHYSADDR(parent), parent->size,
+		    &buf)) <= 0)
 		return (res);
 
 	/* allocate map struct */
@@ -139,7 +140,7 @@ sun_x86_setup(struct disk *disk, struct map *map)
 	int64_t start, size;
 	int i, max, flags;
 
-	if (!up_disk_save1sect(disk, map->start + SUNX86_OFF, map, 0))
+	if (!up_disk_save1sect(disk, UP_MAP_PHYSADDR(map) + SUNX86_OFF, map, 0))
 		return (-1);
 
 	max = UP_LETOH16(packed->partcount);
@@ -158,7 +159,7 @@ sun_x86_setup(struct disk *disk, struct map *map)
 
 		memcpy(&part->part, &packed->parts[i], sizeof part->part);
 		part->index = i;
-		start = map->start + UP_LETOH32(part->part.start);
+		start = UP_MAP_VIRTADDR(map) + UP_LETOH32(part->part.start);
 		size = UP_LETOH32(part->part.size);
 		flags = 0;
 
@@ -185,7 +186,7 @@ sun_x86_info(const struct map *map, FILE *stream)
 	packed = &priv->packed;
 
 	if (fprintf(stream, "%s at ", up_map_label(map)) < 0 ||
-	    printsect_verbose(map->start, stream) < 0 ||
+	    printsect_verbose(UP_MAP_VIRTADDR(map), stream) < 0 ||
 	    fprintf(stream, " (offset %d) of %s:\n",
 		SUNX86_OFF, UP_DISK_PATH(map->disk)) < 0)
 		return (-1);

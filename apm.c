@@ -137,7 +137,7 @@ apm_load(const struct disk *disk, const struct part *parent, void **priv)
 		return (0);
 
 	/* find partitions */
-	if ((res = apm_find(disk, parent->start, parent->size,
+	if ((res = apm_find(disk, UP_PART_PHYSADDR(parent), parent->size,
 		    &start, &size)) <= 0)
 		return (res);
 
@@ -196,7 +196,7 @@ apm_info(const struct map *map, FILE *stream)
 
 	/* XXX display driver info here like pdisk does? */
 	if (fprintf(stream, "%s at ", up_map_label(map)) < 0 ||
-	    printsect_verbose(map->start, stream)  < 0 ||
+	    printsect_verbose(UP_MAP_VIRTADDR(map), stream)  < 0 ||
 	    fprintf(stream, " of %s:\n", UP_DISK_PATH(map->disk)) < 0)
 		return (-1);
 	return (1);

@@ -165,7 +165,8 @@ sparc_load(const struct disk *disk, const struct part *parent, void **priv)
 		return (0);
 
 	/* read map and check magic */
-	if ((res = sparc_read(disk, parent->start, parent->size, &buf)) <= 0)
+	if ((res = sparc_read(disk, UP_PART_PHYSADDR(parent), parent->size,
+		    &buf)) <= 0)
 		return (res);
 
 	/* allocate map struct */
@@ -190,7 +191,7 @@ sparc_setup(struct disk *disk, struct map *map)
 	struct up_sparcpart *part;
 	int i, max, flags;
 
-	if (!up_disk_save1sect(disk, map->start, map, 0))
+	if (!up_disk_save1sect(disk, UP_MAP_PHYSADDR(map), map, 0))
 		return (-1);
 
 	cylsize = (uint64_t)UP_BETOH16(packed->heads) *
@@ -204,7 +205,8 @@ sparc_setup(struct disk *disk, struct map *map)
 		part->part = (SPARC_MAXPART > i ? packed->parts[i] :
 		    packed->ext.obsd.extparts[i - SPARC_MAXPART]);
 		part->index = i;
-		start = map->start + cylsize * UP_BETOH32(part->part.cyl);
+		start = UP_MAP_VIRTADDR(map) +
+		    cylsize * UP_BETOH32(part->part.cyl);
 		size = UP_BETOH32(part->part.size);
 		flags = 0;
 
@@ -244,7 +246,7 @@ sparc_info(const struct map *map, FILE *stream)
 		extstr = "";
 
 	if (fprintf(stream, "%s%s at ", up_map_label(map), extstr) < 0 ||
-	    printsect_verbose(map->start, stream) < 0 ||
+	    printsect_verbose(UP_MAP_VIRTADDR(map), stream) < 0 ||
 	    fprintf(stream, " of %s:\n", UP_DISK_PATH(map->disk)) < 0)
 		return (-1);
 

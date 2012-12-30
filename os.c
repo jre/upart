@@ -26,6 +26,7 @@ RB_HEAD(os_listdev_map, os_listdev_node);
 static int	sortdisk(struct os_listdev_node *, struct os_listdev_node *);
 static int	listdev_add(const char *, void *);
 static int	listdev_print(struct os_listdev_map *, FILE *);
+static int	listdev_print_details(struct os_listdev_map *, FILE *);
 static void	listdev_free(struct os_listdev_map *);
 
 RB_GENERATE_STATIC(os_listdev_map, os_listdev_node, entry, sortdisk)
@@ -71,7 +72,11 @@ done:
 			    "on this platform");
 		return (-1);
 	}
-	listdev_print(&map, stream);
+	
+	if (UP_NOISY(EXTRA))
+		listdev_print_details(&map, stream);
+	else
+		listdev_print(&map, stream);
 	listdev_free(&map);
 	return (0);
 }
@@ -271,6 +276,30 @@ listdev_print(struct os_listdev_map *map, FILE *stream)
 	}
 	if (once)
 		putc('\n', stream);
+
+	return (0);
+}
+
+static int
+listdev_print_details(struct os_listdev_map *map, FILE *stream)
+{
+	struct os_listdev_node *node;
+	struct disk_params params;
+	struct disk *disk;
+
+	RB_FOREACH(node, os_listdev_map, map) {
+		memset(&params, 0, sizeof(params));
+		disk = up_disk_open(node->name);
+		if (disk == NULL || up_disk_setup(disk, &params) < 0)
+			fprintf(stream, "%s: error\n", node->name);
+		else {
+			fprintf(stream, "%s: ", node->name);
+			up_disk_summary(disk, stream);
+			putc('\n', stream);
+		}
+		if (disk != NULL)
+			up_disk_close(disk);
+	}
 
 	return (0);
 }

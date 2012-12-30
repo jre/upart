@@ -128,6 +128,9 @@ void up_disk_close(struct disk *disk);
 /* Print disk info to STREAM. */
 void up_disk_print(const struct disk *disk, void *_stream);
 
+/* Print one-line disk info summary to STREAM, without a trailing newline. */
+void up_disk_summary(const struct disk *disk, void *_stream);
+
 /* Print hexdump of sectors with partition information to STREAM. */
 void up_disk_dump(const struct disk *disk, void *_stream);
 

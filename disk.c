@@ -504,6 +504,21 @@ up_disk_print(const struct disk *disk, void *_stream)
 }
 
 void
+up_disk_summary(const struct disk *disk, void *_stream)
+{
+	FILE *stream = _stream;
+	const char *unit;
+	float size;
+
+	assert(disk->setup_done);
+	size = up_fmtsize(UP_DISK_SIZEBYTES(disk), &unit);
+	if (UP_NOISY(NORMAL))
+		fprintf(stream, "%.*f%s", UP_BESTDECIMAL(size), size, unit);
+	if (UP_NOISY(EXTRA))
+		fprintf(stream, " %s", UP_DISK_DESC(disk));
+}
+
+void
 up_disk_dump(const struct disk *disk, void *stream)
 {
 	struct disk_sect *node;

@@ -17,9 +17,34 @@
 #define SR_OFFSET	(16)
 #define SR_MAGIC	(0x4d4152436372616dLLU)
 /* XXX support v3 and 4 */
+/*
+  1.49  - openbsd 4.3
+  1.61  - v2
+  1.63  - v3, openbsd 4.4
+  1.63  - aoe
+  1.66  - openbsd 4.5
+  1.72  - raidp (4/5)
+  1.78  - openbsd 4.5
+  1.79  - hot spares
+  1.80  - raid6
+  1.88  - key disks
+  1.89  - openbsd 4.7
+  1.90  - v4
+  1.92  - key disk optional metadata type
+  1.93  - v3 backwards compat
+  1.94  - openbsd 4.8
+  1.97  - openbsd 4.9
+  1.106 - openbsd 5.0
+  1.108 - v5
+  1.109 - boot duid in optional metadata
+  1.113 - concat
+  1.116 - openbsd 5.1, 5.2
+ */
 #define SR_VERSION	(5)
+#define SR_META_SIZE	(64)
 
 #define SR_LEVEL_CRYPTO	('C')
+#define SR_LEVEL_CONCAT	('c')
 #define SR_LEVEL_HOT	(0xffffffff)
 #define SR_LEVEL_KEY	(0xfffffffe)
 
@@ -33,7 +58,7 @@ struct up_sr_hdr_p
 	uint8_t		uuid[16];	/* uuid */
 	uint32_t	chunk_count;	/* number of chunks */
 	uint32_t	chunk_id;	/* chunk id */
-	uint32_t	opt_num;	/* number of optional MD elements */
+	uint32_t	opt_num;	/* optional metadata count */
 	uint32_t	pad;
 	uint32_t	volid;		/* volume id */
 	uint32_t	raidlvl;	/* raid level */
@@ -69,6 +94,18 @@ struct up_sr
 	struct up_sr_hdr_p	meta;
 	int64_t		metasect;
 	int		endian;
+	unsigned int	level;
+};
+
+struct {
+	int id;
+	const char *name;
+} raidlevel_names[] = {
+	{ SR_LEVEL_CRYPTO, "Crypto" },
+	{ SR_LEVEL_CONCAT, "Concat" },
+	{ SR_LEVEL_HOT, "Hot Spare" },
+	{ SR_LEVEL_KEY, "Key Disk" },
+	{ -1, NULL }
 };
 
 static int	sr_load(const struct disk *, const struct part *, void **);
@@ -79,6 +116,7 @@ static int	sr_extra(const struct part *, FILE *);
 static int	sr_readmeta(const struct disk *, int64_t, int64_t,
     const uint8_t **, int *);
 static int	sr_checksum(const void *, const void *, const uint8_t *md5);
+static const char *sr_raidlevel_label(int);
 
 void
 up_softraid_register(void)
@@ -117,6 +155,7 @@ sr_load(const struct disk *disk, const struct part *parent, void **privret)
 	memcpy(&priv->meta, buf, sizeof(priv->meta));
 	priv->metasect = UP_PART_VIRTADDR(parent) + SR_OFFSET;
 	priv->endian = endian;
+	priv->level = UP_ETOH32(priv->meta.raidlvl, priv->endian);
 
 	*privret = priv;
 
@@ -133,8 +172,9 @@ sr_setup(struct disk *disk, struct map *map)
 
 	/* XXX checksum and save optional metadata */
 
-	if (up_disk_save1sect(disk, UP_MAP_VIRT_TO_PHYS(map, priv->metasect),
-		    map, 0) == NULL)
+	if (up_disk_savesectrange(disk,
+		UP_MAP_VIRT_TO_PHYS(map, priv->metasect),
+		SR_META_SIZE, map, 0) == NULL)
 		return (-1);
 
 	/* verify the checksum */
@@ -209,24 +249,27 @@ sr_info(const struct map *map, FILE *stream)
 	if (fprintf(stream,
 		"  chunk count: %u\n"
 		"  chunk id: 0x%x\n"
-		"  optional MD elements: %u\n"
+		"  optional metadata elements: %u\n"
 		"  volume id: 0x%x\n"
-		"  raid level: %u\n"
+		"  raid level: %s (%u)\n"
 		"  size: %"PRId64"\n"
 		"  strip size: %u\n"
 		"  data offset: %u\n"
 		"  on disk version counter: %"PRIu64"\n"
-		"  last rebuild block: %"PRIu64"\n",
+		"  last rebuild block: %"PRIu64"\n"
+		"  byte order: %s endian\n",
 		UP_ETOH32(priv->meta.chunk_count, priv->endian),
 		UP_ETOH32(priv->meta.chunk_id, priv->endian),
 		UP_ETOH32(priv->meta.opt_num, priv->endian),
 		UP_ETOH32(priv->meta.volid, priv->endian),
-		UP_ETOH32(priv->meta.raidlvl, priv->endian),
+		sr_raidlevel_label(priv->level),
+		priv->level,
 		UP_ETOH64(priv->meta.size, priv->endian),
 		UP_ETOH32(priv->meta.strip_size, priv->endian),
 		UP_ETOH32(priv->meta.data_off, priv->endian),
 		UP_ETOH64(priv->meta.ondisk, priv->endian),
-		UP_ETOH64(priv->meta.rebuild, priv->endian)) < 0)
+		UP_ETOH64(priv->meta.rebuild, priv->endian),
+		(UP_ENDIAN_BIG == priv->endian ? "big" : "little")) < 0)
 		return (-1);
 
 	return (1);
@@ -245,24 +288,13 @@ static int
 sr_extra(const struct part *part, FILE *stream)
 {
 	struct up_sr *priv;
-	uint32_t level;
 
 	if (!UP_NOISY(NORMAL))
 		return (0);
 
 	priv = part->map->priv;
 
-	level = UP_ETOH32(priv->meta.raidlvl, priv->endian);
-	switch (level) {
-	case SR_LEVEL_CRYPTO:
-		return (fprintf(stream, " Crypto"));
-	case SR_LEVEL_HOT:
-		return (fprintf(stream, " Hot Spare"));
-	case SR_LEVEL_KEY:
-		return (fprintf(stream, " Key Disk"));
-	default:
-		return (fprintf(stream, " RAID-%u", level));
-	}
+	return (fprintf(stream, " %s", sr_raidlevel_label(priv->level)));
 }
 
 static int
@@ -272,7 +304,8 @@ sr_readmeta(const struct disk *disk, int64_t start, int64_t size,
 	const struct up_sr_hdr_p *meta;
 	int endian;
 
-	if (up_disk_check1sect(disk, start))
+	if (size < SR_META_SIZE || 
+	    up_disk_checksectrange(disk, start, SR_META_SIZE))
 		return (0);
         if (!(meta = up_disk_getsect(disk, start)))
 		return (-1);
@@ -308,4 +341,21 @@ sr_checksum(const void *start, const void *end, const uint8_t *md5)
 	MD5Final(sum, &ctx);
 
 	return (!memcmp(sum, md5, MD5_DIGEST_LENGTH));
+}
+
+static const char *
+sr_raidlevel_label(int id)
+{
+	static char buf[32];
+	int i;
+
+	for (i = 0; raidlevel_names[i].id != -1; i++)
+		if (raidlevel_names[i].id == id)
+			return (raidlevel_names[i].name);
+
+	if (id >= 32)
+		return ("Unknown");
+
+	snprintf(buf, sizeof(buf), "RAID-%u", id);
+	return (buf);
 }

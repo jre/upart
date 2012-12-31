@@ -515,7 +515,7 @@ up_disk_summary(const struct disk *disk, void *_stream)
 	if (UP_NOISY(NORMAL))
 		fprintf(stream, "%.*f%s", UP_BESTDECIMAL(size), size, unit);
 	if (UP_NOISY(EXTRA))
-		fprintf(stream, " %s", UP_DISK_DESC(disk));
+		fprintf(stream, " - %s", UP_DISK_DESC(disk));
 }
 
 void

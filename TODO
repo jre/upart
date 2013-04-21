@@ -1,12 +1,14 @@
 non-partitions:
   filesystem detection
   lvm
-listdev verbose
 test with different sector sizes
 make output less unreadable, especially for virtdisks
+multi-disk support
+  allow virtual disks to span multiple physical
 softraid
   v3 and v4 metadata format
-  validate and save all optional metadata
+  validate all optional metadata
+  attempt to validate chunks and print raid status
   support other raid types
     0, P (4/5), 6, concat
   tests
@@ -15,6 +17,8 @@ softraid
     nested map types
     nested softraid
     key disks and hot spares
+windows 7 device permissions
+sector deduplication when saving images
 disklabel
   more testing with labels from other BSDs
   some way to tell which BSD wrote a label?

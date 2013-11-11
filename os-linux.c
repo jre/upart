@@ -12,15 +12,22 @@
 #include <linux/hdreg.h>
 #endif
 
+#include <ctype.h>
 #ifdef HAVE_DIRENT_H
 #include <dirent.h>
 #endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
-#include <ctype.h>
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 #define UPART_DISK_PARAMS_ONLY
 #include "disk.h"
@@ -29,14 +36,22 @@
 
 #if defined(linux) || defined(__linux) || defined(__linux__)
 
+/* skip over ramdisks in device listing */
+#define SKIP_DEVNO(major, minor)	((major) == 1)
+
+static int	scanf_at(int, const char *, const char *, ...);
+
 static int
 os_linux_listdev_sysfs(os_list_callback_func func, void *arg)
 {
+	char const blockpath[] = "/sys/block";
+	int ret, cnt, devfd;
 	struct dirent *ent;
+	long major, minor;
+	int64_t size;
 	DIR *dir;
-	int ret;
 
-	if ((dir = opendir("/sys/block")) == NULL) {
+	if ((dir = opendir(blockpath)) == NULL) {
 		if (errno == ENOENT)
 			return (0);
 		up_warn("failed to list /sys/block: %s", strerror(errno));
@@ -46,16 +61,76 @@ os_linux_listdev_sysfs(os_list_callback_func func, void *arg)
 	ret = 0;
 	while ((ent = readdir(dir)) != NULL) {
 		const char *name = ent->d_name;
-		if (strcmp(name, ".") == 0 ||
-		    strcmp(name, "..") == 0 ||
-		    (strncmp(name, "loop", 4) == 0 && isdigit(name[4])) ||
-		    (strncmp(name, "ram", 3) == 0 && isdigit(name[3])) ||
-		    (strncmp(name, "dm-", 3) == 0 && isdigit(name[3])))
-			continue;
+		if ((devfd = openat(dirfd(dir), name, O_RDONLY)) == -1) {
+			if (errno == ENOENT)
+				continue;
+			if (UP_NOISY(QUIET))
+				up_err("failed to open %s/%s: %s",
+				    blockpath, name, strerror(errno));
+			return (-1);
+		}
+
+		/* ignore devices with a size of 0 */
+		size = -1;
+		if ((cnt = scanf_at(devfd, "size", "%"PRId64, &size)) == -1) {
+			if (UP_NOISY(QUIET))
+				up_err("failed to read %s/%s/size: %s",
+				    blockpath, name, strerror(errno));
+			goto error;
+		}
+		if (cnt != 1 || size <= 0)
+			goto skip;
+
+		/* ignore devices with an uninteresting major/minor number */
+		major = minor = -1;
+		if ((cnt = scanf_at(devfd, "dev", "%ld:%ld", &major, &minor)) == -1) {
+			if (UP_NOISY(QUIET))
+				up_err("failed to read %s/%s/dev: %s",
+				    blockpath, name, strerror(errno));
+			goto error;
+		}
+		if (cnt != 2 || SKIP_DEVNO(major, minor))
+			goto skip;
+
 		ret = 1;
 		func(name, arg);
+	skip:
+		close(devfd);
 	}
 	closedir(dir);
+	return (ret);
+
+error:
+	close(devfd);
+	return (-1);
+}
+
+static int
+scanf_at(int dirfd, const char *name, const char *format, ...)
+{
+	int saved, fd, ret;
+	va_list ap;
+	FILE *fh;
+
+	if ((fd = openat(dirfd, name, O_RDONLY)) == -1) {
+		if (errno == ENOENT)
+			return (0);
+		return (-1);
+	}
+	if ((fh = fdopen(fd, "r")) == NULL) {
+		saved = errno;
+		close(fd);
+		errno = saved;
+		return (-1);
+	}
+	va_start(ap, format);
+	ret = vfscanf(fh, format, ap);
+	if (ferror(fh))
+		ret = -1;
+	va_end(ap);
+	saved = errno;
+	fclose(fh);
+	errno = saved;
 	return (ret);
 }
 

@@ -113,7 +113,7 @@ void up_hexdiff(const void *old, size_t osize, uint64_t ooff, const char *oname,
    char * to store the unit label in. Use the UP_BESTDECIMAL() macro
    on the return value to get the best decimal precision when printing. */
 float up_fmtsize(int64_t num, const char **units);
-#define UP_BESTDECIMAL(d)       (10.0 > (d) ? 2 : (100.0 > (d) ? 1 : 0))
+#define UP_BESTDECIMAL(d)       (9.99 > (d) ? 2 : (99.9 > (d) ? 1 : 0))
 
 /* Like snprintf(), except it appends to the end of a string. */
 int up_scatprintf(char *str, size_t size, const char *format, ...);

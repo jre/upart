@@ -277,11 +277,10 @@ printsect_pad(uint64_t num, int padding, FILE *stream)
 		disk = current_disk();
 		size = up_fmtsize(num * (disk == NULL ?
 			512 : UP_DISK_1SECT(disk)), &unit);
-		padding = MAX(0, padding - strlen(unit));
+		padding = MAX(0, padding - 2);
 		if (stream == NULL)
-			return (6);
-		return (fprintf(stream, "%*.*f%s",
-			padding, UP_BESTDECIMAL(size), size, unit));
+			return (8);
+		return (fprintf(stream, "%*.2f%-2s", padding, size, unit));
 	}
 	else if (opts->printhex) {
 		if (stream == NULL)

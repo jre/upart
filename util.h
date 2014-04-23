@@ -110,8 +110,8 @@ void up_hexdiff(const void *old, size_t osize, uint64_t ooff, const char *oname,
                 void *stream);
 
 /* Format NUM as a human readable size. UNITS should point to a const
-   char * to store the unit label in. Use the UP_BESTDECIMAL() macro
-   on the return value to get the best decimal precision when printing. */
+   char * to store the unit label in. The UP_BESTDECIMAL() macro may
+   be used on the return value for a 4-column precision. */
 float up_fmtsize(int64_t num, const char **units);
 #define UP_BESTDECIMAL(d)       (9.99 > (d) ? 2 : (99.9 > (d) ? 1 : 0))
 

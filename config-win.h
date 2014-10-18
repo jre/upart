@@ -36,7 +36,7 @@ typedef uint64_t uintmax_t;
 #endif
 
 #define PACKAGE_NAME "upart"
-#define PACKAGE_VERSION "0.3.1"
+#define PACKAGE_VERSION "0.3.2"
 
 #define snprintf _snprintf
 #define fseeko _fseeki64

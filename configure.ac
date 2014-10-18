@@ -1,3 +1,17 @@
+dnl Copyright (c) 2007-2011 Joshua R. Elsasser.
+
+dnl Permission to use, copy, modify, and distribute this software for any
+dnl purpose with or without fee is hereby granted, provided that the above
+dnl copyright notice and this permission notice appear in all copies.
+
+dnl THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+dnl WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+dnl MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+dnl ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+dnl WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+dnl ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+dnl OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
 dnl Don't forget to update the version in config-win.h too, as well as
 dnl tag the commit where configure is regenerated.
 AC_INIT([upart], [0.3.1])

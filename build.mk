@@ -23,7 +23,7 @@ clean-tests: $(REGRESS_BIN)
 	$(RM_CMD) $(REGRESS_BIN)
 
 cleaner: clean clean-tests
-	$(RM_CMD) config.cache config.h config.log config.status common.mk
+	$(RM_CMD) config.cache config.h config.log config.status auto.mk
 
 cleanest: cleaner
 	$(RM_CMD) configure

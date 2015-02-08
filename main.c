@@ -158,7 +158,7 @@ readargs(int argc, char *argv[], struct opts *newopts,
 			break;
 		case 'V':
 			printf("%s version %s\n"
-			    "Copyright (c) 2007-2010 Joshua R. Elsasser\n",
+			    "Copyright (c) 2007-2014 Joshua R. Elsasser\n",
 			    PACKAGE_NAME, PACKAGE_VERSION);
 			exit(EXIT_SUCCESS);
 			break;

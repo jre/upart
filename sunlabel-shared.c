@@ -57,7 +57,7 @@ up_sunlabel_parttype(unsigned int type)
 {
     int ii;
 
-    if(0 <= type && sizeof(up_stdtypes) / sizeof(up_stdtypes[0]) > type)
+    if(sizeof(up_stdtypes) / sizeof(up_stdtypes[0]) > type)
         return up_stdtypes[type];
 
     for(ii = 0; sizeof(up_exttypes) / sizeof(up_exttypes[0]) > ii; ii++)

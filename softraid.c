@@ -55,8 +55,19 @@
   1.109 - boot duid in optional metadata
   1.113 - concat
   1.116 - openbsd 5.1, 5.2
+  1.126 - openbsd 5.3
+  1.139 - openbsd 5.4
+  1.142 - remove raid4 and rename raidp to raid5
+  1.154 - openbsd 5.5
+  1.157 - openbsd 5.6
+  1.158 - remove aoe
+  1.159 - openbsd 5.7
+  1.161 - openbsd 5.8, 5.9
+  1.162 - v6
+  1.163 - openbsd 6.0
  */
-#define SR_VERSION	(5)
+#define SR_VERSION_MIN	(5)
+#define SR_VERSION_MAX	(6)
 #define SR_META_SIZE	(64)
 
 #define SR_LEVEL_CRYPTO	('C')
@@ -75,7 +86,7 @@ struct up_sr_hdr_p
 	uint32_t	chunk_count;	/* number of chunks */
 	uint32_t	chunk_id;	/* chunk id */
 	uint32_t	opt_num;	/* optional metadata count */
-	uint32_t	pad;
+	uint32_t	secsize;	/* sector size in bytes (v6) */
 	uint32_t	volid;		/* volume id */
 	uint32_t	raidlvl;	/* raid level */
 	int64_t		size;		/* volume size */
@@ -318,7 +329,8 @@ sr_readmeta(const struct disk *disk, int64_t start, int64_t size,
     const uint8_t **bufret, int *endret)
 {
 	const struct up_sr_hdr_p *meta;
-	int endian;
+	int endian, vers;
+	uint32_t sectsize;
 
 	if (size < SR_META_SIZE || 
 	    up_disk_checksectrange(disk, start, SR_META_SIZE))
@@ -333,10 +345,24 @@ sr_readmeta(const struct disk *disk, int64_t start, int64_t size,
 	else
 		return (0);
 
-	if (UP_ETOH32(meta->vers, endian) != SR_VERSION) {
+	vers = UP_ETOH32(meta->vers, endian);
+	if (vers < SR_VERSION_MIN || vers > SR_VERSION_MAX) {
 		if (UP_NOISY(QUIET))
 			up_err("ignoring version %d %s in sector %"PRId64,
-			    UP_ETOH32(meta->vers, endian), SR_LABEL, start);
+			    vers, SR_LABEL, start);
+		return (0);
+	}
+
+	/* in v5 metadata the secsize field was unused and 512-byte
+	 * sectors were assumed */
+	if (vers < 6)
+		sectsize = 512;
+	else
+		sectsize = UP_ETOH32(meta->secsize, endian);
+	if (sectsize != disk->params.sectsize) {
+		if (UP_NOISY(QUIET))
+			up_err("ignoring %d-byte sector %s in sector %"PRId64,
+			    sectsize, SR_LABEL, start);
 		return (0);
 	}
 

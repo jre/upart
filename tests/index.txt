@@ -2,6 +2,7 @@ bigmajor
 bigsect-4k
 bigsect-obsdbug-bad
 bigsect-obsdbug-both
+bigsect-softraid
 empty
 gpt
 jre-anubis-wd0

@@ -1,5 +1,5 @@
 /* 
- * Copyright (c) 2012 Joshua R. Elsasser.
+ * Copyright (c) 2012-2017 Joshua R. Elsasser.
  * 
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above

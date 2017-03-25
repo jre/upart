@@ -29,6 +29,8 @@
 #include "md5.h"
 #include "util.h"
 
+#define SR_BLKTOSEC(d,b) ((b) * 512 / UP_DISK_1SECT(d))
+
 #define SR_LABEL	"OpenBSD software RAID"
 #define SR_OFFSET	(16)
 #define SR_MAGIC	(0x4d4152436372616dLLU)
@@ -166,21 +168,22 @@ sr_load(const struct disk *disk, const struct part *parent, void **privret)
 {
 	struct up_sr *priv;
 	const uint8_t *buf;
-	int ret, endian;
+	int ret, endian, off;
 
 	*privret = NULL;
+	off = SR_BLKTOSEC(disk, SR_OFFSET);
 
-	if (SR_OFFSET > parent->size)
+	if (off > parent->size)
 		return (0);
-	if ((ret = sr_readmeta(disk, UP_PART_PHYSADDR(parent) + SR_OFFSET,
-		    parent->size - SR_OFFSET, &buf, &endian)) <= 0)
+	if ((ret = sr_readmeta(disk, UP_PART_PHYSADDR(parent) + off,
+		    parent->size - off, &buf, &endian)) <= 0)
 		return (ret);
 
 	if ((priv = xalloc(1, sizeof(*priv), XA_ZERO)) == NULL)
 		return (-1);
 
 	memcpy(&priv->meta, buf, sizeof(priv->meta));
-	priv->metasect = UP_PART_VIRTADDR(parent) + SR_OFFSET;
+	priv->metasect = UP_PART_VIRTADDR(parent) + off;
 	priv->endian = endian;
 	priv->level = UP_ETOH32(priv->meta.raidlvl, priv->endian);
 
@@ -192,21 +195,24 @@ sr_load(const struct disk *disk, const struct part *parent, void **privret)
 static int
 sr_setup(struct disk *disk, struct map *map)
 {
+	struct up_sr_hdr_p *meta;
 	struct up_sr *priv;
+	int64_t start, size;
 	int flags;
 
 	priv = map->priv;
+	meta = &priv->meta;
 
 	/* XXX checksum and save optional metadata */
 
 	if (up_disk_savesectrange(disk,
 		UP_MAP_VIRT_TO_PHYS(map, priv->metasect),
-		SR_META_SIZE, map, 0) == NULL)
+		SR_BLKTOSEC(disk, SR_META_SIZE), map, 0) == NULL)
 		return (-1);
 
 	/* verify the checksum */
-	if (!sr_checksum(&priv->meta, &priv->meta.checksum,
-		    priv->meta.checksum)) {
+	if (!sr_checksum(meta, &meta->checksum,
+		    meta->checksum)) {
 		if (UP_NOISY(QUIET))
 			up_msg((opts->relaxed ? UP_MSG_FWARN : UP_MSG_FERR),
 			    "bad softraid metadata checksum");
@@ -215,11 +221,11 @@ sr_setup(struct disk *disk, struct map *map)
 	}
 
 	flags = UP_PART_VIRTDISK;
-	if (UP_ETOH32(priv->meta.raidlvl, priv->endian) != 1)
+	if (UP_ETOH32(meta->raidlvl, priv->endian) != 1)
 		flags |= UP_PART_UNREADABLE;
-	if (!up_map_add(map, UP_MAP_VIRTADDR(map) +
-		UP_ETOH32(priv->meta.data_off, priv->endian),
-		UP_ETOH64(priv->meta.size, priv->endian), flags, NULL))
+	start = SR_BLKTOSEC(disk, UP_ETOH32(meta->data_off, priv->endian));
+	size = SR_BLKTOSEC(disk, UP_ETOH64(meta->size, priv->endian));
+	if (!up_map_add(map, UP_MAP_VIRTADDR(map) + start, size, flags, NULL))
 		return (-1);
 
 	return (1);
@@ -239,7 +245,8 @@ sr_info(const struct map *map, FILE *stream)
 	priv = map->priv;
 
 	if (fprintf(stream, "%s at ", up_map_label(map)) < 0 ||
-	    printsect_verbose(UP_MAP_VIRTADDR(map) + SR_OFFSET, stream) < 0 ||
+	    printsect_verbose(UP_MAP_VIRTADDR(map) +
+		SR_BLKTOSEC(map->disk, SR_OFFSET), stream) < 0 ||
 	    fprintf(stream, " of %s:\n", UP_DISK_PATH(map->disk)) < 0)
 		return (-1);
 
@@ -329,11 +336,13 @@ sr_readmeta(const struct disk *disk, int64_t start, int64_t size,
     const uint8_t **bufret, int *endret)
 {
 	const struct up_sr_hdr_p *meta;
-	int endian, vers;
+	int endian, vers, metasecs;
 	uint32_t sectsize;
 
-	if (size < SR_META_SIZE || 
-	    up_disk_checksectrange(disk, start, SR_META_SIZE))
+	metasecs = SR_BLKTOSEC(disk, SR_META_SIZE);
+
+	if (size < metasecs || 
+	    up_disk_checksectrange(disk, start, metasecs))
 		return (0);
         if (!(meta = up_disk_getsect(disk, start)))
 		return (-1);

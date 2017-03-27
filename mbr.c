@@ -137,7 +137,7 @@ mbr_load(const struct disk *disk, const struct part *parent, void **priv)
 	  Don't load if there's a parent map to avoid false positives
 	  with partition boot sectors.
 	*/
-	if (parent->map)
+	if (parent->map && !(parent->flags & UP_PART_VIRTDISK))
 		return (0);
 
 	/* load the mbr sector */

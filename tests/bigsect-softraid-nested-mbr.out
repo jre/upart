@@ -1,0 +1,24 @@
+bigsect-softraid-nested-mbr.img: 10.0GB (2621440 sectors of 4096 bytes)
+
+EFI GPT partition table at sector 1 (backup at sector 2621439) of bigsect-softraid-nested-mbr.img:
+            Start       Size Type
+2:             64        959 EFI System Partition
+4:           1024    2620352 824cc7a0-36a8-11e3-890a-952519ad3f61
+ OpenBSD disklabel at sector 1024 (offset 0) of bigsect-softraid-nested-mbr.img:
+             Start       Size Type
+ a:           1931     395715 RAID
+  OpenBSD software RAID at sector 1933 of bigsect-softraid-nested-mbr.img:
+              Start       Size Level
+               1997     395649 RAID-1
+   MBR partition table at sector 0 of bigsect-softraid-nested-mbr.img:
+               Start       Size A Type
+   3:             64     385496 * OpenBSD (0xa6)
+    OpenBSD disklabel at sector 64 (offset 0) of bigsect-softraid-nested-mbr.img:
+                Start       Size Type
+    a:           1744     383816 4.2BSD
+    c:   X          0     395649 unused
+ c:   X          0    2621440 unused
+ i:   X         64        960 MSDOS
+MBR partition table at sector 0 of bigsect-softraid-nested-mbr.img:
+            Start       Size A Type
+0:   X          1 4294967295   EFI GPT (0xee)

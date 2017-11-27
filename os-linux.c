@@ -86,6 +86,10 @@ os_linux_listdev_sysfs(os_list_callback_func func, void *arg)
 			return (-1);
 		}
 
+		/* require a "device" subdirectory to filter out LVM */
+		if (faccessat(devfd, "device", F_OK, 0) == -1)
+			goto skip;
+
 		/* ignore devices with a size of 0 */
 		size = -1;
 		if ((cnt = scanf_at(devfd, "size", "%"PRId64, &size)) == -1) {

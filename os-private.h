@@ -60,6 +60,7 @@ int	os_getparams_haiku(os_handle, struct disk_params *, const char *);
 /* os-linux.c */
 int	os_listdev_linux(os_list_callback_func, void *);
 int	os_getparams_linux(os_handle, struct disk_params *, const char *);
+int	os_getdesc_linux(os_handle, char *, size_t, const char *);
 
 /* os-solaris.c */
 int	os_listdev_solaris(os_list_callback_func, void *);

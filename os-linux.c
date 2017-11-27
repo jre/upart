@@ -1,5 +1,5 @@
 /* 
- * Copyright (c) 2009-2013 Joshua R. Elsasser.
+ * Copyright (c) 2009-2017 Joshua R. Elsasser.
  * 
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,8 +18,14 @@
 #include "config.h"
 #endif
 
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
 #endif
 #ifdef HAVE_LINUX_FS_H
 #include <linux/fs.h>
@@ -209,8 +215,36 @@ os_listdev_linux(os_list_callback_func func, void *arg)
 	return (ret);
 }
 
+
+int
+os_getdesc_linux(int fd, char *buf, size_t size, const char *name)
+{
+	char path[MAXPATHLEN];
+	struct stat sb;
+	ssize_t res;
+	char *ptr;
+	int sfd;
+
+	if (fstat(fd, &sb) < 0)
+		return (0);
+
+	snprintf(path, sizeof(path), "/sys/dev/block/%u:%u/device/model",
+	    major(sb.st_rdev), minor(sb.st_rdev));
+	if ((sfd = open(path, O_RDONLY)) == -1)
+		return (0);
+	res = read(sfd, buf, size - 1);
+	close(sfd);
+	if (res == -1)
+		return (0);
+	buf[res] = '\0';
+	if ((ptr = memchr(buf, '\n', res)) != NULL)
+		*ptr = '\0';
+	return (1);
+}
+
 #else
 OS_GENERATE_LISTDEV_STUB(os_listdev_linux)
+OS_GENERATE_GETDESC_STUB(os_getdesc_linux)
 #endif
 
 #if defined(HAVE_LINUX_FS_H) || defined(HAVE_LINUX_HDREG_H)

@@ -209,6 +209,7 @@ os_dev_desc(os_device_handle ehand, char *buf, size_t size, const char *name)
 {
 	static os_desc_func funcs[] = {
 		os_getdesc_diocinq,
+		os_getdesc_linux,
 	};
 	os_handle hand;
 	int i;

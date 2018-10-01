@@ -69,7 +69,7 @@ AC_SEARCH_LIBS([opendisk], [util],
 AC_DEFINE([HAVE_OPENDISK])])
 
 dnl some linux headers
-AC_CHECK_HEADERS([linux/fs.h linux/hdreg.h])
+AC_CHECK_HEADERS([linux/fs.h linux/hdreg.h sys/sysmacros.h])
 
 dnl sysctl to list disks on bsd systems
 AC_CHECK_HEADERS([sys/sysctl.h],,,

@@ -49,6 +49,7 @@
 /* linux disk ioctls */
 #undef HAVE_LINUX_FS_H
 #undef HAVE_LINUX_HDREG_H
+#undef HAVE_SYS_SYSMACROS_H
 
 /* sysctl, for listing disks on bsd */
 #undef HAVE_SYS_SYSCTL_H

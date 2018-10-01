@@ -430,6 +430,7 @@ void
 fail(const char *format, ...)
 {
 	char buf[1024];
+	ssize_t annoying_warning;
 	va_list ap;
 	int off;
 
@@ -444,8 +445,12 @@ fail(const char *format, ...)
 		    strerror(errno));
 	off = strlen(buf);
 	buf[off] = '\n';
-	(void)write(STDERR_FILENO, buf, off + 1);
-	exit(EXIT_FAILURE);
+	annoying_warning = write(STDERR_FILENO, buf, off + 1);
+	/* sigh... */
+	if (annoying_warning == -1)
+		exit(EXIT_FAILURE);
+	else
+		exit(EXIT_FAILURE);
 }
 
 void

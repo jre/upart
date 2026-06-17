@@ -409,8 +409,13 @@ static struct
     {0xc12a7328, 0xf81f, 0x11d2, (const uint8_t*)"\xba\x4b\x00\xa0\xc9\x3e\xc9\x3b", "EFI System Partition"},
     {0x48465300, 0, 0x11aa, gpt_data4_apple, "Apple HFS+"},
     {0x55465300, 0, 0x11aa, gpt_data4_apple, "Apple UFS"},
-    {0xebd0a0a2, 0xb9e5, 0x4433, (const uint8_t*)"\x87\xc0\x68\xb6\xb7\x26\x99\xc7", "Microsoft Data"},
+    {0x7c3457ef, 0, 0x11aa, gpt_data4_apple, "Apple APFS"},
     {0x6A898CC3, 0x1dd2, 0x11b2, gpt_data4_sun, "Solaris /usr or Apple ZFS"},
+    {0x0fc63daf, 0x8483, 0x4772, (const uint8_t*)"\x8e\x79\x3d\x69\xd8\x47\x7d\xe4", "Linux data"},
+    {0x0657fd6d, 0xa4ab, 0x43c4, (const uint8_t*)"\x84\xe5\x09\x33\xc8\x4b\x4f\x4f", "Linux swap"},
+    {0xe6d6d379, 0xf507, 0x44c2, (const uint8_t*)"\xa2\x3c\x23\x8f\x2a\x3d\xf9\x28", "Linux LVM"},
+    {0xebd0a0a2, 0xb9e5, 0x4433, (const uint8_t*)"\x87\xc0\x68\xb6\xb7\x26\x99\xc7", "Microsoft Data"},
+    {0x824cc7a0, 0x36a8, 0x11e3, (const uint8_t*)"\x89\x0a\x95\x25\x19\xad\x3f\x61", "OpenBSD"},
 };
 
 static const char *

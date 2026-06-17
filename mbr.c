@@ -523,7 +523,7 @@ static const char *mbr_name_table[] =
     /* 0x8b */ NULL,
     /* 0x8c */ NULL,
     /* 0x8d */ NULL,
-    /* 0x8e */ NULL,
+    /* 0x8e */ "Linux LVM",
     /* 0x8f */ NULL,
     /* 0x90 */ NULL,
     /* 0x91 */ NULL,

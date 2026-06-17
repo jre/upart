@@ -310,7 +310,7 @@ os_getdesc_diocinq(int fd, char *buf, size_t size, const char *name)
 	if (ioctl(fd, DIOCINQ, &inq) != 0)
 		return (0);
 
-	if (inq.vendor[0] != '\0' && inq.product != '\0')
+	if (inq.vendor[0] != '\0' && inq.product[0] != '\0')
 		snprintf(buf, size, "%s %s", inq.vendor, inq.product);
 	else if (inq.vendor[0] != '\0')
 		strlcpy(buf, inq.vendor, size);

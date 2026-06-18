@@ -28,11 +28,7 @@ typedef struct MD5Context {
 void	 MD5Init(MD5_CTX *);
 void	 MD5Update(MD5_CTX *, const u_int8_t *, size_t);
 void	 MD5Pad(MD5_CTX *);
-void	 MD5Final(u_int8_t *, MD5_CTX *);
-void	 MD5Transform(u_int32_t [4], const u_int8_t *);
-char	*MD5End(MD5_CTX *, char *);
-char	*MD5File(const char *, char *);
-char	*MD5FileChunk(const char *, char *, off_t, off_t);
-char	*MD5Data(const u_int8_t *, size_t, char *);
+void	 MD5Final(u_int8_t [MD5_DIGEST_LENGTH], MD5_CTX *);
+void	 MD5Transform(u_int32_t [4], const u_int8_t [MD5_BLOCK_LENGTH]);
 
 #endif /* _MD5_H_ */

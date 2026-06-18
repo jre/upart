@@ -71,7 +71,7 @@ int
 up_sunlabel_fmt(FILE *stream, unsigned int type, unsigned int flags)
 {
 	const char *typestr;
-	char flagstr[5];
+	char flagstr[9];
 
 	if (~PFLAG_KNOWN & flags)
 		snprintf(flagstr, sizeof flagstr, "%04x", flags);

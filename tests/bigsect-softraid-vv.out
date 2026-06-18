@@ -25,7 +25,7 @@ EFI GPT partition table at sector 1 (backup at sector 5242879) of bigsect-softra
 1:   X          0          0 00000000-0000-0000-0000-000000000000 00000000-0000-0000-0000-000000000000 unused
 2:             64        959 2d2f1a74-027e-4af3-9305-eecdbb5180ef c12a7328-f81f-11d2-ba4b-00a0c93ec93b EFI System Partition
 3:   X          0          0 00000000-0000-0000-0000-000000000000 00000000-0000-0000-0000-000000000000 unused
-4:           1024    5241792 7470965a-34b6-4244-b466-9dd92d173266 824cc7a0-36a8-11e3-890a-952519ad3f61 
+4:           1024    5241792 7470965a-34b6-4244-b466-9dd92d173266 824cc7a0-36a8-11e3-890a-952519ad3f61 OpenBSD
  OpenBSD disklabel at sector 1024 (offset 0) of bigsect-softraid.img:
   version: 1
   type: vnd/vinum (12)

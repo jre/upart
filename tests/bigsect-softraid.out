@@ -3,7 +3,7 @@ bigsect-softraid.img: 20.0GB (5242880 sectors of 4096 bytes)
 EFI GPT partition table at sector 1 (backup at sector 5242879) of bigsect-softraid.img:
             Start       Size Type
 2:             64        959 EFI System Partition
-4:           1024    5241792 824cc7a0-36a8-11e3-890a-952519ad3f61
+4:           1024    5241792 OpenBSD
  OpenBSD disklabel at sector 1024 (offset 0) of bigsect-softraid.img:
              Start       Size Type
  a:           1024    1571840 RAID
